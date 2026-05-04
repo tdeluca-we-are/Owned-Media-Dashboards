@@ -435,15 +435,11 @@ async function loadSheets(){
   }
 }
 function renderMesChips(){
-  document.getElementById('mesMenu').innerHTML=allSheets.map(s=>`
-    <div class="marca-option" id="mchip-${s.sheetId}" onclick="selectMes(${JSON.stringify(s).replace(/\"/g,'&quot;')});closeMesDD()">
-      <div class="marca-dot"></div>
-      ${s.title.replace(' | Objetivos','').replace(' | objetivos','')}
-    </div>`).join('');
-}" onclick="selectMes(${JSON.stringify(s).replace(/"/g,'&quot;')})">
-      ${s.title.replace(' | Objetivos','').replace(' | objetivos','')}
-    </div>`).join('');
+  document.getElementById('mesMenu').innerHTML=allSheets.map(function(s){
+    return '<div class="marca-option" id="mchip-'+s.sheetId+'" onclick="selectMes_byId(''+s.sheetId+'');closeMesDD()"><div class="marca-dot"></div>'+s.title.replace(' | Objetivos','').replace(' | objetivos','')+'</div>';
+  }).join('');
 }
+
 function selectMes(sheet){
   currentSheet=sheet;
   const nombre=sheet.title.replace(' | Objetivos','').replace(' | objetivos','');
@@ -618,6 +614,10 @@ async function loadSheetData(){
   }
 }
 
+function selectMes_byId(sheetId){
+  const sheet = allSheets.find(s => s.sheetId == sheetId);
+  if(sheet) selectMes(sheet);
+}
 // ── TABLE RENDER ──
 function renderTablaRows(rows) {
   document.getElementById('recordCount').textContent = rows.length + ' días';
