@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We Are — Owned Media Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1929;--bg2:#112240;--bg3:#1a3355;--bg4:#0b1929;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#f0f0f0;--text2:#8892a4;--text3:#3d4f6b;
+  --orange:#f04e23;--orange2:#d43d16;
+  --green:#22c55e;--red:#ef4444;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+}
+body{font-family:var(--font);background:var(--bg4);color:var(--text);min-height:100vh;font-size:14px}
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center}
+.auth-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-xl);padding:40px;width:100%;max-width:380px}
+.text-logo-xl{font-size:36px;font-weight:800;letter-spacing:-0.03em;text-align:center;margin-bottom:28px}
+.text-logo-sm{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.logo-we{color:#f0f0f0}.logo-are{color:var(--orange)}
+.auth-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:24px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em}
+.fg input{font-family:var(--font);font-size:14px;padding:11px 14px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;transition:border-color 0.15s}
+.fg input:focus{border-color:var(--orange)}
+.btn-primary{width:100%;font-family:var(--font);font-size:14px;font-weight:600;padding:12px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;margin-top:6px}
+.btn-primary:hover{background:var(--orange2)}
+.auth-error{font-size:12px;color:var(--orange);text-align:center;margin-top:10px;min-height:18px}
+.app{display:none;min-height:100vh}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:200}
+.top-left{display:flex;align-items:center;gap:16px}
+.top-divider{width:1px;height:20px;background:var(--border2)}
+.dd-wrap{position:relative}
+.dd-btn{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;color:var(--text);user-select:none}
+.dd-btn:hover{border-color:var(--orange)}
+.dd-arrow{font-size:10px;color:var(--text2);transition:transform 0.2s;display:inline-block}
+.dd-btn.open .dd-arrow{transform:rotate(180deg)}
+.dd-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:200px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:6px;z-index:300;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.dd-menu.open{display:block}
+.dd-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500}
+.dd-item:hover{background:var(--bg3)}
+.dd-item.active{background:rgba(240,78,35,0.12);color:var(--orange)}
+.dd-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.dd-item.active .dd-dot{background:var(--orange)}
+.top-right{display:flex;align-items:center;gap:10px}
+.user-pill{font-size:12px;color:var(--text2);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
+.role-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em}
+.role-administrador{background:rgba(240,78,35,0.15);color:#f04e23;border:1px solid rgba(240,78,35,0.3)}
+.role-analista{background:rgba(61,79,107,0.3);color:#7a9eca;border:1px solid rgba(61,79,107,0.5)}
+.role-lector{background:rgba(255,255,255,0.05);color:#666;border:1px solid rgba(255,255,255,0.08)}
+.btn-sm{font-family:var(--font);font-size:12px;padding:6px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer}
+.btn-sm:hover{color:var(--orange);border-color:var(--orange)}
+.btn-orange{font-family:var(--font);font-size:12px;font-weight:600;padding:8px 16px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer}
+.btn-orange:hover{background:var(--orange2)}
+.main{padding:24px 28px;max-width:1600px;margin:0 auto}
+.slabel{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.period-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.period-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.date-group{display:flex;align-items:center;gap:6px}
+.date-group label{font-size:11px;color:var(--text2);font-weight:500}
+.date-group input{font-family:var(--font);font-size:12px;padding:6px 10px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none}
+.canales-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.canal-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.canal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.canal-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.canal-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.canal-icon.email{background:rgba(240,78,35,0.15)}
+.canal-icon.push{background:rgba(61,79,107,0.3)}
+.canal-icon.wpp{background:rgba(37,211,102,0.12)}
+.canal-icon.onsite{background:rgba(45,212,160,0.12)}
+.cstatus{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px}
+.cstatus.ok{background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25)}
+.cstatus.mal{background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25)}
+.cstatus.neutro{background:rgba(255,255,255,0.05);color:var(--text2);border:1px solid var(--border)}
+.canal-kpis{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpi-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:3px}
+.kpi-target{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:2px}
+.kpi-real{font-size:15px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
+.kpi-var{font-size:11px;font-weight:600;margin-top:3px}
+.kpi-var.pos{color:#22c55e}.kpi-var.neg{color:#ef4444}.kpi-var.neu{color:var(--text2)}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:24px}
+.mcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;position:relative;overflow:hidden}
+.mcard::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--card-accent,var(--orange))}
+.mlabel{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;font-weight:600;margin-bottom:5px}
+.mtarget{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:4px}
+.mreal{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.03em;line-height:1;font-family:var(--mono)}
+.mvar{font-size:12px;font-weight:600;margin-top:5px}
+.mvar.pos{color:#22c55e}.mvar.neg{color:#ef4444}.mvar.neu{color:var(--text2)}
+.table-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:24px}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.table-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{padding:8px 12px;text-align:right;font-weight:600;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+thead th:first-child{text-align:left}
+thead th.grp{text-align:center;color:var(--text2);font-size:11px;padding:5px 12px}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg3)}
+tbody td{padding:9px 12px;color:var(--text);white-space:nowrap;font-family:var(--mono);font-size:12px;text-align:right;font-weight:500}
+tbody td:first-child{font-family:var(--font);font-size:13px;text-align:left}
+.vp{color:#22c55e;font-weight:600}.vn{color:#ef4444;font-weight:600}.vz{color:var(--text2)}
+.admin-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px}
+.atabs{display:flex;gap:8px;margin-bottom:20px}
+.atab{font-family:var(--font);font-size:12px;font-weight:500;padding:7px 16px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer}
+.atab.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+.acontent{display:none}.acontent.active{display:block}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.ifield{font-family:var(--font);font-size:13px;padding:9px 12px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;width:100%}
+.ifield:focus{border-color:var(--orange)}
+.sfield{font-family:var(--font);font-size:13px;padding:9px 12px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;width:100%;appearance:none;cursor:pointer}
+.atbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}
+.atbl th{padding:7px 12px;text-align:left;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border)}
+.atbl td{padding:9px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px}
+.atbl tr:last-child td{border-bottom:none}
+.atbl td.lc{font-family:var(--font)}
+.bdanger{font-size:11px;padding:4px 10px;background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;cursor:pointer;font-family:var(--font)}
+.smsg{font-size:12px;color:#22c55e;margin-top:8px;min-height:18px}
+.spinner{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--orange);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.error-state{text-align:center;padding:40px;color:var(--red);font-size:13px}
+.empty-state{text-align:center;padding:30px;color:var(--text3);font-size:13px}
+.hidden{display:none!important}
+@media(max-width:700px){.canales-grid{grid-template-columns:1fr}.top-bar,.main{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="text-logo-xl"><span class="logo-we">WE</span> <span class="logo-are">ARE</span></div>
+    <div class="auth-title">Owned Media Hub</div>
+    <div class="auth-sub">Ingresá con tu cuenta</div>
+    <div class="fg"><label>Email</label><input type="email" id="authEmail" placeholder="tu@weare.com"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="authPass" placeholder="••••••••"></div>
+    <button class="btn-primary" onclick="login()">Ingresar</button>
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<div class="app" id="appScreen">
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="text-logo-sm"><span class="logo-we">WE</span> <span class="logo-are">ARE</span></div>
+      <div class="top-divider"></div>
+      <div class="dd-wrap" id="marcaDDWrap">
+        <div class="dd-btn" id="marcaBtn" onclick="toggleDD('marca')">
+          <span id="marcaSelected">Seleccioná una marca</span>
+          <span class="dd-arrow">▼</span>
+        </div>
+        <div class="dd-menu" id="marcaMenu"></div>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="user-pill" id="userEmail">—</span>
+      <span class="role-badge" id="userRoleBadge">—</span>
+      <button class="btn-sm" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="period-row">
+      <div class="period-left">
+        <div class="slabel" style="margin-bottom:0">Período</div>
+        <div class="dd-wrap" id="mesDDWrap">
+          <div class="dd-btn" id="mesBtn" onclick="toggleDD('mes')">
+            <span id="mesSelected">Seleccioná un mes</span>
+            <span class="dd-arrow">▼</span>
+          </div>
+          <div class="dd-menu" id="mesMenu"></div>
+        </div>
+        <div class="date-group">
+          <label>Desde</label>
+          <input type="date" id="filtroDesde" onchange="applyFilter()">
+        </div>
+        <div class="date-group">
+          <label>Hasta</label>
+          <input type="date" id="filtroHasta" onchange="applyFilter()">
+        </div>
+        <button class="btn-sm" onclick="clearFilter()">✕ Limpiar</button>
+      </div>
+      <button class="btn-sm" onclick="loadSheetData()">↻ Actualizar</button>
+    </div>
+
+    <div class="slabel">Canales</div>
+    <div class="canales-grid" id="canalesGrid"><div class="loading-state"><div class="spinner"></div></div></div>
+
+    <div class="slabel" id="summaryLabel" style="margin-top:8px"></div>
+    <div class="metrics-grid" id="metricsGrid"></div>
+
+    <div class="table-section">
+      <div class="table-hdr">
+        <span class="table-title">Detalle diario</span>
+        <span id="recordCount" style="font-size:12px;color:var(--text3);font-family:var(--mono)">—</span>
+      </div>
+      <div class="twrap">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" style="text-align:left">Fecha</th>
+              <th colspan="3" class="grp" style="background:rgba(240,78,35,0.05)">Facturación</th>
+              <th colspan="2" class="grp" style="background:rgba(61,79,107,0.05)">Sesiones</th>
+              <th colspan="2" class="grp" style="background:rgba(240,78,35,0.05)">Órdenes</th>
+              <th colspan="2" class="grp" style="background:rgba(61,79,107,0.05)">Envíos</th>
+              <th colspan="2" class="grp" style="background:rgba(240,78,35,0.05)">Aperturas</th>
+              <th colspan="2" class="grp" style="background:rgba(61,79,107,0.05)">Open Rate</th>
+              <th colspan="2" class="grp" style="background:rgba(240,78,35,0.05)">Clicks</th>
+            </tr>
+            <tr>
+              <th style="background:rgba(240,78,35,0.05)">Target</th><th style="background:rgba(240,78,35,0.05)">Real</th><th style="background:rgba(240,78,35,0.05)">Var</th>
+              <th style="background:rgba(61,79,107,0.05)">Target</th><th style="background:rgba(61,79,107,0.05)">Real</th>
+              <th style="background:rgba(240,78,35,0.05)">Target</th><th style="background:rgba(240,78,35,0.05)">Real</th>
+              <th style="background:rgba(61,79,107,0.05)">Target</th><th style="background:rgba(61,79,107,0.05)">Real</th>
+              <th style="background:rgba(240,78,35,0.05)">Target</th><th style="background:rgba(240,78,35,0.05)">Real</th>
+              <th style="background:rgba(61,79,107,0.05)">Target</th><th style="background:rgba(61,79,107,0.05)">Real</th>
+              <th style="background:rgba(240,78,35,0.05)">Target</th><th style="background:rgba(240,78,35,0.05)">Real</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-panel hidden" id="adminPanel">
+      <div class="slabel">Panel de administración</div>
+      <div class="atabs">
+        <button class="atab active" onclick="switchTab('marcas')">Marcas</button>
+        <button class="atab" onclick="switchTab('usuarios')">Usuarios</button>
+      </div>
+      <div class="acontent active" id="tabMarcas">
+        <div class="agrid">
+          <div class="fg" style="margin-bottom:0"><label>Nombre</label><input class="ifield" id="newMarcaNombre" placeholder="King Of The Kongo"></div>
+          <div class="fg" style="margin-bottom:0"><label>Google Sheets ID</label><input class="ifield" id="newMarcaSheetId" placeholder="1QuIdkoxh8Y..."></div>
+        </div>
+        <button class="btn-orange" style="margin-top:10px" onclick="agregarMarca()">+ Agregar marca</button>
+        <div id="marcasMsg" class="smsg"></div>
+        <table class="atbl"><thead><tr><th>Marca</th><th>Sheet ID</th><th>Estado</th><th></th></tr></thead><tbody id="adminMarcasTable"></tbody></table>
+      </div>
+      <div class="acontent" id="tabUsuarios">
+        <div class="agrid">
+          <div class="fg" style="margin-bottom:0"><label>Email</label><input class="ifield" id="newUserEmail" placeholder="analista@weare.com"></div>
+          <div class="fg" style="margin-bottom:0"><label>Contraseña</label><input class="ifield" type="password" id="newUserPass"></div>
+          <div class="fg" style="margin-bottom:0"><label>Marca</label><select class="sfield" id="newUserMarca"></select></div>
+          <div class="fg" style="margin-bottom:0"><label>Rol</label><select class="sfield" id="newUserRol"><option value="lector">Lector</option><option value="analista">Analista</option><option value="administrador">Administrador</option></select></div>
+        </div>
+        <button class="btn-orange" style="margin-top:10px" onclick="invitarUsuario()">+ Crear usuario</button>
+        <div id="usuariosMsg" class="smsg"></div>
+        <table class="atbl"><thead><tr><th>Usuario</th><th>Marca</th><th>Rol</th><th></th></tr></thead><tbody id="adminUsuariosTable"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://ojzcxwhoinmljospgmfp.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
+const GKEY = 'AIzaSyCqzy9M5QcC1jcLBzhvoQBubX6-OWp71qw';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+
+let currentUser = null, currentRol = null, allMarcas = [], currentMarca = null;
+let allSheets = [], currentSheet = null, allDataRows = [], filteredRows = [];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function pn(v) {
+  if (!v || v === '#DIV/0!' || v === '#REF!' || v === '-' || v === '') return null;
+  var s = v.toString().trim().replace(/\$/g, '').replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+function fp(n) { return n === null ? '-' : '$' + Math.round(n).toLocaleString('es-AR'); }
+function fn(n) { return n === null ? '-' : Math.round(n).toLocaleString('es-AR'); }
+function fpct(v) {
+  if (!v || v === '#DIV/0!' || v === '#REF!' || v === '') return '-';
+  var n = parseFloat(v.toString().replace(',', '.').replace('%', ''));
+  return isNaN(n) ? '-' : n.toFixed(1) + '%';
+}
+function vcls(v) {
+  if (!v || v === '#DIV/0!' || v === '#REF!' || v === '') return 'vz';
+  var n = parseFloat(v.toString().replace(',', '.').replace('%', ''));
+  return isNaN(n) ? 'vz' : n > 0 ? 'vp' : n < 0 ? 'vn' : 'vz';
+}
+function calcVar(real, target) {
+  if (real === null || target === null || target === 0) return null;
+  return (real - target) / Math.abs(target) * 100;
+}
+function varStr(v) {
+  if (v === null) return '-';
+  return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+function varCls(v) {
+  if (v === null) return 'neu';
+  return v >= 0 ? 'pos' : 'neg';
+}
+function parseFecha(s) {
+  if (!s) return null;
+  var meses = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+  var m = s.toLowerCase().match(/(\d+)\s+de\s+(\w+)/);
+  if (!m) return null;
+  var mes = meses[m[2]];
+  if (mes === undefined) return null;
+  return new Date(new Date().getFullYear(), mes, parseInt(m[1]));
+}
+
+// ── DROPDOWN ─────────────────────────────────────────────────────────────────
+function toggleDD(which) {
+  var btn = document.getElementById(which + 'Btn');
+  var menu = document.getElementById(which + 'Menu');
+  var isOpen = btn.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.dd-btn').forEach(function(b) { b.classList.remove('open'); });
+  document.querySelectorAll('.dd-menu').forEach(function(m) { m.classList.remove('open'); });
+  if (!isOpen) { btn.classList.add('open'); menu.classList.add('open'); }
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.dd-wrap')) {
+    document.querySelectorAll('.dd-btn').forEach(function(b) { b.classList.remove('open'); });
+    document.querySelectorAll('.dd-menu').forEach(function(m) { m.classList.remove('open'); });
+  }
+});
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function login() {
+  var email = document.getElementById('authEmail').value.trim();
+  var pass = document.getElementById('authPass').value;
+  document.getElementById('authError').textContent = '';
+  sb.auth.signInWithPassword({email: email, password: pass}).then(function(r) {
+    if (r.error) { document.getElementById('authError').textContent = 'Email o contraseña incorrectos'; return; }
+    initApp(r.data.user);
+  });
+}
+function logout() {
+  sb.auth.signOut().then(function() {
+    document.getElementById('appScreen').style.display = 'none';
+    document.getElementById('authScreen').style.display = 'flex';
+  });
+}
+function initApp(user) {
+  currentUser = user;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('userEmail').textContent = user.email;
+  loadMarcasYRol();
+}
+
+// ── MARCAS ────────────────────────────────────────────────────────────────────
+function loadMarcasYRol() {
+  sb.from('usuario_marcas').select('rol,marca_id').eq('user_id', currentUser.id).then(function(r1) {
+    var asig = r1.data;
+    if (!asig || asig.length === 0) return;
+    var ids = asig.map(function(a) { return a.marca_id; });
+    sb.from('marcas').select('*').in('id', ids).eq('activa', true).then(function(r2) {
+      var marcas = r2.data;
+      if (!marcas || marcas.length === 0) return;
+      var roles = asig.map(function(a) { return a.rol; });
+      currentRol = roles.indexOf('administrador') >= 0 ? 'administrador' : roles.indexOf('analista') >= 0 ? 'analista' : 'lector';
+      var badge = document.getElementById('userRoleBadge');
+      badge.textContent = currentRol.charAt(0).toUpperCase() + currentRol.slice(1);
+      badge.className = 'role-badge role-' + currentRol;
+      allMarcas = marcas.map(function(m) {
+        var found = asig.find(function(a) { return a.marca_id === m.id; });
+        return Object.assign({}, m, {rol: found ? found.rol : 'lector'});
+      });
+      renderMarcaMenu();
+      if (currentRol === 'administrador') {
+        document.getElementById('adminPanel').classList.remove('hidden');
+        loadAdminData();
+      }
+      if (allMarcas.length > 0) selectMarca(allMarcas[0]);
+    });
+  });
+}
+
+function renderMarcaMenu() {
+  var html = '';
+  allMarcas.forEach(function(m) {
+    html += '<div class="dd-item" id="mopt-' + m.id + '" data-mid="' + m.id + '" onclick="selectMarcaById(this.dataset.mid);toggleDD(\'marca\')">';
+    html += '<div class="dd-dot"></div>' + m.nombre + '</div>';
+  });
+  document.getElementById('marcaMenu').innerHTML = html;
+}
+
+function selectMarcaById(id) {
+  var m = allMarcas.find(function(x) { return x.id === id; });
+  if (m) selectMarca(m);
+}
+
+function selectMarca(m) {
+  currentMarca = m;
+  document.getElementById('marcaSelected').textContent = m.nombre;
+  document.querySelectorAll('#marcaMenu .dd-item').forEach(function(o) { o.classList.remove('active'); });
+  var opt = document.getElementById('mopt-' + m.id);
+  if (opt) opt.classList.add('active');
+  loadSheets();
+}
+
+// ── SHEETS ────────────────────────────────────────────────────────────────────
+function loadSheets() {
+  if (!currentMarca || !currentMarca.sheet_id) return;
+  document.getElementById('mesSelected').textContent = 'Cargando...';
+  document.getElementById('canalesGrid').innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + currentMarca.sheet_id + '?key=' + GKEY + '&fields=sheets.properties')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      allSheets = (data.sheets || []).map(function(s) { return s.properties; }).filter(function(p) {
+        return p.title.indexOf('| Objetivos') >= 0 || p.title.indexOf('| objetivos') >= 0;
+      });
+      if (allSheets.length === 0) {
+        document.getElementById('mesSelected').textContent = 'Sin hojas';
+        return;
+      }
+      renderMesMenu();
+      selectMes(allSheets[allSheets.length - 1]);
+    })
+    .catch(function(e) {
+      document.getElementById('mesSelected').textContent = 'Error';
+      document.getElementById('canalesGrid').innerHTML = '<div class="error-state">' + e.message + '</div>';
+    });
+}
+
+function renderMesMenu() {
+  var html = '';
+  allSheets.forEach(function(s) {
+    var nombre = s.title.replace(' | Objetivos', '').replace(' | objetivos', '');
+    html += '<div class="dd-item" id="mchip-' + s.sheetId + '" data-stitle="' + s.title.replace(/'/g,'&#39;') + '" onclick="selectMesByTitle(this.dataset.stitle);toggleDD(\'mes\')">';
+    html += '<div class="dd-dot"></div>' + nombre + '</div>';
+  });
+  document.getElementById('mesMenu').innerHTML = html;
+}
+
+function selectMesByTitle(title) {
+  var sheet = allSheets.find(function(s) { return s.title === title; });
+  if (sheet) selectMes(sheet);
+}
+
+function selectMes(sheet) {
+  currentSheet = sheet;
+  var nombre = sheet.title.replace(' | Objetivos', '').replace(' | objetivos', '');
+  document.getElementById('mesSelected').textContent = nombre;
+  document.querySelectorAll('#mesMenu .dd-item').forEach(function(c) { c.classList.remove('active'); });
+  var chip = document.getElementById('mchip-' + sheet.sheetId);
+  if (chip) chip.classList.add('active');
+  loadSheetData();
+}
+
+function loadSheetData() {
+  if (!currentMarca || !currentMarca.sheet_id || !currentSheet) return;
+  document.getElementById('canalesGrid').innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  document.getElementById('metricsGrid').innerHTML = '';
+  document.getElementById('tablaBody').innerHTML = '<tr><td colspan="16"><div class="loading-state"><div class="spinner"></div></div></td></tr>';
+  var sn = encodeURIComponent(currentSheet.title);
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + currentMarca.sheet_id + '/values/' + sn + '!A1:Z500?key=' + GKEY;
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rows = data.values || [];
+      // row0=headers grupo, row1=headers sub, row2=headers Target/Real, row3=TOTALES, row4+=diarios
+      var totalsRow = rows[3] || [];
+
+      // DEBUG COMPLETO — cada columna de totalsRow
+      console.log('=== TOTALS ROW COMPLETO ===');
+      for (var _di = 0; _di < totalsRow.length; _di++) {
+        if (totalsRow[_di] !== undefined && totalsRow[_di] !== '') {
+          console.log('col[' + _di + '] = ' + JSON.stringify(totalsRow[_di]));
+        }
+      }
+
+      allDataRows = rows.slice(4).filter(function(r) {
+        if (!r || r.length < 2) return false;
+        var colA = String(r[0] == null ? '' : r[0]).trim().toLowerCase();
+        return colA !== '' && colA !== 'fecha' && colA !== 'total' && colA !== 'acumulado';
+      });
+      renderAll(totalsRow, allDataRows);
+    })
+    .catch(function(e) {
+      document.getElementById('canalesGrid').innerHTML = '<div class="error-state">Error: ' + e.message + '</div>';
+    });
+}
+
+function applyFilter() {
+  var desde = document.getElementById('filtroDesde').value;
+  var hasta = document.getElementById('filtroHasta').value;
+  if (!desde && !hasta) { filteredRows = allDataRows; }
+  else {
+    filteredRows = allDataRows.filter(function(r) {
+      var d = parseFecha(r[0]);
+      if (!d) return true;
+      if (desde && d < new Date(desde)) return false;
+      if (hasta && d > new Date(hasta + 'T23:59:59')) return false;
+      return true;
+    });
+  }
+  renderTabla(filteredRows);
+}
+
+function clearFilter() {
+  document.getElementById('filtroDesde').value = '';
+  document.getElementById('filtroHasta').value = '';
+  filteredRows = allDataRows;
+  renderTabla(filteredRows);
+}
+
+function renderAll(totalsRow, dataRows) {
+  filteredRows = dataRows;
+  // Cols confirmadas del debug: col2=TgtFact, col3=RealFact (mismo patrón en filas diarias)
+  // Patrón: target=col par, real=col impar, siguiendo mismos índices que renderTabla
+  var tFact   = pn(totalsRow[2]);  var rFact   = pn(totalsRow[3]);
+  var tSes    = pn(totalsRow[5]);  var rSes    = pn(totalsRow[6]);
+  var tOrd    = pn(totalsRow[7]);  var rOrd    = pn(totalsRow[8]);
+  var tCR     = totalsRow[10] || '-'; var rCRraw  = totalsRow[11] || '-';
+  var tTicket = pn(totalsRow[12]); var rTicket = pn(totalsRow[13]);
+  var tEnv    = pn(totalsRow[16]); var rEnv    = pn(totalsRow[17]);
+  var tAper   = pn(totalsRow[18]); var rAper   = pn(totalsRow[19]);
+  var tOR     = totalsRow[20] || '-'; var rORraw  = totalsRow[21] || '-';
+  var tClicks = pn(totalsRow[22]); var rClicks = pn(totalsRow[23]);
+  var tCTOR   = totalsRow[24] || '-'; var rCTORraw = totalsRow[25] || '-';
+
+  var vFact = calcVar(rFact, tFact);
+  var vSes = calcVar(rSes, tSes);
+  var vOrd = calcVar(rOrd, tOrd);
+  var vEnv = calcVar(rEnv, tEnv);
+  var vAper = calcVar(rAper, tAper);
+  var vClicks = calcVar(rClicks, tClicks);
+
+  // KPI helper
+  function kpi(label, target, real, v) {
+    return '<div><div class="kpi-label">' + label + '</div><div class="kpi-target">Target: ' + target + '</div><div class="kpi-real">' + real + '</div><div class="kpi-var ' + varCls(v) + '">' + varStr(v) + '</div></div>';
+  }
+
+  var vTicket = calcVar(rTicket, tTicket);
+  var kpisEmail = kpi('Facturación', fp(tFact), fp(rFact), vFact) +
+    kpi('Órdenes', fn(tOrd), fn(rOrd), vOrd) +
+    kpi('Sesiones', fn(tSes), fn(rSes), vSes) +
+    kpi('Tasa de conv.', tCR, rCRraw, null) +
+    kpi('Ticket prom.', fp(tTicket), fp(rTicket), vTicket) +
+    kpi('Envíos', fn(tEnv), fn(rEnv), vEnv) +
+    kpi('Aperturas', fn(tAper), fn(rAper), vAper) +
+    kpi('Tasa apertura', tOR, rORraw, null) +
+    kpi('Clicks', fn(tClicks), fn(rClicks), vClicks) +
+    kpi('CTOR', tCTOR, rCTORraw, null);
+
+  var kpisOnSite = kpi('Facturación', fp(tFact), '-', null) +
+    kpi('Órdenes', fn(tOrd), '-', null) +
+    kpi('Sesiones', fn(tSes), '-', null) +
+    kpi('Tasa de conv.', tCR, '-', null) +
+    kpi('Ticket prom.', fp(tTicket), '-', null);
+
+  var emailStatus = vFact !== null ? (vFact >= 0 ? 'ok' : 'mal') : 'neutro';
+
+  document.getElementById('canalesGrid').innerHTML =
+    '<div class="canal-card"><div class="canal-header"><div class="canal-name"><div class="canal-icon email">✉️</div>Email</div><span class="cstatus ' + emailStatus + '">' + varStr(vFact) + '</span></div><div class="canal-kpis">' + kpisEmail + '</div></div>' +
+    '<div class="canal-card"><div class="canal-header"><div class="canal-name"><div class="canal-icon push">🔔</div>Push</div><span class="cstatus neutro">Próximamente</span></div><div class="canal-kpis">' + kpisEmail.replace(/fp\(rFact\)|fn\(rOrd\)|fn\(rSes\)|fn\(rEnv\)|fn\(rAper\)|fn\(rClicks\)/g, "'-'") + '</div></div>' +
+    '<div class="canal-card"><div class="canal-header"><div class="canal-name"><div class="canal-icon wpp">💬</div>WhatsApp</div><span class="cstatus neutro">Próximamente</span></div><div class="canal-kpis">' + kpisEmail + '</div></div>' +
+    '<div class="canal-card"><div class="canal-header"><div class="canal-name"><div class="canal-icon onsite">🖥️</div>On Site</div><span class="cstatus neutro">Próximamente</span></div><div class="canal-kpis">' + kpisOnSite + '</div></div>';
+
+  // Summary
+  var mes = currentSheet.title.replace(' | Objetivos', '').replace(' | objetivos', '');
+  document.getElementById('summaryLabel').textContent = 'Resumen · ' + mes;
+
+  var cards = [
+    {l:'Facturación', t:fp(tFact), r:fp(rFact), v:vFact, a:'#f04e23'},
+    {l:'Sesiones', t:fn(tSes), r:fn(rSes), v:vSes, a:'#3d4f6b'},
+    {l:'Órdenes', t:fn(tOrd), r:fn(rOrd), v:vOrd, a:'#f04e23'},
+    {l:'Ticket prom.', t:fp(tTicket), r:fp(rTicket), v:vTicket, a:'#3d4f6b'},
+    {l:'Envíos', t:fn(tEnv), r:fn(rEnv), v:vEnv, a:'#f04e23'},
+    {l:'Aperturas', t:fn(tAper), r:fn(rAper), v:vAper, a:'#3d4f6b'},
+    {l:'Clicks', t:fn(tClicks), r:fn(rClicks), v:vClicks, a:'#f04e23'},
+  ];
+  document.getElementById('metricsGrid').innerHTML = cards.map(function(c) {
+    return '<div class="mcard" style="--card-accent:' + c.a + '"><div class="mlabel">' + c.l + '</div><div class="mtarget">Target: ' + c.t + '</div><div class="mreal">' + c.r + '</div><div class="mvar ' + varCls(c.v) + '">' + varStr(c.v) + '</div></div>';
+  }).join('');
+
+  renderTabla(dataRows);
+}
+
+function renderTabla(rows) {
+  document.getElementById('recordCount').textContent = rows.length + ' días';
+  if (rows.length === 0) {
+    document.getElementById('tablaBody').innerHTML = '<tr><td colspan="16"><div class="empty-state">Sin datos</div></td></tr>';
+    return;
+  }
+  var html = '';
+  rows.forEach(function(r) {
+    html += '<tr><td>' + (r[0]||'-') + '</td>';
+    html += '<td>' + fp(pn(r[2])) + '</td><td>' + fp(pn(r[3])) + '</td><td class="' + vcls(r[4]) + '">' + fpct(r[4]) + '</td>';
+    html += '<td>' + fn(pn(r[5])) + '</td><td>' + fn(pn(r[6])) + '</td>';
+    html += '<td>' + fn(pn(r[7])) + '</td><td>' + fn(pn(r[8])) + '</td>';
+    html += '<td>' + fn(pn(r[16])) + '</td><td>' + fn(pn(r[17])) + '</td>';
+    html += '<td>' + fn(pn(r[18])) + '</td><td>' + fn(pn(r[19])) + '</td>';
+    html += '<td>' + fpct(r[20]) + '</td><td>' + fpct(r[21]) + '</td>';
+    html += '<td>' + fn(pn(r[22])) + '</td><td>' + fn(pn(r[23])) + '</td></tr>';
+  });
+  document.getElementById('tablaBody').innerHTML = html;
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.atab').forEach(function(x,i) { x.classList.toggle('active', (i===0&&t==='marcas')||(i===1&&t==='usuarios')); });
+  document.getElementById('tabMarcas').classList.toggle('active', t==='marcas');
+  document.getElementById('tabUsuarios').classList.toggle('active', t==='usuarios');
+}
+function loadAdminData() {
+  sb.from('marcas').select('*').order('nombre').then(function(r) {
+    var marcas = r.data || [];
+    document.getElementById('adminMarcasTable').innerHTML = marcas.map(function(m) {
+      return '<tr><td class="lc">' + m.nombre + '</td><td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">' + (m.sheet_id||'-') + '</td><td><span class="role-badge ' + (m.activa?'role-administrador':'role-lector') + '">' + (m.activa?'Activa':'Inactiva') + '</span></td><td><button class="bdanger" data-mid="' + m.id + '" data-act="' + m.activa + '" onclick="toggleMarca(this.dataset.mid,this.dataset.act===\'true\')">' + (m.activa?'Desactivar':'Activar') + '</button></td></tr>';
+    }).join('');
+    document.getElementById('newUserMarca').innerHTML = marcas.filter(function(m) { return m.activa; }).map(function(m) { return '<option value="' + m.id + '">' + m.nombre + '</option>'; }).join('');
+  });
+  sb.from('usuario_marcas').select('*,marcas(nombre)').then(function(r) {
+    var asig = r.data || [];
+    document.getElementById('adminUsuariosTable').innerHTML = asig.map(function(a) {
+      return '<tr><td class="lc">' + a.user_id.slice(0,8) + '...</td><td class="lc">' + (a.marcas&&a.marcas.nombre||'-') + '</td><td><span class="role-badge role-' + a.rol + '">' + a.rol + '</span></td><td><button class="bdanger" data-aid="' + a.id + '" onclick="removeAcceso(this.dataset.aid)">Quitar</button></td></tr>';
+    }).join('');
+  });
+}
+function agregarMarca() {
+  var nombre = document.getElementById('newMarcaNombre').value.trim();
+  var sheet_id = document.getElementById('newMarcaSheetId').value.trim();
+  var msg = document.getElementById('marcasMsg');
+  if (!nombre || !sheet_id) { msg.style.color='var(--red)'; msg.textContent='Completá todos los campos'; return; }
+  sb.from('marcas').insert({nombre:nombre, sheet_id:sheet_id, activa:true}).then(function(r) {
+    if (r.error) { msg.style.color='var(--red)'; msg.textContent='Error: '+r.error.message; return; }
+    msg.style.color='#22c55e'; msg.textContent='✓ Marca agregada';
+    document.getElementById('newMarcaNombre').value='';
+    document.getElementById('newMarcaSheetId').value='';
+    loadAdminData();
+    setTimeout(function() { msg.textContent=''; }, 3000);
+  });
+}
+function toggleMarca(id, activa) {
+  sb.from('marcas').update({activa:!activa}).eq('id',id).then(function() { loadAdminData(); });
+}
+function invitarUsuario() {
+  var email = document.getElementById('newUserEmail').value.trim();
+  var pass = document.getElementById('newUserPass').value;
+  var marca_id = document.getElementById('newUserMarca').value;
+  var rol = document.getElementById('newUserRol').value;
+  var msg = document.getElementById('usuariosMsg');
+  if (!email||!pass||!marca_id) { msg.style.color='var(--red)'; msg.textContent='Completá todos los campos'; return; }
+  sb.auth.signUp({email:email, password:pass}).then(function(r) {
+    if (r.error) { msg.style.color='var(--red)'; msg.textContent='Error: '+r.error.message; return; }
+    var user_id = r.data.user && r.data.user.id;
+    if (!user_id) { msg.style.color='var(--red)'; msg.textContent='Error al crear usuario'; return; }
+    sb.from('usuario_marcas').insert({user_id:user_id, marca_id:marca_id, rol:rol}).then(function(r2) {
+      if (r2.error) { msg.style.color='var(--red)'; msg.textContent='Usuario creado pero error al asignar: '+r2.error.message; return; }
+      msg.style.color='#22c55e'; msg.textContent='✓ Usuario creado y asignado';
+      loadAdminData();
+      setTimeout(function() { msg.textContent=''; }, 3000);
+    });
+  });
+}
+function removeAcceso(id) {
+  sb.from('usuario_marcas').delete().eq('id',id).then(function() { loadAdminData(); });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
+sb.auth.onAuthStateChange(function(event, session) {
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
+    initApp(session.user);
+  }
+});
+</script>
+</body>
+</html>
