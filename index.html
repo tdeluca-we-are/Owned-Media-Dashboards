@@ -918,6 +918,20 @@ function agregarMarca() {
 function toggleMarca(id, activa) {
   sb.from('marcas').update({activa:!activa}).eq('id',id).then(function() { loadAdminData(); });
 }
+function asignarAcceso(user_id, email, nombre, marca_id, rol, msg) {
+  sb.from('usuarios').upsert({id: user_id, email: email}, {onConflict: 'id'}).then(function() {
+    sb.from('usuario_marcas').insert({user_id: user_id, marca_id: marca_id, rol: rol, nombre: nombre}).then(function(r2) {
+      if (r2.error) { msg.style.color='var(--red)'; msg.textContent='Error al asignar acceso: '+r2.error.message; return; }
+      msg.style.color='#22c55e'; msg.textContent='✓ Usuario creado y asignado';
+      document.getElementById('newUserNombre').value='';
+      document.getElementById('newUserEmail').value='';
+      document.getElementById('newUserPass').value='';
+      loadAdminData();
+      setTimeout(function() { msg.textContent=''; }, 3000);
+    });
+  });
+}
+
 function invitarUsuario() {
   var nombre = document.getElementById('newUserNombre').value.trim();
   var email = document.getElementById('newUserEmail').value.trim();
@@ -926,15 +940,21 @@ function invitarUsuario() {
   var rol = document.getElementById('newUserRol').value;
   var msg = document.getElementById('usuariosMsg');
   if (!nombre||!email||!pass||!marca_id) { msg.style.color='var(--red)'; msg.textContent='Completá todos los campos'; return; }
-  sb.auth.signUp({email:email, password:pass}).then(function(r) {
-    if (r.error) { msg.style.color='var(--red)'; msg.textContent='Error: '+r.error.message; return; }
-    var user_id = r.data.user && r.data.user.id;
-    if (!user_id) { msg.style.color='var(--red)'; msg.textContent='Error al crear usuario'; return; }
-    sb.from('usuario_marcas').insert({user_id:user_id, marca_id:marca_id, rol:rol, nombre:nombre}).then(function(r2) {
-      if (r2.error) { msg.style.color='var(--red)'; msg.textContent='Usuario creado pero error al asignar: '+r2.error.message; return; }
-      msg.style.color='#22c55e'; msg.textContent='✓ Usuario creado y asignado';
-      loadAdminData();
-      setTimeout(function() { msg.textContent=''; }, 3000);
+  msg.style.color='var(--text2)'; msg.textContent='Creando usuario...';
+  sb.auth.signUp({email: email, password: pass}).then(function(r) {
+    if (!r.error) {
+      var user_id = r.data.user && r.data.user.id;
+      if (!user_id) { msg.style.color='var(--red)'; msg.textContent='Error al crear usuario'; return; }
+      asignarAcceso(user_id, email, nombre, marca_id, rol, msg);
+      return;
+    }
+    // Signup falló — buscar en tabla usuarios por si ya existe
+    sb.from('usuarios').select('id').eq('email', email).single().then(function(ru) {
+      if (!ru.error && ru.data) {
+        asignarAcceso(ru.data.id, email, nombre, marca_id, rol, msg);
+      } else {
+        msg.style.color='var(--red)'; msg.textContent='Error: ' + (r.error.message || 'No se pudo crear el usuario');
+      }
     });
   });
 }
