@@ -257,6 +257,7 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
       <button class="ctab" data-canal="push">🔔 Noti Push</button>
       <button class="ctab" data-canal="wpp">💬 WhatsApp</button>
       <button class="ctab" data-canal="onsite">🖥️ On Site</button>
+      <button class="ctab" data-canal="acumulado" style="margin-left:8px;border-color:rgba(240,78,35,0.4)">📊 Acumulado</button>
     </div>
 
     <div class="metrics-grid" id="metricsGrid"></div>
@@ -371,6 +372,7 @@ const sb = supabase.createClient(SB_URL, SB_ANON);
 
 let currentUser = null, currentRol = null, allMarcas = [], currentMarca = null;
 let allSheets = [], currentSheet = null, allDataRows = [], filteredRows = [];
+var emailCardsHTML = '', currentCanal = 'email';
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function pn(v) {
@@ -718,7 +720,7 @@ function renderAll(totalsRow, dataRows) {
     {l:'Clicks', t:fn(tClicks), r:fn(rClicks), v:vClicks, a:'#f04e23'},
     {l:'CTOR', t:tCTOR, r:rCTORraw, v:vCTOR, a:'#3d4f6b'},
   ];
-  var emailCardsHTML = emailCards.map(function(c) {
+  emailCardsHTML = emailCards.map(function(c) {
     return '<div class="mcard" style="--card-accent:' + c.a + '">' +
       '<div class="mlabel">' + c.l + '</div>' +
       '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">' + c.t + '</span>' +
@@ -727,31 +729,9 @@ function renderAll(totalsRow, dataRows) {
     '</div>';
   }).join('');
 
-  var proxHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja correspondiente en el Sheet</span></div>';
-
-  // Tab click handler
-  currentCanal = 'email';
-  function renderCanalTab(canal) {
-    currentCanal = canal;
-    document.querySelectorAll('.ctab').forEach(function(b) {
-      b.classList.toggle('active', b.dataset.canal === canal);
-    });
-    if (canal === 'email') {
-      document.getElementById('metricsGrid').innerHTML = emailCardsHTML;
-      document.getElementById('metricsGrid').style.display = '';
-      var ts = document.getElementById('tableSection');
-      if (ts) ts.style.display = '';
-    } else {
-      document.getElementById('metricsGrid').innerHTML = proxHTML;
-      document.getElementById('metricsGrid').style.display = '';
-      var ts2 = document.getElementById('tableSection');
-      if (ts2) ts2.style.display = 'none';
-    }
-  }
-
   // Init tabs
   document.querySelectorAll('.ctab').forEach(function(btn) {
-    btn.addEventListener('click', function() { renderCanalTab(this.dataset.canal); });
+    btn.onclick = function() { renderCanalTab(this.dataset.canal); };
   });
   renderCanalTab('email');
 
@@ -770,6 +750,95 @@ function renderAll(totalsRow, dataRows) {
 
 
   renderTabla(dataRows);
+}
+
+function renderCanalTab(canal) {
+  currentCanal = canal;
+  var proxHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja correspondiente en el Sheet</span></div>';
+  document.querySelectorAll('.ctab').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.canal === canal);
+  });
+  var ts = document.getElementById('tableSection');
+  if (canal === 'email') {
+    document.getElementById('metricsGrid').innerHTML = emailCardsHTML;
+    document.getElementById('metricsGrid').style.display = '';
+    if (ts) ts.style.display = '';
+    renderTabla(filteredRows);
+  } else if (canal === 'acumulado') {
+    document.getElementById('metricsGrid').innerHTML = '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
+    if (ts) ts.style.display = '';
+    loadAcumuladoData();
+  } else {
+    document.getElementById('metricsGrid').innerHTML = proxHTML;
+    document.getElementById('metricsGrid').style.display = '';
+    if (ts) ts.style.display = 'none';
+  }
+}
+
+function loadAcumuladoData() {
+  if (!allSheets.length || !currentMarca) return;
+  var promises = allSheets.map(function(sheet) {
+    var sn = encodeURIComponent(sheet.title);
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + currentMarca.sheet_id + '/values/' + sn + '!A1:Z500?key=' + GKEY;
+    return fetch(url).then(function(r) { return r.json(); }).then(function(d) { return d.values || []; }).catch(function() { return []; });
+  });
+  Promise.all(promises).then(function(allRows) {
+    var sumN = {};
+    var numCols = [1,2,4,5,6,7,10,11,12,13,14,15,18,19];
+    var rateCols = [8,9,16,17,20,21];
+    allRows.forEach(function(rows) {
+      var t = rows[2] || [];
+      numCols.forEach(function(i) {
+        var v = pn(t[i]);
+        if (v !== null) sumN[i] = (sumN[i] || 0) + v;
+      });
+    });
+    // Recalcular tasas desde sumas
+    var rCR    = sumN[7]&&sumN[5]   ? ((sumN[7]/sumN[5])*100).toFixed(1)+'%'   : '-';
+    var tCR    = sumN[6]&&sumN[4]   ? ((sumN[6]/sumN[4])*100).toFixed(1)+'%'   : '-';
+    var rOR    = sumN[15]&&sumN[13] ? ((sumN[15]/sumN[13])*100).toFixed(1)+'%' : '-';
+    var tOR    = sumN[14]&&sumN[12] ? ((sumN[14]/sumN[12])*100).toFixed(1)+'%' : '-';
+    var rCTOR  = sumN[19]&&sumN[15] ? ((sumN[19]/sumN[15])*100).toFixed(1)+'%' : '-';
+    var tCTOR  = sumN[18]&&sumN[14] ? ((sumN[18]/sumN[14])*100).toFixed(1)+'%' : '-';
+    var rTicket = sumN[7] ? sumN[11]/sumN[7] : null;
+    var tTicket = sumN[6] ? sumN[10]/sumN[6] : null;
+    function pN2(s){ return (!s||s==='-')?null:parseFloat(String(s).replace('%',''))||null; }
+    var cards = [
+      {l:'Facturación', t:fp(sumN[1]||null),  r:fp(sumN[2]||null),  v:calcVar(sumN[2],sumN[1]),   a:'#f04e23'},
+      {l:'Sesiones',    t:fn(sumN[4]||null),  r:fn(sumN[5]||null),  v:calcVar(sumN[5],sumN[4]),   a:'#3d4f6b'},
+      {l:'Órdenes',     t:fn(sumN[6]||null),  r:fn(sumN[7]||null),  v:calcVar(sumN[7],sumN[6]),   a:'#f04e23'},
+      {l:'CR',          t:tCR,  r:rCR,  v:calcVar(pN2(rCR),pN2(tCR)),   a:'#3d4f6b'},
+      {l:'Ticket prom.',t:fp(tTicket), r:fp(rTicket), v:calcVar(rTicket,tTicket), a:'#f04e23'},
+      {l:'Envíos',      t:fn(sumN[12]||null), r:fn(sumN[13]||null), v:calcVar(sumN[13],sumN[12]), a:'#3d4f6b'},
+      {l:'Aperturas',   t:fn(sumN[14]||null), r:fn(sumN[15]||null), v:calcVar(sumN[15],sumN[14]), a:'#f04e23'},
+      {l:'Open Rate',   t:tOR,  r:rOR,  v:calcVar(pN2(rOR),pN2(tOR)),   a:'#3d4f6b'},
+      {l:'Clicks',      t:fn(sumN[18]||null), r:fn(sumN[19]||null), v:calcVar(sumN[19],sumN[18]), a:'#f04e23'},
+      {l:'CTOR',        t:tCTOR,r:rCTOR,v:calcVar(pN2(rCTOR),pN2(tCTOR)),a:'#3d4f6b'},
+    ];
+    document.getElementById('metricsGrid').innerHTML = cards.map(function(c) {
+      return '<div class="mcard" style="--card-accent:'+c.a+'">' +
+        '<div class="mlabel">'+c.l+'</div>' +
+        '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">'+c.t+'</span>' +
+        '<span class="mreal-badge">REAL</span><span class="mreal">'+c.r+'</span>' +
+        '<div class="mvar '+varCls(c.v)+'">'+(c.v!==null?varStr(c.v):'—')+'</div></div>';
+    }).join('');
+    // Combinar filas diarias por fecha
+    var dateMap = {}, dateOrder = [];
+    allRows.forEach(function(rows) {
+      rows.slice(3).filter(function(r) {
+        var ca = String(r&&r[0]||'').trim().toLowerCase();
+        return ca && ca !== 'fecha' && ca !== 'total' && ca !== 'acumulado';
+      }).forEach(function(r) {
+        var fecha = String(r[0]||'').trim();
+        if (!fecha) return;
+        if (!dateMap[fecha]) { dateMap[fecha] = r.slice(0,22).map(function(v){ return v||''; }); dateOrder.push(fecha); }
+        else { numCols.forEach(function(i) { var ex=pn(dateMap[fecha][i]),nv=pn(r[i]); if(nv!==null) dateMap[fecha][i]=String((ex||0)+nv); }); }
+      });
+    });
+    var combined = dateOrder.map(function(f){ return dateMap[f]; });
+    combined.sort(function(a,b){ var da=parseFecha(a[0]),db=parseFecha(b[0]); return da&&db?da-db:0; });
+    renderTabla(combined);
+  });
 }
 
 function showAdmin() {
