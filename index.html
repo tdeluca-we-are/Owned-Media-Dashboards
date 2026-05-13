@@ -942,7 +942,8 @@ function agregarMarca() {
   var sheet_id = document.getElementById('newMarcaSheetId').value.trim();
   var msg = document.getElementById('marcasMsg');
   if (!nombre || !sheet_id) { msg.style.color='var(--red)'; msg.textContent='Completá todos los campos'; return; }
-  sb.from('marcas').insert({nombre:nombre, sheet_id:sheet_id, activa:true}).then(function(r) {
+  var sheet_url = 'https://docs.google.com/spreadsheets/d/' + sheet_id;
+  sb.from('marcas').insert({nombre:nombre, sheet_id:sheet_id, sheet_url:sheet_url, activa:true}).then(function(r) {
     if (r.error) { msg.style.color='var(--red)'; msg.textContent='Error: '+r.error.message; return; }
     msg.style.color='#22c55e'; msg.textContent='✓ Marca agregada';
     document.getElementById('newMarcaNombre').value='';
