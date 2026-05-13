@@ -175,24 +175,24 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
 .btn-quick{font-family:var(--font);font-size:11px;font-weight:600;padding:5px 10px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-quick:hover{border-color:var(--orange);color:var(--text)}
 .btn-quick.active{background:rgba(240,78,35,0.15);color:var(--orange);border-color:var(--orange)}
-.conclusiones-wrap{margin-top:24px;margin-bottom:24px}
+.conclusiones-wrap{margin-top:24px;margin-bottom:24px;width:100%}
 .conclusiones-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.conclusiones-title{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
-.conc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.conclusiones-title{font-size:13px;font-weight:600;padding:8px 18px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);display:flex;align-items:center;gap:6px}
+.conc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
 .conc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;border-top:2px solid var(--orange)}
-.conc-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.conc-header-left{}
-.conc-semana-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);margin-bottom:5px}
-.conc-fechas{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.01em;line-height:1.2}
-.conc-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.conc-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.conc-header-left{flex:1;min-width:0}
+.conc-semana-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);margin-bottom:6px}
+.conc-fechas{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-0.02em;line-height:1.2}
+.conc-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;padding-top:2px}
 .conc-meta-autor{font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:5px}
-.conc-meta-autor::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block;flex-shrink:0}
+.conc-meta-autor::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
 .conc-meta-fecha{font-size:10px;color:var(--text3);font-family:var(--mono);text-align:right}
 .conc-meta-empty{font-size:10px;color:var(--text3);font-style:italic}
-.conc-textarea{width:100%;min-height:120px;background:transparent;border:none;padding:14px 18px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6;flex:1}
+.conc-textarea{width:100%;min-height:120px;background:transparent;border:none;padding:14px 20px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6;flex:1}
 .conc-textarea:focus{background:rgba(255,255,255,0.02)}
 .conc-textarea[readonly]{color:var(--text2);cursor:default}
-.conc-footer{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border)}
+.conc-footer{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border)}
 .btn-conc-save{font-family:var(--font);font-size:11px;font-weight:600;padding:6px 14px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
 .btn-conc-save:hover{opacity:.85}
 .conc-saved{font-size:11px;font-weight:600}
@@ -326,7 +326,7 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
     <!-- ══ CONCLUSIONES ══ -->
     <div class="conclusiones-wrap" id="conclusionesWrap">
       <div class="conclusiones-bar">
-        <span class="conclusiones-title">📝 Conclusiones semanales</span>
+        <div class="conclusiones-title">📝 Conclusiones semanales</div>
         <button class="btn-sm" id="btnToggleConc" onclick="toggleConclusiones()">Ocultar</button>
       </div>
       <div id="conclusionesSection"></div>
