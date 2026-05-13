@@ -171,6 +171,10 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
 .error-state{text-align:center;padding:40px;color:var(--red);font-size:13px}
 .empty-state{text-align:center;padding:30px;color:var(--text3);font-size:13px}
 .hidden{display:none!important}
+.quick-filters{display:flex;gap:4px;margin-left:4px}
+.btn-quick{font-family:var(--font);font-size:11px;font-weight:600;padding:5px 10px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-quick:hover{border-color:var(--orange);color:var(--text)}
+.btn-quick.active{background:rgba(240,78,35,0.15);color:var(--orange);border-color:var(--orange)}
 @media(max-width:700px){.canales-grid{grid-template-columns:1fr}.top-bar,.main{padding-left:16px;padding-right:16px}}
 
 .admin-view{display:none;flex-direction:column;min-height:100vh;background:var(--bg)}
@@ -238,6 +242,12 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
         </div>
         <button class="btn-sm btn-orange" onclick="applyFilter()">Filtrar</button>
         <button class="btn-sm" onclick="clearFilter()">✕ Limpiar</button>
+        <div class="quick-filters">
+          <button class="btn-quick" id="qf-hoy" onclick="setQuickFilter('hoy')">Hoy</button>
+          <button class="btn-quick" id="qf-ayer" onclick="setQuickFilter('ayer')">Ayer</button>
+          <button class="btn-quick" id="qf-7d" onclick="setQuickFilter('7d')">7 días</button>
+          <button class="btn-quick" id="qf-30d" onclick="setQuickFilter('30d')">30 días</button>
+        </div>
       </div>
       <button class="btn-sm" onclick="loadSheetData()">↻ Actualizar</button>
     </div>
@@ -610,9 +620,35 @@ function applyFilter() {
   renderTabla(filteredRows);
 }
 
+function setQuickFilter(range) {
+  var today = new Date();
+  var desde, hasta;
+  hasta = today.toISOString().split('T')[0];
+  if (range === 'hoy') {
+    desde = hasta;
+  } else if (range === 'ayer') {
+    var ayer = new Date(today); ayer.setDate(ayer.getDate() - 1);
+    desde = ayer.toISOString().split('T')[0];
+    hasta = desde;
+  } else if (range === '7d') {
+    var d7 = new Date(today); d7.setDate(d7.getDate() - 6);
+    desde = d7.toISOString().split('T')[0];
+  } else if (range === '30d') {
+    var d30 = new Date(today); d30.setDate(d30.getDate() - 29);
+    desde = d30.toISOString().split('T')[0];
+  }
+  document.getElementById('filtroDesde').value = desde;
+  document.getElementById('filtroHasta').value = hasta;
+  // Marcar botón activo
+  document.querySelectorAll('.btn-quick').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('qf-' + range).classList.add('active');
+  applyFilter();
+}
+
 function clearFilter() {
   document.getElementById('filtroDesde').value = '';
   document.getElementById('filtroHasta').value = '';
+  document.querySelectorAll('.btn-quick').forEach(function(b) { b.classList.remove('active'); });
   filteredRows = allDataRows;
   renderCanalTab(currentCanal || 'email');
   renderTabla(filteredRows);
