@@ -1230,9 +1230,7 @@ function saveConclusion(inicio, fin) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT' || (e.key === 'Enter' && (e.target.id === 'authEmail' || e.target.id === 'authPass'))) {
-    if (document.getElementById('authScreen').style.display !== 'none') login();
-  }
+  if (e.key === 'Enter' && e.target.closest && e.target.closest('#authScreen')) login();
 });
 sb.auth.onAuthStateChange(function(event, session) {
   if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
