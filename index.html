@@ -179,20 +179,28 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
 .conclusiones-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .conclusiones-title{font-size:13px;font-weight:600;padding:8px 18px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);display:flex;align-items:center;gap:6px}
 .conc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
-.conc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;border-top:2px solid var(--orange)}
-.conc-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.conc-header-left{flex:1;min-width:0}
-.conc-semana-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);margin-bottom:6px}
-.conc-fechas{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-0.02em;line-height:1.2}
-.conc-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;padding-top:2px}
-.conc-meta-autor{font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:5px}
-.conc-meta-autor::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
-.conc-meta-fecha{font-size:10px;color:var(--text3);font-family:var(--mono);text-align:right}
+.conc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;border-top:2px solid var(--orange);resize:vertical;min-height:280px}
+.conc-header{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.conc-header-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.conc-semana-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);white-space:nowrap}
+.conc-fechas{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.01em;white-space:nowrap}
+.conc-meta-block{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.conc-meta-autor{font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.conc-meta-autor::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--orange);flex-shrink:0}
+.conc-meta-fecha{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.conc-meta-sep{color:var(--text3);font-size:10px}
 .conc-meta-empty{font-size:10px;color:var(--text3);font-style:italic}
-.conc-textarea{width:100%;min-height:140px;max-height:400px;background:transparent;border:none;padding:14px 20px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6;flex:1;overflow-y:auto}
-.conc-textarea:focus{background:rgba(255,255,255,0.02)}
-.conc-textarea[readonly]{color:var(--text2);cursor:default}
-.conc-footer{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border)}
+.conc-toolbar{display:flex;align-items:center;gap:3px;padding:6px 12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);flex-wrap:wrap}
+.conc-tool{font-family:var(--font);font-size:12px;font-weight:700;padding:3px 8px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:4px;cursor:pointer;line-height:1.4;transition:all .15s}
+.conc-tool:hover{background:var(--bg3);color:var(--text)}
+.conc-tool-sep{width:1px;height:14px;background:var(--border2);margin:0 3px}
+.conc-size{font-family:var(--font);font-size:11px;padding:3px 6px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:4px;cursor:pointer;outline:none}
+.conc-color{width:24px;height:24px;padding:2px;border:1px solid var(--border2);border-radius:4px;cursor:pointer;background:var(--bg3)}
+.conc-editor{flex:1;min-height:160px;padding:14px 18px;color:var(--text);font-family:var(--font);font-size:13px;line-height:1.7;outline:none;overflow-y:auto;word-break:break-word}
+.conc-editor:focus{background:rgba(255,255,255,0.015)}
+.conc-editor[contenteditable="false"]{color:var(--text2);cursor:default}
+.conc-editor[contenteditable="true"]:empty::before{content:attr(data-placeholder);color:var(--text3);pointer-events:none}
+.conc-footer{display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--border)}
 .btn-conc-save{font-family:var(--font);font-size:11px;font-weight:600;padding:6px 14px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
 .btn-conc-save:hover{opacity:.85}
 .conc-saved{font-size:11px;font-weight:600}
@@ -1185,19 +1193,33 @@ function renderConclusiones() {
       weeks.forEach(function(w) {
         var ex = byInicio[w.inicioStr];
         var texto = ex ? (ex.texto || '') : '';
-        var sid = 'saved-' + w.inicioStr.replace(/-/g,'');
+        var eid = 'ed-' + w.inicioStr.replace(/-/g,'');
+        var sid = 'sv-' + w.inicioStr.replace(/-/g,'');
         var metaHTML = ex && ex.updated_at
-          ? '<span class="conc-meta-autor">' + (ex.autor_nombre || '—') + '</span><span class="conc-meta-fecha">' + new Date(ex.updated_at).toLocaleDateString('es-AR') + '</span>'
+          ? '<span class="conc-meta-autor">' + (ex.autor_nombre || '—') + '</span><span class="conc-meta-sep">·</span><span class="conc-meta-fecha">' + new Date(ex.updated_at).toLocaleDateString('es-AR') + '</span>'
           : '<span class="conc-meta-empty">Sin ediciones</span>';
         html += '<div class="conc-card">';
+        // Header
         html += '<div class="conc-header">';
-        html += '<div class="conc-header-left">';
-        html += '<div class="conc-semana-label">Semana ' + w.num + '</div>';
-        html += '<div class="conc-fechas">' + fmtWeekDate(w.inicio) + ' &rarr; ' + fmtWeekDate(w.fin) + ' ' + w.fin.getFullYear() + '</div>';
-        html += '</div>';
+        html += '<div class="conc-header-left"><span class="conc-semana-label">Semana ' + w.num + '</span><span class="conc-fechas">' + fmtWeekDate(w.inicio) + ' &rarr; ' + fmtWeekDate(w.fin) + ' ' + w.fin.getFullYear() + '</span></div>';
         html += '<div class="conc-meta-block">' + metaHTML + '</div>';
         html += '</div>';
-        html += '<textarea class="conc-textarea" id="ta-' + w.inicioStr.replace(/-/g,'') + '" data-inicio="' + w.inicioStr + '" ' + (canEdit ? '' : 'readonly') + ' placeholder="' + (canEdit ? 'Escribí tus conclusiones de la semana...' : 'Solo lectura') + '">' + texto.replace(/</g,'&lt;') + '</textarea>';
+        // Toolbar (solo si puede editar)
+        if (canEdit) {
+          html += '<div class="conc-toolbar">' +
+            '<button class="conc-tool" onmousedown="event.preventDefault();execFmt(\'bold\')" title="Negrita"><b>B</b></button>' +
+            '<button class="conc-tool" onmousedown="event.preventDefault();execFmt(\'italic\')" title="Cursiva"><i>I</i></button>' +
+            '<button class="conc-tool" onmousedown="event.preventDefault();execFmt(\'underline\')" title="Subrayado"><u>U</u></button>' +
+            '<div class="conc-tool-sep"></div>' +
+            '<select class="conc-size" onchange="execFmt(\'fontSize\',this.value);this.blur()" title="Tamaño">' +
+            '<option value="2">Pequeño</option><option value="3" selected>Normal</option><option value="5">Grande</option><option value="6">Muy grande</option>' +
+            '</select>' +
+            '<div class="conc-tool-sep"></div>' +
+            '<input type="color" class="conc-color" value="#f0f0f0" onchange="execFmt(\'foreColor\',this.value)" title="Color de texto">' +
+            '</div>';
+        }
+        // Editor
+        html += '<div class="conc-editor" id="' + eid + '" contenteditable="' + (canEdit ? 'true' : 'false') + '" data-placeholder="' + (canEdit ? 'Escribí tus conclusiones...' : 'Solo lectura') + '">' + texto + '</div>';
         if (canEdit) {
           html += '<div class="conc-footer"><button class="btn-conc-save" onclick="saveConclusion(\'' + w.inicioStr + '\',\'' + w.finStr + '\')">Guardar</button><span class="conc-saved" id="' + sid + '"></span></div>';
         }
@@ -1208,11 +1230,15 @@ function renderConclusiones() {
     });
 }
 
+function execFmt(cmd, val) {
+  document.execCommand(cmd, false, val || null);
+}
+
 function saveConclusion(inicio, fin) {
-  var tid = 'ta-' + inicio.replace(/-/g,'');
-  var ta = document.getElementById(tid);
-  var texto = ta ? ta.value : '';
-  var sid = 'saved-' + inicio.replace(/-/g,'');
+  var eid = 'ed-' + inicio.replace(/-/g,'');
+  var ed = document.getElementById(eid);
+  var texto = ed ? ed.innerHTML : '';
+  var sid = 'sv-' + inicio.replace(/-/g,'');
   var savedEl = document.getElementById(sid);
   var autor = document.getElementById('userEmail').textContent;
   sb.from('conclusiones').upsert({
