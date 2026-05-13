@@ -175,6 +175,22 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
 .btn-quick{font-family:var(--font);font-size:11px;font-weight:600;padding:5px 10px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-quick:hover{border-color:var(--orange);color:var(--text)}
 .btn-quick.active{background:rgba(240,78,35,0.15);color:var(--orange);border-color:var(--orange)}
+.conclusiones-wrap{margin-top:24px;margin-bottom:24px}
+.conclusiones-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.conclusiones-title{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
+.conc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.conc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column}
+.conc-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.conc-week{font-size:12px;font-weight:700;color:var(--text)}
+.conc-week span{display:block;font-size:11px;color:var(--text2);font-weight:400;margin-top:2px}
+.conc-meta{font-size:10px;color:var(--text3);white-space:nowrap;padding-top:2px}
+.conc-textarea{width:100%;min-height:110px;background:transparent;border:none;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6;flex:1}
+.conc-textarea:focus{background:rgba(255,255,255,0.02)}
+.conc-textarea[readonly]{color:var(--text2);cursor:default}
+.conc-footer{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--border)}
+.btn-conc-save{font-family:var(--font);font-size:11px;font-weight:600;padding:5px 12px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
+.btn-conc-save:hover{opacity:.85}
+.conc-saved{font-size:11px;font-weight:600}
 @media(max-width:700px){.canales-grid{grid-template-columns:1fr}.top-bar,.main{padding-left:16px;padding-right:16px}}
 
 .admin-view{display:none;flex-direction:column;min-height:100vh;background:var(--bg)}
@@ -299,6 +315,15 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
           <tbody id="tablaBody"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- ══ CONCLUSIONES ══ -->
+    <div class="conclusiones-wrap" id="conclusionesWrap">
+      <div class="conclusiones-bar">
+        <span class="conclusiones-title">📝 Conclusiones semanales</span>
+        <button class="btn-sm" id="btnToggleConc" onclick="toggleConclusiones()">Ocultar</button>
+      </div>
+      <div id="conclusionesSection"></div>
     </div>
 
   </div><!-- end .main -->
@@ -620,6 +645,7 @@ function applyFilter() {
     '</div>';
   }).join('');
   renderTabla(filteredRows);
+  renderConclusiones();
 }
 
 function setQuickFilter(range) {
@@ -654,6 +680,7 @@ function clearFilter() {
   filteredRows = allDataRows;
   renderCanalTab(currentCanal || 'email');
   renderTabla(filteredRows);
+  renderConclusiones();
 }
 
 function renderAll(totalsRow, dataRows) {
@@ -750,6 +777,7 @@ function renderAll(totalsRow, dataRows) {
 
 
   renderTabla(dataRows);
+  renderConclusiones();
 }
 
 function renderCanalTab(canal) {
@@ -1086,6 +1114,107 @@ function saveNombre(id) {
 
 function removeAcceso(id) {
   sb.from('usuario_marcas').delete().eq('id',id).then(function() { loadAdminData(); });
+}
+
+// ── CONCLUSIONES ──────────────────────────────────────────────────────────────
+var conclusionesVisible = true;
+
+function toggleConclusiones() {
+  conclusionesVisible = !conclusionesVisible;
+  document.getElementById('conclusionesSection').style.display = conclusionesVisible ? '' : 'none';
+  document.getElementById('btnToggleConc').textContent = conclusionesVisible ? 'Ocultar' : 'Ver conclusiones';
+}
+
+function getWeeksInRange(desdeStr, hastaStr) {
+  var now = new Date();
+  var desde = desdeStr
+    ? new Date(desdeStr + 'T00:00:00')
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+  var hasta = hastaStr
+    ? new Date(hastaStr + 'T00:00:00')
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var weeks = [], weekNum = 1, current = new Date(desde);
+  while (current <= hasta) {
+    var weekStart = new Date(current);
+    var dow = current.getDay(); // 0=dom
+    var daysUntilSun = dow === 0 ? 0 : 7 - dow;
+    var weekEnd = new Date(current);
+    weekEnd.setDate(weekEnd.getDate() + daysUntilSun);
+    if (weekEnd > hasta) weekEnd = new Date(hasta);
+    weeks.push({
+      num: weekNum++,
+      inicio: weekStart,
+      fin: weekEnd,
+      inicioStr: weekStart.toISOString().split('T')[0],
+      finStr: weekEnd.toISOString().split('T')[0]
+    });
+    current = new Date(weekEnd);
+    current.setDate(current.getDate() + 1);
+  }
+  return weeks;
+}
+
+function fmtWeekDate(d) {
+  var dias  = ['dom','lun','mar','mié','jue','vie','sáb'];
+  var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return dias[d.getDay()] + ' ' + d.getDate() + ' ' + meses[d.getMonth()];
+}
+
+function renderConclusiones() {
+  if (!currentMarca) return;
+  var sec = document.getElementById('conclusionesSection');
+  var desdeVal = document.getElementById('filtroDesde').value;
+  var hastaVal = document.getElementById('filtroHasta').value;
+  var weeks = getWeeksInRange(desdeVal, hastaVal);
+  if (!weeks.length) { sec.innerHTML = '<div class="empty-state">Aplicá un filtro de fechas para ver las conclusiones.</div>'; return; }
+  var canEdit = currentRol === 'analista' || currentRol === 'administrador';
+  var inicios = weeks.map(function(w){ return w.inicioStr; });
+  sb.from('conclusiones').select('*').eq('marca_id', currentMarca.id).in('semana_inicio', inicios)
+    .then(function(r) {
+      var byInicio = {};
+      (r.data || []).forEach(function(c){ byInicio[c.semana_inicio] = c; });
+      var html = '<div class="conc-grid">';
+      weeks.forEach(function(w) {
+        var ex = byInicio[w.inicioStr];
+        var texto = ex ? (ex.texto || '') : '';
+        var meta = ex && ex.updated_at
+          ? 'Editado por ' + (ex.autor_nombre || '—') + ' · ' + new Date(ex.updated_at).toLocaleDateString('es-AR')
+          : 'Sin conclusiones aún';
+        var sid = 'saved-' + w.inicioStr.replace(/-/g,'');
+        html += '<div class="conc-card">';
+        html += '<div class="conc-header">';
+        html += '<div class="conc-week">Semana ' + w.num + '<span>' + fmtWeekDate(w.inicio) + ' → ' + fmtWeekDate(w.fin) + ' ' + w.fin.getFullYear() + '</span></div>';
+        html += '<span class="conc-meta">' + meta + '</span>';
+        html += '</div>';
+        html += '<textarea class="conc-textarea" id="ta-' + w.inicioStr.replace(/-/g,'') + '" data-inicio="' + w.inicioStr + '" ' + (canEdit ? '' : 'readonly') + ' placeholder="' + (canEdit ? 'Escribí tus conclusiones de la semana...' : 'Solo lectura') + '">' + texto.replace(/</g,'&lt;') + '</textarea>';
+        if (canEdit) {
+          html += '<div class="conc-footer"><button class="btn-conc-save" onclick="saveConclusion(\'' + w.inicioStr + '\',\'' + w.finStr + '\')">Guardar</button><span class="conc-saved" id="' + sid + '"></span></div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+      sec.innerHTML = html;
+    });
+}
+
+function saveConclusion(inicio, fin) {
+  var tid = 'ta-' + inicio.replace(/-/g,'');
+  var ta = document.getElementById(tid);
+  var texto = ta ? ta.value : '';
+  var sid = 'saved-' + inicio.replace(/-/g,'');
+  var savedEl = document.getElementById(sid);
+  var autor = document.getElementById('userEmail').textContent;
+  sb.from('conclusiones').upsert({
+    marca_id: currentMarca.id,
+    semana_inicio: inicio,
+    semana_fin: fin,
+    texto: texto,
+    autor_nombre: autor,
+    updated_at: new Date().toISOString()
+  }, {onConflict: 'marca_id,semana_inicio'}).then(function(r) {
+    if (r.error) { if(savedEl){savedEl.style.color='#ef4444';savedEl.textContent='Error';} return; }
+    if (savedEl) { savedEl.style.color='#22c55e'; savedEl.textContent='✓ Guardado'; setTimeout(function(){ savedEl.textContent=''; }, 2500); }
+  });
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
