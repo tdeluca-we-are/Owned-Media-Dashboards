@@ -178,19 +178,25 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
 .conclusiones-wrap{margin-top:24px;margin-bottom:24px}
 .conclusiones-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .conclusiones-title{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
-.conc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.conc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column}
-.conc-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.conc-week{font-size:12px;font-weight:700;color:var(--text)}
-.conc-week span{display:block;font-size:11px;color:var(--text2);font-weight:400;margin-top:2px}
-.conc-meta{font-size:10px;color:var(--text3);white-space:nowrap;padding-top:2px}
-.conc-textarea{width:100%;min-height:110px;background:transparent;border:none;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6;flex:1}
+.conc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.conc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;border-top:2px solid var(--orange)}
+.conc-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.conc-header-left{}
+.conc-semana-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);margin-bottom:5px}
+.conc-fechas{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.01em;line-height:1.2}
+.conc-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.conc-meta-autor{font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:5px}
+.conc-meta-autor::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block;flex-shrink:0}
+.conc-meta-fecha{font-size:10px;color:var(--text3);font-family:var(--mono);text-align:right}
+.conc-meta-empty{font-size:10px;color:var(--text3);font-style:italic}
+.conc-textarea{width:100%;min-height:120px;background:transparent;border:none;padding:14px 18px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6;flex:1}
 .conc-textarea:focus{background:rgba(255,255,255,0.02)}
 .conc-textarea[readonly]{color:var(--text2);cursor:default}
-.conc-footer{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--border)}
-.btn-conc-save{font-family:var(--font);font-size:11px;font-weight:600;padding:5px 12px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
+.conc-footer{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border)}
+.btn-conc-save{font-family:var(--font);font-size:11px;font-weight:600;padding:6px 14px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
 .btn-conc-save:hover{opacity:.85}
 .conc-saved{font-size:11px;font-weight:600}
+@media(max-width:900px){.conc-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.canales-grid{grid-template-columns:1fr}.top-bar,.main{padding-left:16px;padding-right:16px}}
 
 .admin-view{display:none;flex-direction:column;min-height:100vh;background:var(--bg)}
@@ -1127,20 +1133,23 @@ function toggleConclusiones() {
 
 function getWeeksInRange(desdeStr, hastaStr) {
   var now = new Date();
-  var desde = desdeStr
-    ? new Date(desdeStr + 'T00:00:00')
-    : new Date(now.getFullYear(), now.getMonth(), 1);
-  var hasta = hastaStr
-    ? new Date(hastaStr + 'T00:00:00')
-    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  var weeks = [], weekNum = 1, current = new Date(desde);
-  while (current <= hasta) {
+  var desde = desdeStr ? new Date(desdeStr + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+  var hasta = hastaStr ? new Date(hastaStr + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Encontrar el lunes de/antes de "desde"
+  var dow = desde.getDay(); // 0=dom, 1=lun...
+  var daysToMon = dow === 0 ? 6 : dow - 1;
+  var firstMon = new Date(desde);
+  firstMon.setDate(firstMon.getDate() - daysToMon);
+  // Encontrar el domingo de/después de "hasta"
+  var dowH = hasta.getDay();
+  var daysToSun = dowH === 0 ? 0 : 7 - dowH;
+  var lastSun = new Date(hasta);
+  lastSun.setDate(lastSun.getDate() + daysToSun);
+  var weeks = [], weekNum = 1, current = new Date(firstMon);
+  while (current <= lastSun) {
     var weekStart = new Date(current);
-    var dow = current.getDay(); // 0=dom
-    var daysUntilSun = dow === 0 ? 0 : 7 - dow;
     var weekEnd = new Date(current);
-    weekEnd.setDate(weekEnd.getDate() + daysUntilSun);
-    if (weekEnd > hasta) weekEnd = new Date(hasta);
+    weekEnd.setDate(weekEnd.getDate() + 6);
     weeks.push({
       num: weekNum++,
       inicio: weekStart,
@@ -1148,8 +1157,7 @@ function getWeeksInRange(desdeStr, hastaStr) {
       inicioStr: weekStart.toISOString().split('T')[0],
       finStr: weekEnd.toISOString().split('T')[0]
     });
-    current = new Date(weekEnd);
-    current.setDate(current.getDate() + 1);
+    current.setDate(current.getDate() + 7);
   }
   return weeks;
 }
@@ -1177,14 +1185,17 @@ function renderConclusiones() {
       weeks.forEach(function(w) {
         var ex = byInicio[w.inicioStr];
         var texto = ex ? (ex.texto || '') : '';
-        var meta = ex && ex.updated_at
-          ? 'Editado por ' + (ex.autor_nombre || '—') + ' · ' + new Date(ex.updated_at).toLocaleDateString('es-AR')
-          : 'Sin conclusiones aún';
         var sid = 'saved-' + w.inicioStr.replace(/-/g,'');
+        var metaHTML = ex && ex.updated_at
+          ? '<span class="conc-meta-autor">' + (ex.autor_nombre || '—') + '</span><span class="conc-meta-fecha">' + new Date(ex.updated_at).toLocaleDateString('es-AR') + '</span>'
+          : '<span class="conc-meta-empty">Sin ediciones</span>';
         html += '<div class="conc-card">';
         html += '<div class="conc-header">';
-        html += '<div class="conc-week">Semana ' + w.num + '<span>' + fmtWeekDate(w.inicio) + ' → ' + fmtWeekDate(w.fin) + ' ' + w.fin.getFullYear() + '</span></div>';
-        html += '<span class="conc-meta">' + meta + '</span>';
+        html += '<div class="conc-header-left">';
+        html += '<div class="conc-semana-label">Semana ' + w.num + '</div>';
+        html += '<div class="conc-fechas">' + fmtWeekDate(w.inicio) + ' &rarr; ' + fmtWeekDate(w.fin) + ' ' + w.fin.getFullYear() + '</div>';
+        html += '</div>';
+        html += '<div class="conc-meta-block">' + metaHTML + '</div>';
         html += '</div>';
         html += '<textarea class="conc-textarea" id="ta-' + w.inicioStr.replace(/-/g,'') + '" data-inicio="' + w.inicioStr + '" ' + (canEdit ? '' : 'readonly') + ' placeholder="' + (canEdit ? 'Escribí tus conclusiones de la semana...' : 'Solo lectura') + '">' + texto.replace(/</g,'&lt;') + '</textarea>';
         if (canEdit) {
