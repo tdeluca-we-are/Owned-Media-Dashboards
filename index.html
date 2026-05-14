@@ -299,11 +299,11 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
     </div>
 
     <div class="canal-tabs" id="canalTabs">
+      <button class="ctab" data-canal="acumulado">📊 Acumulado</button>
       <button class="ctab active" data-canal="email">✉️ Email</button>
       <button class="ctab" data-canal="push">🔔 Noti Push</button>
       <button class="ctab" data-canal="wpp">💬 WhatsApp</button>
       <button class="ctab" data-canal="onsite">🖥️ On Site</button>
-      <button class="ctab" data-canal="acumulado" style="margin-left:8px;border-color:rgba(240,78,35,0.4)">📊 Acumulado</button>
     </div>
 
     <div class="metrics-grid" id="metricsGrid"></div>
@@ -650,6 +650,16 @@ function loadSheetData() {
         var colA = String(r[0] == null ? '' : r[0]).trim().toLowerCase();
         return colA !== '' && colA !== 'fecha' && colA !== 'total' && colA !== 'acumulado';
       });
+      // Aplicar filtro predeterminado de últimos 7 días
+      var today = new Date();
+      var hasta7 = today.toISOString().split('T')[0];
+      var d7 = new Date(today); d7.setDate(d7.getDate() - 6);
+      var desde7 = d7.toISOString().split('T')[0];
+      document.getElementById('filtroDesde').value = desde7;
+      document.getElementById('filtroHasta').value = hasta7;
+      document.querySelectorAll('.btn-quick').forEach(function(b) { b.classList.remove('active'); });
+      var btn7 = document.getElementById('qf-7d');
+      if (btn7) btn7.classList.add('active');
       renderAll(totalsRow, allDataRows);
     })
     .catch(function(e) {
@@ -754,7 +764,20 @@ function clearFilter() {
 }
 
 function renderAll(totalsRow, dataRows) {
-  filteredRows = dataRows;
+  // Aplicar filtro activo si existe, si no usar todos los datos
+  var desde = document.getElementById('filtroDesde').value;
+  var hasta = document.getElementById('filtroHasta').value;
+  if (desde || hasta) {
+    filteredRows = dataRows.filter(function(r) {
+      var d = parseFecha(r[0]);
+      if (!d) return true;
+      if (desde && d < new Date(desde + 'T00:00:00')) return false;
+      if (hasta && d > new Date(hasta + 'T23:59:59')) return false;
+      return true;
+    });
+  } else {
+    filteredRows = dataRows;
+  }
   // Columnas verificadas directamente desde la API de Google Sheets
   // col[1]=TgtFact col[2]=RealFact col[3]=Var | col[4]=TgtSes col[5]=RealSes
   // col[6]=TgtOrd col[7]=RealOrd | col[8]=TgtCR col[9]=RealCR
