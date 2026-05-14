@@ -986,11 +986,11 @@ function downloadPDF() {
   ];
 
   var kpiHTML = kpis.map(function(k) {
-    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;border-top:3px solid #f04e23">' +
-      '<div style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:8px">'+k.l+'</div>' +
-      '<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Objetivo: <b style="color:#64748b">'+k.t+'</b></div>' +
-      '<div style="font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;margin-bottom:4px">'+k.r+'</div>' +
-      '<div style="font-size:12px;font-weight:700;color:'+k.vc+'">'+k.vs+'</div>' +
+    return '<div style="background:#112240;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;border-top:3px solid #f04e23">' +
+      '<div style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3d4f6b;margin-bottom:6px">'+k.l+'</div>' +
+      '<div style="font-size:9px;color:#3d4f6b;margin-bottom:2px">OBJ: <span style="color:#8892a4">'+k.t+'</span></div>' +
+      '<div style="font-size:18px;font-weight:800;color:#f0f0f0;letter-spacing:-0.02em;margin-bottom:3px">'+k.r+'</div>' +
+      '<div style="font-size:11px;font-weight:700;color:'+k.vc+'">'+k.vs+'</div>' +
     '</div>';
   }).join('');
 
@@ -1013,25 +1013,27 @@ function downloadPDF() {
   var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
     '<title>'+marca+' — Reporte '+periodo+'</title>' +
     '<style>' +
-    '*{box-sizing:border-box;margin:0;padding:0}' +
-    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#fff;color:#1e293b;font-size:12px;padding:32px}' +
-    '@page{size:A4 landscape;margin:16mm}' +
-    '@media print{body{padding:0}.no-print{display:none}}' +
+    '*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#0b1929;color:#f0f0f0;font-size:12px;padding:32px}' +
+    '@page{size:A4 landscape;margin:12mm}' +
+    '@media print{body{padding:0}}' +
     '.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #f04e23}' +
     '.logo{font-size:28px;font-weight:900;letter-spacing:-0.03em}' +
-    '.logo-we{color:#0f172a}.logo-are{color:#f04e23}' +
+    '.logo-we{color:#f0f0f0}.logo-are{color:#f04e23}' +
     '.header-right{text-align:right}' +
-    '.marca-name{font-size:18px;font-weight:700;color:#0f172a}' +
-    '.periodo{font-size:11px;color:#64748b;margin-top:3px}' +
+    '.marca-name{font-size:18px;font-weight:700;color:#f0f0f0}' +
+    '.periodo{font-size:11px;color:#8892a4;margin-top:3px}' +
     '.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}' +
     'table{width:100%;border-collapse:collapse;font-size:10px}' +
-    'thead th{background:#0f172a;color:#fff;padding:7px 8px;text-align:right;font-weight:600;font-size:9px;letter-spacing:0.04em;white-space:nowrap}' +
-    'thead th:first-child{text-align:left}' +
-    'thead th.grp{background:#f04e23}' +
-    'tbody tr:nth-child(even){background:#f8fafc}' +
-    'tbody td{padding:6px 8px;text-align:right;border-bottom:1px solid #e2e8f0;font-size:10px;color:#475569}' +
-    'tbody td:first-child{text-align:left}' +
-    '.footer{margin-top:16px;font-size:9px;color:#94a3b8;text-align:right}' +
+    'thead th{background:#112240;color:#8892a4;padding:7px 8px;text-align:right;font-weight:700;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;border-bottom:2px solid #0b1929}' +
+    'thead th:first-child{text-align:left;color:#f0f0f0}' +
+    'thead th.grp{background:rgba(240,78,35,0.25);color:#f04e23}' +
+    'tbody tr{border-bottom:1px solid rgba(255,255,255,0.05)}' +
+    'tbody tr:nth-child(even){background:rgba(255,255,255,0.02)}' +
+    'tbody td{padding:7px 8px;text-align:right;font-size:10px;color:#8892a4;background:#0b1929}' +
+    'tbody tr:nth-child(even) td{background:#0d1e35}' +
+    'tbody td:first-child{text-align:left;color:#f0f0f0;font-weight:600}' +
+    '.footer{margin-top:16px;font-size:9px;color:#3d4f6b;text-align:right}' +
     '</style></head><body>' +
     '<div class="header">' +
     '<div class="logo"><span class="logo-we">WE</span> <span class="logo-are">ARE</span></div>' +
