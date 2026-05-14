@@ -302,7 +302,7 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
       <button class="ctab" data-canal="acumulado">📊 Acumulado</button>
       <button class="ctab active" data-canal="email">✉️ Email</button>
       <button class="ctab" data-canal="push">🔔 Noti Push</button>
-      <button class="ctab" data-canal="wpp">💬 WhatsApp</button>
+      <button class="ctab" data-canal="whatsapp">💬 WhatsApp</button>
       <button class="ctab" data-canal="onsite">🖥️ On Site</button>
     </div>
 
@@ -430,7 +430,7 @@ const sb = supabase.createClient(SB_URL, SB_ANON);
 
 let currentUser = null, currentRol = null, allMarcas = [], currentMarca = null;
 let allSheets = [], currentSheet = null, allDataRows = [], filteredRows = [];
-var emailCardsHTML = '', currentCanal = 'email';
+var emailCardsHTML = '', currentCanal = 'email', canalCardsCache = {};
 var allCanalSheets = {}, currentSheetFileId = null;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -570,6 +570,7 @@ function selectMarca(m) {
 function loadCanalSheets() {
   if (!currentMarca) return;
   emailCardsHTML = '';
+  canalCardsCache = {};
   allCanalSheets = {};
   currentSheetFileId = null;
   document.getElementById('metricsGrid').innerHTML = '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
@@ -858,7 +859,7 @@ function renderAll(totalsRow, dataRows) {
     {l:'Clicks', t:fn(tClicks), r:fn(rClicks), v:vClicks, a:'#f04e23'},
     {l:'CTOR', t:tCTOR, r:rCTORraw, v:vCTOR, a:'#3d4f6b'},
   ];
-  emailCardsHTML = emailCards.map(function(c) {
+  var cardsHTML = emailCards.map(function(c) {
     return '<div class="mcard" style="--card-accent:' + c.a + '">' +
       '<div class="mlabel">' + c.l + '</div>' +
       '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">' + c.t + '</span>' +
@@ -866,12 +867,15 @@ function renderAll(totalsRow, dataRows) {
       '<div class="mvar ' + varCls(c.v) + '">' + (c.v !== null ? varStr(c.v) : '—') + '</div>' +
     '</div>';
   }).join('');
+  // Guardar en cache por canal y mantener emailCardsHTML por compat
+  canalCardsCache[currentCanal] = cardsHTML;
+  if (currentCanal === 'email') emailCardsHTML = cardsHTML;
 
   // Init tabs
   document.querySelectorAll('.ctab').forEach(function(btn) {
     btn.onclick = function() { renderCanalTab(this.dataset.canal); };
   });
-  renderCanalTab('email');
+  renderCanalTab(currentCanal);
 
   // Summary
   var mes = currentSheet.title
@@ -896,26 +900,33 @@ function renderCanalTab(canal) {
     b.classList.toggle('active', b.dataset.canal === canal);
   });
   var ts = document.getElementById('tableSection');
-  if (canal === 'email') {
-    document.getElementById('metricsGrid').innerHTML = emailCardsHTML;
-    document.getElementById('metricsGrid').style.display = '';
-    if (ts) ts.style.display = '';
-    renderTabla(filteredRows);
+  if (canal === 'email' || canal === 'push' || canal === 'whatsapp' || canal === 'onsite') {
+    var cached = canalCardsCache[canal];
+    if (cached) {
+      document.getElementById('metricsGrid').innerHTML = cached;
+      document.getElementById('metricsGrid').style.display = '';
+      if (ts) ts.style.display = '';
+      renderTabla(filteredRows);
+    } else {
+      // No cacheado aún — cargar desde sheet
+      var sid = allCanalSheets[canal];
+      if (sid) {
+        if (ts) ts.style.display = '';
+        loadSheetsForId(sid, canal);
+      } else if (canal === 'email' && emailCardsHTML) {
+        document.getElementById('metricsGrid').innerHTML = emailCardsHTML;
+        if (ts) ts.style.display = '';
+        renderTabla(filteredRows);
+      } else {
+        document.getElementById('metricsGrid').innerHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja en el panel de Administración</span></div>';
+        document.getElementById('metricsGrid').style.display = '';
+        if (ts) ts.style.display = 'none';
+      }
+    }
   } else if (canal === 'acumulado') {
     document.getElementById('metricsGrid').innerHTML = '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
     if (ts) ts.style.display = '';
     loadAcumuladoData();
-  } else {
-    // push, whatsapp, onsite — load if configured, else show placeholder
-    var sid = allCanalSheets[canal];
-    if (sid) {
-      if (ts) ts.style.display = '';
-      loadSheetsForId(sid, canal);
-    } else {
-      document.getElementById('metricsGrid').innerHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja en el panel de Administración</span></div>';
-      document.getElementById('metricsGrid').style.display = '';
-      if (ts) ts.style.display = 'none';
-    }
   }
 }
 
