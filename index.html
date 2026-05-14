@@ -914,34 +914,157 @@ function showDashboard() {
   window.scrollTo(0,0);
 }
 
+function fmtDateLabel(s) {
+  if (!s) return '';
+  var d = new Date(s + 'T00:00:00');
+  var m = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return d.getDate() + ' de ' + m[d.getMonth()] + ' ' + d.getFullYear();
+}
+
 function downloadCSV() {
   if (!filteredRows || !filteredRows.length) return;
-  var hdrs = ['Fecha','TgtFact','RealFact','VarFact','TgtSes','RealSes','TgtOrd','RealOrd','TgtCR','RealCR','TgtTicket','RealTicket','TgtEnv','RealEnv','TgtAper','RealAper','TgtOR','RealOR','TgtClicks','RealClicks','TgtCTOR','RealCTOR'];
+  var marca = currentMarca ? currentMarca.nombre : 'dashboard';
+  var hdrs = ['Fecha','Obj Facturación','Real Facturación','Var Facturación','Obj Sesiones','Real Sesiones','Obj Órdenes','Real Órdenes','Obj CR','Real CR','Obj Ticket Prom','Real Ticket Prom','Obj Envíos','Real Envíos','Obj Aperturas','Real Aperturas','Obj Open Rate','Real Open Rate','Obj Clicks','Real Clicks','Obj CTOR','Real CTOR'];
   var nl = String.fromCharCode(10);
-  var lines = [hdrs.join(',')].concat(filteredRows.map(function(r){
+  var lines = [hdrs.join(',')].concat(filteredRows.map(function(r) {
     return hdrs.map(function(_,i){ return '"'+(String(r[i]||'').replace(/"/g,'""'))+'"'; }).join(',');
   }));
   var blob = new Blob([lines.join(nl)], {type:'text/csv;charset=utf-8;'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dashboard.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = marca.replace(/\s/g,'-') + '-datos.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function downloadExcel() {
   if (!filteredRows || !filteredRows.length) return;
-  var headers = ['Fecha','Tgt Fact','Real Fact','Var','Tgt Ses','Real Ses','Tgt Ord','Real Ord','Tgt CR','Real CR','Tgt Ticket','Real Ticket','Tgt Env','Real Env','Tgt Aper','Real Aper','Tgt OR','Real OR','Tgt Clicks','Real Clicks','Tgt CTOR','Real CTOR'];
-  var xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Dashboard"><Table>';
-  var addRow = function(cells, bold) {
-    return '<Row>' + cells.map(function(v){ return '<Cell><Data ss:Type="String">' + String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</Data></Cell>'; }).join('') + '</Row>';
-  };
-  xml += addRow(headers, true);
-  filteredRows.forEach(function(r) { xml += addRow(headers.map(function(_,i){ return r[i]||''; })); });
+  var marca = currentMarca ? currentMarca.nombre : 'dashboard';
+  var desde = document.getElementById('filtroDesde').value;
+  var hasta = document.getElementById('filtroHasta').value;
+  var hdrs = ['Fecha','Obj Fact','Real Fact','Var','Obj Ses','Real Ses','Obj Ord','Real Ord','Obj CR','Real CR','Obj Ticket','Real Ticket','Obj Envíos','Real Envíos','Obj Apert','Real Apert','Obj OR','Real OR','Obj Clicks','Real Clicks','Obj CTOR','Real CTOR'];
+  var xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="' + marca + '"><Table>';
+  xml += '<Row>' + hdrs.map(function(v){ return '<Cell ss:StyleID="s1"><Data ss:Type="String">'+v.replace(/&/g,'&amp;')+'</Data></Cell>'; }).join('') + '</Row>';
+  filteredRows.forEach(function(r) {
+    xml += '<Row>' + hdrs.map(function(_,i){ return '<Cell><Data ss:Type="String">'+(String(r[i]||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'))+'</Data></Cell>'; }).join('') + '</Row>';
+  });
   xml += '</Table></Worksheet></Workbook>';
   var blob = new Blob([xml], {type:'application/vnd.ms-excel'});
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'dashboard.xls'; a.click();
+  a.download = marca.replace(/\s/g,'-') + '-datos.xls'; a.click();
 }
 
 function downloadPDF() {
-  window.print();
+  if (!currentMarca || !filteredRows || !filteredRows.length) return;
+  var marca = currentMarca.nombre;
+  var desde = document.getElementById('filtroDesde').value;
+  var hasta = document.getElementById('filtroHasta').value;
+  var periodo = (desde && hasta) ? fmtDateLabel(desde) + ' — ' + fmtDateLabel(hasta) : desde ? 'Desde ' + fmtDateLabel(desde) : 'Período completo';
+  var hoy = new Date().toLocaleDateString('es-AR');
+
+  // Recalcular KPIs desde filteredRows
+  var rows = filteredRows;
+  function sum(col){ return rows.reduce(function(s,r){ return s+(pn(r[col])||0); },0); }
+  function avgPct(col){ var vals=rows.map(function(r){ return parseFloat(String(r[col]||'').replace('%','').replace(',','.')); }).filter(function(v){ return !isNaN(v); }); return vals.length?(vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1)+'%':'-'; }
+  var rFact=sum(2),tFact=sum(1),rSes=sum(5),tSes=sum(4),rOrd=sum(7),tOrd=sum(6);
+  var rEnv=sum(13),tEnv=sum(12),rAper=sum(15),tAper=sum(14),rClicks=sum(19),tClicks=sum(18);
+  var rTicket=rOrd?rFact/rOrd:0, tTicket=tOrd?tFact/tOrd:0;
+  var rCR=rSes?((rOrd/rSes)*100).toFixed(1)+'%':'-', tCR=tSes?((tOrd/tSes)*100).toFixed(1)+'%':'-';
+  var rOR=rEnv?((rAper/rEnv)*100).toFixed(1)+'%':'-', tOR=tEnv?((tAper/tEnv)*100).toFixed(1)+'%':'-';
+  var rCTOR=rAper?((rClicks/rAper)*100).toFixed(1)+'%':'-', tCTOR=tAper?((tClicks/tAper)*100).toFixed(1)+'%':'-';
+  function vStr(r,t){ if(!t) return '—'; var v=((r-t)/Math.abs(t)*100); return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+  function vColor(r,t){ if(!t) return '#888'; return r>=t?'#16a34a':'#dc2626'; }
+  var kpis = [
+    {l:'Facturación',  t:fp(tFact),   r:fp(rFact),   vs:vStr(rFact,tFact),   vc:vColor(rFact,tFact)},
+    {l:'Sesiones',     t:fn(tSes),    r:fn(rSes),    vs:vStr(rSes,tSes),     vc:vColor(rSes,tSes)},
+    {l:'Órdenes',      t:fn(tOrd),    r:fn(rOrd),    vs:vStr(rOrd,tOrd),     vc:vColor(rOrd,tOrd)},
+    {l:'CR',           t:tCR,         r:rCR,         vs:'—',                  vc:'#888'},
+    {l:'Ticket prom.', t:fp(tTicket), r:fp(rTicket), vs:vStr(rTicket,tTicket),vc:vColor(rTicket,tTicket)},
+    {l:'Envíos',       t:fn(tEnv),    r:fn(rEnv),    vs:vStr(rEnv,tEnv),     vc:vColor(rEnv,tEnv)},
+    {l:'Aperturas',    t:fn(tAper),   r:fn(rAper),   vs:vStr(rAper,tAper),   vc:vColor(rAper,tAper)},
+    {l:'Open Rate',    t:tOR,         r:rOR,         vs:'—',                  vc:'#888'},
+    {l:'Clicks',       t:fn(tClicks), r:fn(rClicks), vs:vStr(rClicks,tClicks),vc:vColor(rClicks,tClicks)},
+    {l:'CTOR',         t:tCTOR,       r:rCTOR,       vs:'—',                  vc:'#888'},
+  ];
+
+  var kpiHTML = kpis.map(function(k) {
+    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;border-top:3px solid #f04e23">' +
+      '<div style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:8px">'+k.l+'</div>' +
+      '<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Objetivo: <b style="color:#64748b">'+k.t+'</b></div>' +
+      '<div style="font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;margin-bottom:4px">'+k.r+'</div>' +
+      '<div style="font-size:12px;font-weight:700;color:'+k.vc+'">'+k.vs+'</div>' +
+    '</div>';
+  }).join('');
+
+  var tableRows = rows.map(function(r) {
+    var vv = r[3] ? parseFloat(String(r[3]).replace('%','').replace(',','.')) : 0;
+    var vc = vv > 0 ? '#16a34a' : vv < 0 ? '#dc2626' : '#888';
+    return '<tr>' +
+      '<td style="font-weight:600;color:#1e293b;white-space:nowrap">'+(r[0]||'-')+'</td>' +
+      '<td>'+fp(pn(r[1]))+'</td><td style="font-weight:700">'+fp(pn(r[2]))+'</td><td style="color:'+vc+';font-weight:700">'+fpct(r[3])+'</td>' +
+      '<td>'+fn(pn(r[4]))+'</td><td style="font-weight:700">'+fn(pn(r[5]))+'</td>' +
+      '<td>'+fn(pn(r[6]))+'</td><td style="font-weight:700">'+fn(pn(r[7]))+'</td>' +
+      '<td>'+fpct(r[8])+'</td><td style="font-weight:700">'+fpct(r[9])+'</td>' +
+      '<td>'+fn(pn(r[12]))+'</td><td style="font-weight:700">'+fn(pn(r[13]))+'</td>' +
+      '<td>'+fn(pn(r[14]))+'</td><td style="font-weight:700">'+fn(pn(r[15]))+'</td>' +
+      '<td>'+fpct(r[16])+'</td><td style="font-weight:700">'+fpct(r[17])+'</td>' +
+      '<td>'+fn(pn(r[18]))+'</td><td style="font-weight:700">'+fn(pn(r[19]))+'</td>' +
+    '</tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+    '<title>'+marca+' — Reporte '+periodo+'</title>' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#fff;color:#1e293b;font-size:12px;padding:32px}' +
+    '@page{size:A4 landscape;margin:16mm}' +
+    '@media print{body{padding:0}.no-print{display:none}}' +
+    '.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #f04e23}' +
+    '.logo{font-size:28px;font-weight:900;letter-spacing:-0.03em}' +
+    '.logo-we{color:#0f172a}.logo-are{color:#f04e23}' +
+    '.header-right{text-align:right}' +
+    '.marca-name{font-size:18px;font-weight:700;color:#0f172a}' +
+    '.periodo{font-size:11px;color:#64748b;margin-top:3px}' +
+    '.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}' +
+    'table{width:100%;border-collapse:collapse;font-size:10px}' +
+    'thead th{background:#0f172a;color:#fff;padding:7px 8px;text-align:right;font-weight:600;font-size:9px;letter-spacing:0.04em;white-space:nowrap}' +
+    'thead th:first-child{text-align:left}' +
+    'thead th.grp{background:#f04e23}' +
+    'tbody tr:nth-child(even){background:#f8fafc}' +
+    'tbody td{padding:6px 8px;text-align:right;border-bottom:1px solid #e2e8f0;font-size:10px;color:#475569}' +
+    'tbody td:first-child{text-align:left}' +
+    '.footer{margin-top:16px;font-size:9px;color:#94a3b8;text-align:right}' +
+    '</style></head><body>' +
+    '<div class="header">' +
+    '<div class="logo"><span class="logo-we">WE</span> <span class="logo-are">ARE</span></div>' +
+    '<div class="header-right"><div class="marca-name">'+marca+'</div><div class="periodo">'+periodo+'</div></div>' +
+    '</div>' +
+    '<div class="kpi-grid">'+kpiHTML+'</div>' +
+    '<table><thead><tr>' +
+    '<th rowspan="2">FECHA</th>' +
+    '<th colspan="3" class="grp">Facturación</th>' +
+    '<th colspan="2">Sesiones</th>' +
+    '<th colspan="2" class="grp">Órdenes</th>' +
+    '<th colspan="2">CR</th>' +
+    '<th colspan="2" class="grp">Envíos</th>' +
+    '<th colspan="2">Aperturas</th>' +
+    '<th colspan="2" class="grp">Open Rate</th>' +
+    '<th colspan="2">Clicks</th>' +
+    '</tr><tr>' +
+    '<th class="grp">Obj</th><th class="grp">Real</th><th class="grp">Dif</th>' +
+    '<th>Obj</th><th>Real</th>' +
+    '<th class="grp">Obj</th><th class="grp">Real</th>' +
+    '<th>Obj</th><th>Real</th>' +
+    '<th class="grp">Obj</th><th class="grp">Real</th>' +
+    '<th>Obj</th><th>Real</th>' +
+    '<th class="grp">Obj</th><th class="grp">Real</th>' +
+    '<th>Obj</th><th>Real</th>' +
+    '</tr></thead><tbody>'+tableRows+'</tbody></table>' +
+    '<div class="footer">Generado el '+hoy+' · We Are Owned Media Hub</div>' +
+    '</body></html>';
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 500);
 }
 
 function showAdmin() {
@@ -960,29 +1083,6 @@ function showDashboard() {
   app.style.flexDirection = 'column';
   window.scrollTo(0,0);
 }
-
-function downloadCSV() {
-  if (!filteredRows || !filteredRows.length) return;
-  var hdrs = ['Fecha','TgtFact','RealFact','VarFact','TgtSes','RealSes','TgtOrd','RealOrd','TgtCR','RealCR','TgtTicket','RealTicket','TgtEnv','RealEnv','TgtAper','RealAper','TgtOR','RealOR','TgtClicks','RealClicks','TgtCTOR','RealCTOR'];
-  var lines = [hdrs.join(',')].concat(filteredRows.map(function(r){ return hdrs.map(function(_,i){ return '"'+(r[i]||'')+'"'; }).join(','); }));
-  var blob = new Blob([lines.join(String.fromCharCode(10))], {type:'text/csv;charset=utf-8;'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dashboard.csv'; a.click();
-}
-
-function downloadExcel() {
-  if (!filteredRows || !filteredRows.length) return;
-  var hdrs = ['Fecha','Tgt Fact','Real Fact','Var','Tgt Ses','Real Ses','Tgt Ord','Real Ord','Tgt CR','Real CR','Tgt Ticket','Real Ticket','Tgt Env','Real Env','Tgt Aper','Real Aper','Tgt OR','Real OR','Tgt Clicks','Real Clicks','Tgt CTOR','Real CTOR'];
-  var xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Dashboard"><Table>';
-  xml += '<Row>' + hdrs.map(function(v){ return '<Cell><Data ss:Type="String">'+v+'</Data></Cell>'; }).join('') + '</Row>';
-  filteredRows.forEach(function(r) {
-    xml += '<Row>' + hdrs.map(function(_,i){ return '<Cell><Data ss:Type="String">'+(r[i]||'')+'</Data></Cell>'; }).join('') + '</Row>';
-  });
-  xml += '</Table></Worksheet></Workbook>';
-  var blob = new Blob([xml], {type:'application/vnd.ms-excel'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dashboard.xls'; a.click();
-}
-
-function downloadPDF() { window.print(); }
 
 function renderTabla(rows) {
   document.getElementById('recordCount').textContent = rows.length + ' días';
