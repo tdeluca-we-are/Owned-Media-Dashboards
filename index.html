@@ -669,16 +669,19 @@ function loadSheetData() {
         var colA = String(r[0] == null ? '' : r[0]).trim().toLowerCase();
         return colA !== '' && colA !== 'fecha' && colA !== 'total' && colA !== 'acumulado';
       });
-      // Aplicar filtro predeterminado de últimos 7 días
-      var today = new Date();
-      var hasta7 = today.toISOString().split('T')[0];
-      var d7 = new Date(today); d7.setDate(d7.getDate() - 6);
-      var desde7 = d7.toISOString().split('T')[0];
-      document.getElementById('filtroDesde').value = desde7;
-      document.getElementById('filtroHasta').value = hasta7;
-      document.querySelectorAll('.btn-quick').forEach(function(b) { b.classList.remove('active'); });
-      var btn7 = document.getElementById('qf-7d');
-      if (btn7) btn7.classList.add('active');
+      // Solo aplicar filtro predeterminado de 7 días si el usuario no tiene ninguno activo
+      var desdeActual = document.getElementById('filtroDesde').value;
+      var hastaActual = document.getElementById('filtroHasta').value;
+      if (!desdeActual && !hastaActual) {
+        var today = new Date();
+        var hasta7 = today.toISOString().split('T')[0];
+        var d7 = new Date(today); d7.setDate(d7.getDate() - 6);
+        document.getElementById('filtroDesde').value = d7.toISOString().split('T')[0];
+        document.getElementById('filtroHasta').value = hasta7;
+        document.querySelectorAll('.btn-quick').forEach(function(b) { b.classList.remove('active'); });
+        var btn7 = document.getElementById('qf-7d');
+        if (btn7) btn7.classList.add('active');
+      }
       renderAll(totalsRow, allDataRows);
     })
     .catch(function(e) {
