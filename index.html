@@ -1010,6 +1010,37 @@ function downloadPDF() {
     '</tr>';
   }).join('');
 
+  // Capturar conclusiones renderizadas
+  var concPdfHTML = '';
+  var concCards = document.querySelectorAll('#conclusionesSection .conc-card');
+  if (concCards.length) {
+    concPdfHTML += '<div style="margin-top:28px;page-break-before:auto">' +
+      '<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3d4f6b;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08)">📝 Conclusiones semanales</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+    concCards.forEach(function(card) {
+      var semana = card.querySelector('.conc-semana-label') ? card.querySelector('.conc-semana-label').textContent : '';
+      var fechas  = card.querySelector('.conc-fechas')       ? card.querySelector('.conc-fechas').textContent       : '';
+      var editor  = card.querySelector('.conc-editor')       ? card.querySelector('.conc-editor').innerHTML          : '';
+      var autor   = card.querySelector('.conc-meta-autor')   ? card.querySelector('.conc-meta-autor').textContent    : '';
+      var metafecha = card.querySelector('.conc-meta-fecha') ? card.querySelector('.conc-meta-fecha').textContent    : '';
+      var hasContent = card.querySelector('.conc-editor') && card.querySelector('.conc-editor').textContent.trim();
+      concPdfHTML +=
+        '<div style="background:#112240;border:1px solid rgba(255,255,255,0.08);border-radius:10px;border-top:2px solid #f04e23;overflow:hidden">' +
+          '<div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">' +
+            '<div>' +
+              '<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f04e23;margin-bottom:3px">'+semana+'</div>' +
+              '<div style="font-size:13px;font-weight:700;color:#f0f0f0">'+fechas+'</div>' +
+            '</div>' +
+            (autor ? '<div style="font-size:9px;color:#3d4f6b;text-align:right">'+autor+'<br>'+metafecha+'</div>' : '') +
+          '</div>' +
+          '<div style="padding:12px 14px;font-size:11px;color:'+(hasContent?'#c8d0dc':'#3d4f6b')+';line-height:1.6;min-height:60px">' +
+            (hasContent ? editor : '<em>Sin conclusiones</em>') +
+          '</div>' +
+        '</div>';
+    });
+    concPdfHTML += '</div></div>';
+  }
+
   var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
     '<title>'+marca+' — Reporte '+periodo+'</title>' +
     '<style>' +
@@ -1061,6 +1092,7 @@ function downloadPDF() {
     '<th>Obj</th><th>Real</th>' +
     '</tr></thead><tbody>'+tableRows+'</tbody></table>' +
     '<div class="footer">Generado el '+hoy+' · We Are Owned Media Hub</div>' +
+    concPdfHTML +
     '</body></html>';
 
   var win = window.open('', '_blank');
