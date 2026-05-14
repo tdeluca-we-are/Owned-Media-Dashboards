@@ -200,9 +200,15 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
 .conc-editor:focus{background:rgba(255,255,255,0.015)}
 .conc-editor[contenteditable="false"]{color:var(--text2);cursor:default}
 .conc-editor[contenteditable="true"]:empty::before{content:attr(data-placeholder);color:var(--text3);pointer-events:none}
-.conc-footer{display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--border)}
+.conc-toolbar{display:none}
+.conc-card.editing .conc-toolbar{display:flex}
+.conc-footer{display:none;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--border)}
+.conc-card.editing .conc-footer{display:flex}
 .btn-conc-save{font-family:var(--font);font-size:11px;font-weight:600;padding:6px 14px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
 .btn-conc-save:hover{opacity:.85}
+.btn-conc-edit{font-family:var(--font);font-size:11px;font-weight:600;padding:4px 12px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-conc-edit:hover{border-color:var(--orange);color:var(--orange)}
+.conc-card.editing .btn-conc-edit{background:rgba(240,78,35,0.1);color:var(--orange);border-color:var(--orange)}
 .conc-saved{font-size:11px;font-weight:600}
 @media(max-width:900px){.conc-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.canales-grid{grid-template-columns:1fr}.top-bar,.main{padding-left:16px;padding-right:16px}}
@@ -1199,12 +1205,15 @@ function renderConclusiones() {
           ? '<span class="conc-meta-autor">' + (ex.autor_nombre || '—') + '</span><span class="conc-meta-sep">·</span><span class="conc-meta-fecha">' + new Date(ex.updated_at).toLocaleDateString('es-AR') + '</span>'
           : '<span class="conc-meta-empty">Sin ediciones</span>';
         html += '<div class="conc-card">';
+        var cid = 'card-' + w.inicioStr.replace(/-/g,'');
         // Header
         html += '<div class="conc-header">';
         html += '<div class="conc-header-left"><span class="conc-semana-label">Semana ' + w.num + '</span><span class="conc-fechas">' + fmtWeekDate(w.inicio) + ' &rarr; ' + fmtWeekDate(w.fin) + ' ' + w.fin.getFullYear() + '</span></div>';
-        html += '<div class="conc-meta-block">' + metaHTML + '</div>';
+        html += '<div class="conc-meta-block">' + metaHTML;
+        if (canEdit) html += '<button class="btn-conc-edit" id="ebtn-' + w.inicioStr.replace(/-/g,'') + '" onclick="toggleConcEdit(\'' + w.inicioStr + '\')">Editar</button>';
         html += '</div>';
-        // Toolbar (solo si puede editar)
+        html += '</div>';
+        // Toolbar (oculta por defecto, visible al editar)
         if (canEdit) {
           html += '<div class="conc-toolbar">' +
             '<button class="conc-tool" onmousedown="event.preventDefault();execFmt(\'bold\')" title="Negrita"><b>B</b></button>' +
@@ -1218,8 +1227,8 @@ function renderConclusiones() {
             '<input type="color" class="conc-color" value="#f0f0f0" onchange="execFmt(\'foreColor\',this.value)" title="Color de texto">' +
             '</div>';
         }
-        // Editor
-        html += '<div class="conc-editor" id="' + eid + '" contenteditable="' + (canEdit ? 'true' : 'false') + '" data-placeholder="' + (canEdit ? 'Escribí tus conclusiones...' : 'Solo lectura') + '">' + texto + '</div>';
+        // Editor — siempre no editable hasta que se active
+        html += '<div class="conc-editor" id="' + eid + '" contenteditable="false" data-placeholder="Sin conclusiones aún...">' + texto + '</div>';
         if (canEdit) {
           html += '<div class="conc-footer"><button class="btn-conc-save" onclick="saveConclusion(\'' + w.inicioStr + '\',\'' + w.finStr + '\')">Guardar</button><span class="conc-saved" id="' + sid + '"></span></div>';
         }
@@ -1232,6 +1241,32 @@ function renderConclusiones() {
 
 function execFmt(cmd, val) {
   document.execCommand(cmd, false, val || null);
+}
+
+function toggleConcEdit(inicio) {
+  var eid  = 'ed-'   + inicio.replace(/-/g,'');
+  var bid  = 'ebtn-' + inicio.replace(/-/g,'');
+  var card = document.getElementById(eid).closest('.conc-card');
+  var ed   = document.getElementById(eid);
+  var btn  = document.getElementById(bid);
+  var isEditing = card.classList.contains('editing');
+  if (isEditing) {
+    card.classList.remove('editing');
+    ed.setAttribute('contenteditable', 'false');
+    if (btn) btn.textContent = 'Editar';
+  } else {
+    card.classList.add('editing');
+    ed.setAttribute('contenteditable', 'true');
+    ed.focus();
+    if (btn) btn.textContent = 'Cerrar';
+    // Mover cursor al final
+    var range = document.createRange();
+    range.selectNodeContents(ed);
+    range.collapse(false);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
 }
 
 function saveConclusion(inicio, fin) {
