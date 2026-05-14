@@ -699,54 +699,12 @@ function applyFilter() {
     filteredRows = allDataRows.filter(function(r) {
       var d = parseFecha(r[0]);
       if (!d) return true;
-      if (desde && d < new Date(desde)) return false;
+      if (desde && d < new Date(desde + 'T00:00:00')) return false;
       if (hasta && d > new Date(hasta + 'T23:59:59')) return false;
       return true;
     });
   }
-  // Re-render KPIs summing from filtered rows
-  var rFact2   = filteredRows.reduce(function(s,r){return s+pn(r[2]);},0);
-  var tFact2   = filteredRows.reduce(function(s,r){return s+pn(r[1]);},0);
-  var rSes2    = filteredRows.reduce(function(s,r){return s+pn(r[5]);},0);
-  var tSes2    = filteredRows.reduce(function(s,r){return s+pn(r[4]);},0);
-  var rOrd2    = filteredRows.reduce(function(s,r){return s+pn(r[7]);},0);
-  var tOrd2    = filteredRows.reduce(function(s,r){return s+pn(r[6]);},0);
-  var rEnv2    = filteredRows.reduce(function(s,r){return s+pn(r[13]);},0);
-  var tEnv2    = filteredRows.reduce(function(s,r){return s+pn(r[12]);},0);
-  var rAper2   = filteredRows.reduce(function(s,r){return s+pn(r[15]);},0);
-  var tAper2   = filteredRows.reduce(function(s,r){return s+pn(r[14]);},0);
-  var rClicks2 = filteredRows.reduce(function(s,r){return s+pn(r[19]);},0);
-  var tClicks2 = filteredRows.reduce(function(s,r){return s+pn(r[18]);},0);
-  var rTicket2 = filteredRows.reduce(function(s,r){return s+pn(r[11]);},0) / (filteredRows.length||1);
-  var tTicket2 = filteredRows.reduce(function(s,r){return s+pn(r[10]);},0) / (filteredRows.length||1);
-  function pctAvg(col) {
-    var vals = filteredRows.map(function(r){ return parseFloat(String(r[col]||'').replace('%','').replace(',','.')); }).filter(function(v){return !isNaN(v);});
-    return vals.length ? (vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1)+'%' : '-';
-  }
-  var rCR2   = pctAvg(9);  var tCR2   = pctAvg(8);
-  var rOR2   = pctAvg(17); var tOR2   = pctAvg(16);
-  var rCTOR2 = pctAvg(21); var tCTOR2 = pctAvg(20);
-  function pctToNum2(s){ if(!s||s==='-') return null; return parseFloat(String(s).replace('%','').replace(',','.')) || null; }
-  var filtCards = [
-    {l:'Facturación', t:fp(tFact2), r:fp(rFact2), v:calcVar(rFact2,tFact2), a:'#f04e23'},
-    {l:'Sesiones',    t:fn(tSes2),  r:fn(rSes2),  v:calcVar(rSes2,tSes2),   a:'#3d4f6b'},
-    {l:'Órdenes',     t:fn(tOrd2),  r:fn(rOrd2),  v:calcVar(rOrd2,tOrd2),   a:'#f04e23'},
-    {l:'CR',          t:tCR2,       r:rCR2,        v:(pctToNum2(rCR2)!==null&&pctToNum2(tCR2)!==null)?calcVar(pctToNum2(rCR2),pctToNum2(tCR2)):null, a:'#3d4f6b'},
-    {l:'Ticket prom.',t:fp(tTicket2),r:fp(rTicket2),v:calcVar(rTicket2,tTicket2),a:'#f04e23'},
-    {l:'Envíos',      t:fn(tEnv2),  r:fn(rEnv2),  v:calcVar(rEnv2,tEnv2),   a:'#3d4f6b'},
-    {l:'Aperturas',   t:fn(tAper2), r:fn(rAper2), v:calcVar(rAper2,tAper2), a:'#f04e23'},
-    {l:'Open Rate',   t:tOR2,       r:rOR2,        v:(pctToNum2(rOR2)!==null&&pctToNum2(tOR2)!==null)?calcVar(pctToNum2(rOR2),pctToNum2(tOR2)):null, a:'#3d4f6b'},
-    {l:'Clicks',      t:fn(tClicks2),r:fn(rClicks2),v:calcVar(rClicks2,tClicks2),a:'#f04e23'},
-    {l:'CTOR',        t:tCTOR2,     r:rCTOR2,      v:(pctToNum2(rCTOR2)!==null&&pctToNum2(tCTOR2)!==null)?calcVar(pctToNum2(rCTOR2),pctToNum2(tCTOR2)):null, a:'#3d4f6b'},
-  ];
-  document.getElementById('metricsGrid').innerHTML = filtCards.map(function(card) {
-    return '<div class="mcard" style="--card-accent:' + card.a + '">' +
-      '<div class="mlabel">' + card.l + '</div>' +
-      '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">' + card.t + '</span>' +
-      '<span class="mreal-badge">REAL</span><span class="mreal">' + card.r + '</span>' +
-      '<div class="mvar ' + varCls(card.v) + '">' + (card.v !== null ? varStr(card.v) : '—') + '</div>' +
-    '</div>';
-  }).join('');
+  renderKPICards();
   renderTabla(filteredRows);
   renderConclusiones();
 }
@@ -781,9 +739,57 @@ function clearFilter() {
   document.getElementById('filtroHasta').value = '';
   document.querySelectorAll('.btn-quick').forEach(function(b) { b.classList.remove('active'); });
   filteredRows = allDataRows;
-  renderCanalTab(currentCanal || 'email');
+  renderKPICards();
   renderTabla(filteredRows);
   renderConclusiones();
+}
+
+// Calcula y renderiza las KPI cards siempre desde filteredRows (respeta filtro activo y canal activo)
+function renderKPICards() {
+  var rows = filteredRows || [];
+  function sumF(col) { return rows.reduce(function(s,r){ return s+(pn(r[col])||0); }, 0); }
+  function pctToNum(s) { if (!s || s === '-') return null; return parseFloat(String(s).replace('%','').replace(',','.')) || null; }
+  var tFact = sumF(1), rFact = sumF(2);
+  var tSes  = sumF(4), rSes  = sumF(5);
+  var tOrd  = sumF(6), rOrd  = sumF(7);
+  var tEnv  = sumF(12), rEnv  = sumF(13);
+  var tAper = sumF(14), rAper = sumF(15);
+  var tClicks = sumF(18), rClicks = sumF(19);
+  var tTicket = tOrd ? tFact/tOrd : null;
+  var rTicket = rOrd ? rFact/rOrd : null;
+  var tCR    = tSes   ? ((tOrd/tSes)*100).toFixed(1)+'%'    : '-';
+  var rCRraw = rSes   ? ((rOrd/rSes)*100).toFixed(1)+'%'    : '-';
+  var tOR    = tEnv   ? ((tAper/tEnv)*100).toFixed(1)+'%'   : '-';
+  var rORraw = rEnv   ? ((rAper/rEnv)*100).toFixed(1)+'%'   : '-';
+  var tCTOR  = tAper  ? ((tClicks/tAper)*100).toFixed(1)+'%': '-';
+  var rCTORraw = rAper? ((rClicks/rAper)*100).toFixed(1)+'%': '-';
+  var vCR   = (pctToNum(rCRraw)!==null&&pctToNum(tCR)!==null)   ? calcVar(pctToNum(rCRraw),pctToNum(tCR))   : null;
+  var vOR   = (pctToNum(rORraw)!==null&&pctToNum(tOR)!==null)   ? calcVar(pctToNum(rORraw),pctToNum(tOR))   : null;
+  var vCTOR = (pctToNum(rCTORraw)!==null&&pctToNum(tCTOR)!==null)?calcVar(pctToNum(rCTORraw),pctToNum(tCTOR)):null;
+  var cards = [
+    {l:'Facturación', t:fp(tFact),   r:fp(rFact),   v:calcVar(rFact,tFact),     a:'#f04e23'},
+    {l:'Sesiones',    t:fn(tSes),    r:fn(rSes),    v:calcVar(rSes,tSes),       a:'#3d4f6b'},
+    {l:'Órdenes',     t:fn(tOrd),    r:fn(rOrd),    v:calcVar(rOrd,tOrd),       a:'#f04e23'},
+    {l:'CR',          t:tCR,         r:rCRraw,       v:vCR,                      a:'#3d4f6b'},
+    {l:'Ticket prom.',t:fp(tTicket), r:fp(rTicket), v:calcVar(rTicket,tTicket), a:'#f04e23'},
+    {l:'Envíos',      t:fn(tEnv),    r:fn(rEnv),    v:calcVar(rEnv,tEnv),       a:'#3d4f6b'},
+    {l:'Aperturas',   t:fn(tAper),   r:fn(rAper),   v:calcVar(rAper,tAper),     a:'#f04e23'},
+    {l:'Open Rate',   t:tOR,         r:rORraw,       v:vOR,                      a:'#3d4f6b'},
+    {l:'Clicks',      t:fn(tClicks), r:fn(rClicks), v:calcVar(rClicks,tClicks), a:'#f04e23'},
+    {l:'CTOR',        t:tCTOR,       r:rCTORraw,     v:vCTOR,                    a:'#3d4f6b'},
+  ];
+  var html = cards.map(function(c) {
+    return '<div class="mcard" style="--card-accent:'+c.a+'">' +
+      '<div class="mlabel">'+c.l+'</div>' +
+      '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">'+c.t+'</span>' +
+      '<span class="mreal-badge">REAL</span><span class="mreal">'+c.r+'</span>' +
+      '<div class="mvar '+varCls(c.v)+'">'+(c.v!==null?varStr(c.v):'—')+'</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('metricsGrid').innerHTML = html;
+  document.getElementById('metricsGrid').style.display = '';
+  // Mantener compat con emailCardsHTML
+  emailCardsHTML = html;
 }
 
 function renderAll(totalsRow, dataRows) {
@@ -801,85 +807,14 @@ function renderAll(totalsRow, dataRows) {
   } else {
     filteredRows = dataRows;
   }
-  // Columnas verificadas directamente desde la API de Google Sheets
-  // col[1]=TgtFact col[2]=RealFact col[3]=Var | col[4]=TgtSes col[5]=RealSes
-  // col[6]=TgtOrd col[7]=RealOrd | col[8]=TgtCR col[9]=RealCR
-  // col[10]=TgtTicket col[11]=RealTicket | col[12]=TgtEnv col[13]=RealEnv
-  // col[14]=TgtAper col[15]=RealAper | col[16]=TgtOR col[17]=RealOR
-  // col[18]=TgtClicks col[19]=RealClicks | col[20]=TgtCTOR col[21]=RealCTOR
-  var tFact   = pn(totalsRow[1]);   var rFact   = pn(totalsRow[2]);
-  var tSes    = pn(totalsRow[4]);   var rSes    = pn(totalsRow[5]);
-  var tOrd    = pn(totalsRow[6]);   var rOrd    = pn(totalsRow[7]);
-  var tCR     = totalsRow[8]  || '-'; var rCRraw  = totalsRow[9]  || '-';
-  var tTicket = pn(totalsRow[10]);  var rTicket = pn(totalsRow[11]);
-  var tEnv    = pn(totalsRow[12]);  var rEnv    = pn(totalsRow[13]);
-  var tAper   = pn(totalsRow[14]);  var rAper   = pn(totalsRow[15]);
-  var tOR     = totalsRow[16] || '-'; var rORraw  = totalsRow[17] || '-';
-  var tClicks = pn(totalsRow[18]);  var rClicks = pn(totalsRow[19]);
-  var tCTOR   = totalsRow[20] || '-'; var rCTORraw = totalsRow[21] || '-';
-
-  var vFact = calcVar(rFact, tFact);
-  var vSes = calcVar(rSes, tSes);
-  var vOrd = calcVar(rOrd, tOrd);
-  var vEnv = calcVar(rEnv, tEnv);
-  var vAper = calcVar(rAper, tAper);
-  var vClicks = calcVar(rClicks, tClicks);
-
-  // KPI helper
-  function kpi(label, target, real, v) {
-    return '<div><div class="kpi-label">' + label + '</div><div class="kpi-target">Target: ' + target + '</div><div class="kpi-real">' + real + '</div><div class="kpi-var ' + varCls(v) + '">' + varStr(v) + '</div></div>';
-  }
-
-  var vTicket = calcVar(rTicket, tTicket);
-  var kpisEmail = kpi('Facturación', fp(tFact), fp(rFact), vFact) +
-    kpi('Órdenes', fn(tOrd), fn(rOrd), vOrd) +
-    kpi('Sesiones', fn(tSes), fn(rSes), vSes) +
-    kpi('Tasa de conv.', tCR, rCRraw, null) +
-    kpi('Ticket prom.', fp(tTicket), fp(rTicket), vTicket) +
-    kpi('Envíos', fn(tEnv), fn(rEnv), vEnv) +
-    kpi('Aperturas', fn(tAper), fn(rAper), vAper) +
-    kpi('Tasa apertura', tOR, rORraw, null) +
-    kpi('Clicks', fn(tClicks), fn(rClicks), vClicks) +
-    kpi('CTOR', tCTOR, rCTORraw, null);
-
-  var vTicket = calcVar(rTicket, tTicket);
-
-  // Store email KPI cards HTML
-  // Variance for pct metrics: parse pct string to number
-  function pctToNum(s) { if (!s || s === '-') return null; return parseFloat(String(s).replace('%','').replace(',','.')) || null; }
-  var vCR   = (pctToNum(rCRraw) !== null && pctToNum(tCR) !== null) ? calcVar(pctToNum(rCRraw), pctToNum(tCR)) : null;
-  var vOR   = (pctToNum(rORraw) !== null && pctToNum(tOR) !== null) ? calcVar(pctToNum(rORraw), pctToNum(tOR)) : null;
-  var vCTOR = (pctToNum(rCTORraw) !== null && pctToNum(tCTOR) !== null) ? calcVar(pctToNum(rCTORraw), pctToNum(tCTOR)) : null;
-
-  var emailCards = [
-    {l:'Facturación', t:fp(tFact), r:fp(rFact), v:vFact, a:'#f04e23'},
-    {l:'Sesiones', t:fn(tSes), r:fn(rSes), v:vSes, a:'#3d4f6b'},
-    {l:'Órdenes', t:fn(tOrd), r:fn(rOrd), v:vOrd, a:'#f04e23'},
-    {l:'CR', t:tCR, r:rCRraw, v:vCR, a:'#3d4f6b'},
-    {l:'Ticket prom.', t:fp(tTicket), r:fp(rTicket), v:vTicket, a:'#f04e23'},
-    {l:'Envíos', t:fn(tEnv), r:fn(rEnv), v:vEnv, a:'#3d4f6b'},
-    {l:'Aperturas', t:fn(tAper), r:fn(rAper), v:vAper, a:'#f04e23'},
-    {l:'Open Rate', t:tOR, r:rORraw, v:vOR, a:'#3d4f6b'},
-    {l:'Clicks', t:fn(tClicks), r:fn(rClicks), v:vClicks, a:'#f04e23'},
-    {l:'CTOR', t:tCTOR, r:rCTORraw, v:vCTOR, a:'#3d4f6b'},
-  ];
-  var cardsHTML = emailCards.map(function(c) {
-    return '<div class="mcard" style="--card-accent:' + c.a + '">' +
-      '<div class="mlabel">' + c.l + '</div>' +
-      '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">' + c.t + '</span>' +
-      '<span class="mreal-badge">REAL</span><span class="mreal">' + c.r + '</span>' +
-      '<div class="mvar ' + varCls(c.v) + '">' + (c.v !== null ? varStr(c.v) : '—') + '</div>' +
-    '</div>';
-  }).join('');
-  // Guardar en cache por canal
-  canalCardsCache[currentCanal] = cardsHTML;
-  canalDataCache[currentCanal] = allDataRows; // guardar datos crudos para re-filtrar al volver
-  if (currentCanal === 'email') emailCardsHTML = cardsHTML;
+  // Guardar datos crudos del canal para poder re-filtrar al volver
+  canalDataCache[currentCanal] = allDataRows;
 
   // Init tabs
   document.querySelectorAll('.ctab').forEach(function(btn) {
     btn.onclick = function() { renderCanalTab(this.dataset.canal); };
   });
+  renderKPICards();
   renderCanalTab(currentCanal);
 
   // Summary
@@ -906,12 +841,10 @@ function renderCanalTab(canal) {
   });
   var ts = document.getElementById('tableSection');
   if (canal === 'email' || canal === 'push' || canal === 'whatsapp' || canal === 'onsite') {
-    var cached = canalCardsCache[canal];
-    if (cached) {
-      document.getElementById('metricsGrid').innerHTML = cached;
-      document.getElementById('metricsGrid').style.display = '';
+    var canalLoaded = !!canalDataCache[canal];
+    if (canalLoaded) {
       if (ts) ts.style.display = '';
-      // Re-filtrar con los datos del canal activo y el filtro actual
+      // Restaurar datos del canal y re-aplicar filtro actual
       var canalRows = canalDataCache[canal] || [];
       allDataRows = canalRows;
       var desde = document.getElementById('filtroDesde').value;
@@ -927,6 +860,7 @@ function renderCanalTab(canal) {
       } else {
         filteredRows = canalRows;
       }
+      renderKPICards();
       renderTabla(filteredRows);
     } else {
       // No cacheado aún — cargar desde sheet
