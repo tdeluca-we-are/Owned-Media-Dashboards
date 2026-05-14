@@ -585,7 +585,7 @@ function loadCanalSheets() {
         b.classList.toggle('active', b.dataset.canal === 'email');
       });
       if (allCanalSheets['email']) {
-        loadSheetsForId(allCanalSheets['email']);
+        loadSheetsForId(allCanalSheets['email'], 'email');
       } else {
         document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No hay hoja de Email configurada para esta marca</div>';
       }
@@ -594,29 +594,47 @@ function loadCanalSheets() {
       // Fallback if marca_canales table doesn't exist
       if (currentMarca.sheet_id) {
         allCanalSheets['email'] = currentMarca.sheet_id;
-        loadSheetsForId(currentMarca.sheet_id);
+        loadSheetsForId(currentMarca.sheet_id, 'email');
       } else {
         document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">' + e.message + '</div>';
       }
     });
 }
 
-function loadSheetsForId(sheetId) {
+// Prefijos de pestaña por canal para detectar la tab correcta dentro del mismo archivo
+var CANAL_TAB_PREFIXES = {
+  email:    ['EM', 'Em', 'email', 'Email', 'mail'],
+  push:     ['NP', 'Np', 'Push', 'push', 'Noti', 'noti'],
+  whatsapp: ['WP', 'Wp', 'WA', 'wa', 'WhatsApp', 'whatsapp', 'Whatsapp'],
+  onsite:   ['OS', 'Os', 'OnSite', 'onsite', 'Onsite', 'On Site']
+};
+
+function loadSheetsForId(sheetId, canal) {
   currentSheetFileId = sheetId;
   fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      allSheets = (data.sheets || []).map(function(s) { return s.properties; }).filter(function(p) {
+      var allTabs = (data.sheets || []).map(function(s) { return s.properties; });
+      // Tabs que tienen nombre de dashboard
+      var dashTabs = allTabs.filter(function(p) {
         return p.title.indexOf('| Dashboard') >= 0 || p.title.indexOf('Dash-Dinamico') >= 0 || p.title.indexOf('dash-dinamico') >= 0;
       });
-      if (allSheets.length === 0) {
-        // No matching tab found — try loading entire first sheet
-        var firstSheet = (data.sheets || [])[0];
-        if (firstSheet) { allSheets = [firstSheet.properties]; selectMes(allSheets[0]); }
+      if (dashTabs.length === 0) {
+        // Sin tab con nombre estándar — usar primera pestaña del archivo
+        if (allTabs.length) { allSheets = [allTabs[0]]; selectMes(allSheets[0]); }
         else { document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No se encontró hoja de datos</div>'; }
         return;
       }
-      selectMes(allSheets[0]);
+      allSheets = dashTabs;
+      // Si hay canal, intentar encontrar la pestaña que corresponde a ese canal
+      var bestTab = null;
+      if (canal && CANAL_TAB_PREFIXES[canal]) {
+        var prefixes = CANAL_TAB_PREFIXES[canal];
+        bestTab = dashTabs.find(function(p) {
+          return prefixes.some(function(px) { return p.title.indexOf(px) >= 0; });
+        });
+      }
+      selectMes(bestTab || dashTabs[0]);
     })
     .catch(function(e) {
       document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">' + e.message + '</div>';
@@ -892,7 +910,7 @@ function renderCanalTab(canal) {
     var sid = allCanalSheets[canal];
     if (sid) {
       if (ts) ts.style.display = '';
-      loadSheetsForId(sid);
+      loadSheetsForId(sid, canal);
     } else {
       document.getElementById('metricsGrid').innerHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja en el panel de Administración</span></div>';
       document.getElementById('metricsGrid').style.display = '';
