@@ -385,15 +385,18 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
       <div class="admin-card">
         <div class="admin-card-title">Nueva marca</div>
         <div class="agrid">
-          <div class="fg"><label>Nombre</label><input class="ifield" id="newMarcaNombre" placeholder="King Of The Kongo"></div>
-          <div class="fg"><label>Google Sheets ID</label><input class="ifield" id="newMarcaSheetId" placeholder="1QuIdkoxh8Y..."></div>
+          <div class="fg" style="grid-column:1/-1"><label>Nombre de la marca</label><input class="ifield" id="newMarcaNombre" placeholder="King Of The Kongo"></div>
+          <div class="fg"><label>📧 Sheet ID — Email</label><input class="ifield" id="newMarcaSheetEmail" placeholder="1QuIdkoxh8Y... (obligatorio)"></div>
+          <div class="fg"><label>🔔 Sheet ID — Push</label><input class="ifield" id="newMarcaSheetPush" placeholder="Opcional"></div>
+          <div class="fg"><label>💬 Sheet ID — WhatsApp</label><input class="ifield" id="newMarcaSheetWA" placeholder="Opcional"></div>
+          <div class="fg"><label>🌐 Sheet ID — OnSite</label><input class="ifield" id="newMarcaSheetOnSite" placeholder="Opcional"></div>
         </div>
         <button class="btn-orange" style="margin-top:12px" onclick="agregarMarca()">+ Agregar marca</button>
         <div id="marcasMsg" class="smsg"></div>
       </div>
       <div class="admin-card" style="margin-top:16px">
         <div class="admin-card-title">Marcas registradas</div>
-        <table class="atbl"><thead><tr><th>Marca</th><th>Sheet ID</th><th>Estado</th><th></th></tr></thead><tbody id="adminMarcasTable"></tbody></table>
+        <table class="atbl"><thead><tr><th>Marca</th><th>Estado</th><th>Canales</th><th></th></tr></thead><tbody id="adminMarcasTable"></tbody></table>
       </div>
     </div>
     <div class="acontent" id="tabUsuarios">
@@ -426,6 +429,7 @@ const sb = supabase.createClient(SB_URL, SB_ANON);
 let currentUser = null, currentRol = null, allMarcas = [], currentMarca = null;
 let allSheets = [], currentSheet = null, allDataRows = [], filteredRows = [];
 var emailCardsHTML = '', currentCanal = 'email';
+var allCanalSheets = {}, currentSheetFileId = null;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function pn(v) {
@@ -557,24 +561,59 @@ function selectMarca(m) {
   document.querySelectorAll('#marcaMenu .dd-item').forEach(function(o) { o.classList.remove('active'); });
   var opt = document.getElementById('mopt-' + m.id);
   if (opt) opt.classList.add('active');
-  loadSheets();
+  loadCanalSheets();
 }
 
 // ── SHEETS ────────────────────────────────────────────────────────────────────
-function loadSheets() {
-  if (!currentMarca || !currentMarca.sheet_id) return;
+function loadCanalSheets() {
+  if (!currentMarca) return;
+  emailCardsHTML = '';
+  allCanalSheets = {};
+  currentSheetFileId = null;
   document.getElementById('metricsGrid').innerHTML = '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
-  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + currentMarca.sheet_id + '?key=' + GKEY + '&fields=sheets.properties')
+  sb.from('marca_canales').select('*').eq('marca_id', currentMarca.id).eq('activo', true)
+    .then(function(r) {
+      (r.data || []).forEach(function(c) { allCanalSheets[c.canal] = c.sheet_id; });
+      // Backward compat: if no email canal in DB, fall back to marca.sheet_id
+      if (!allCanalSheets['email'] && currentMarca.sheet_id) {
+        allCanalSheets['email'] = currentMarca.sheet_id;
+      }
+      currentCanal = 'email';
+      document.querySelectorAll('.ctab').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.canal === 'email');
+      });
+      if (allCanalSheets['email']) {
+        loadSheetsForId(allCanalSheets['email']);
+      } else {
+        document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No hay hoja de Email configurada para esta marca</div>';
+      }
+    })
+    .catch(function(e) {
+      // Fallback if marca_canales table doesn't exist
+      if (currentMarca.sheet_id) {
+        allCanalSheets['email'] = currentMarca.sheet_id;
+        loadSheetsForId(currentMarca.sheet_id);
+      } else {
+        document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">' + e.message + '</div>';
+      }
+    });
+}
+
+function loadSheetsForId(sheetId) {
+  currentSheetFileId = sheetId;
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       allSheets = (data.sheets || []).map(function(s) { return s.properties; }).filter(function(p) {
         return p.title.indexOf('| Dashboard') >= 0 || p.title.indexOf('Dash-Dinamico') >= 0 || p.title.indexOf('dash-dinamico') >= 0;
       });
       if (allSheets.length === 0) {
-        document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No se encontró hoja de datos</div>';
+        // No matching tab found — try loading entire first sheet
+        var firstSheet = (data.sheets || [])[0];
+        if (firstSheet) { allSheets = [firstSheet.properties]; selectMes(allSheets[0]); }
+        else { document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No se encontró hoja de datos</div>'; }
         return;
       }
-      // Auto-select first matching sheet (EM | Dashboard)
       selectMes(allSheets[0]);
     })
     .catch(function(e) {
@@ -591,12 +630,13 @@ function selectMes(sheet) {
 }
 
 function loadSheetData() {
-  if (!currentMarca || !currentMarca.sheet_id || !currentSheet) return;
+  var sheetId = currentSheetFileId || (currentMarca && currentMarca.sheet_id);
+  if (!currentMarca || !sheetId || !currentSheet) return;
   document.getElementById('metricsGrid').innerHTML = '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
   document.getElementById('metricsGrid').innerHTML = '';
   document.getElementById('tablaBody').innerHTML = '<tr><td colspan="21"><div class="loading-state"><div class="spinner"></div></div></td></tr>';
   var sn = encodeURIComponent(currentSheet.title);
-  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + currentMarca.sheet_id + '/values/' + sn + '!A1:Z500?key=' + GKEY;
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/' + sn + '!A1:Z500?key=' + GKEY;
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -810,7 +850,6 @@ function renderAll(totalsRow, dataRows) {
 
 function renderCanalTab(canal) {
   currentCanal = canal;
-  var proxHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja correspondiente en el Sheet</span></div>';
   document.querySelectorAll('.ctab').forEach(function(b) {
     b.classList.toggle('active', b.dataset.canal === canal);
   });
@@ -825,18 +864,45 @@ function renderCanalTab(canal) {
     if (ts) ts.style.display = '';
     loadAcumuladoData();
   } else {
-    document.getElementById('metricsGrid').innerHTML = proxHTML;
-    document.getElementById('metricsGrid').style.display = '';
-    if (ts) ts.style.display = 'none';
+    // push, whatsapp, onsite — load if configured, else show placeholder
+    var sid = allCanalSheets[canal];
+    if (sid) {
+      if (ts) ts.style.display = '';
+      loadSheetsForId(sid);
+    } else {
+      document.getElementById('metricsGrid').innerHTML = '<div class="canal-prox">Próximamente — <span>configurá la hoja en el panel de Administración</span></div>';
+      document.getElementById('metricsGrid').style.display = '';
+      if (ts) ts.style.display = 'none';
+    }
   }
 }
 
 function loadAcumuladoData() {
-  if (!allSheets.length || !currentMarca) return;
-  var promises = allSheets.map(function(sheet) {
-    var sn = encodeURIComponent(sheet.title);
-    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + currentMarca.sheet_id + '/values/' + sn + '!A1:Z500?key=' + GKEY;
-    return fetch(url).then(function(r) { return r.json(); }).then(function(d) { return d.values || []; }).catch(function() { return []; });
+  if (!currentMarca) return;
+  // Gather all available canal sheet IDs
+  var canalIds = Object.values(allCanalSheets).filter(Boolean);
+  if (!canalIds.length && allSheets.length && currentMarca.sheet_id) {
+    // Old compat: use allSheets from current file
+    canalIds = [currentMarca.sheet_id];
+  }
+  if (!canalIds.length) {
+    document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No hay canales configurados</div>';
+    return;
+  }
+  // For each canal file, fetch its first matching tab
+  var promises = canalIds.map(function(sheetId) {
+    return fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var tabs = (data.sheets || []).map(function(s) { return s.properties; }).filter(function(p) {
+          return p.title.indexOf('| Dashboard') >= 0 || p.title.indexOf('Dash-Dinamico') >= 0 || p.title.indexOf('dash-dinamico') >= 0;
+        });
+        if (!tabs.length) tabs = (data.sheets || []).slice(0, 1).map(function(s) { return s.properties; });
+        if (!tabs.length) return [];
+        var sn = encodeURIComponent(tabs[0].title);
+        var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/' + sn + '!A1:Z500?key=' + GKEY;
+        return fetch(url).then(function(r) { return r.json(); }).then(function(d) { return d.values || []; }).catch(function() { return []; });
+      }).catch(function() { return []; });
   });
   Promise.all(promises).then(function(allRows) {
     var sumN = {};
@@ -1161,12 +1227,58 @@ function switchTab(t) {
   document.getElementById('tabUsuarios').classList.toggle('active', t==='usuarios');
 }
 function loadAdminData() {
-  sb.from('marcas').select('*').order('nombre').then(function(r) {
-    var marcas = r.data || [];
-    document.getElementById('adminMarcasTable').innerHTML = marcas.map(function(m) {
-      return '<tr><td class="lc">' + m.nombre + '</td><td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">' + (m.sheet_id||'-') + '</td><td><span class="role-badge ' + (m.activa?'role-administrador':'role-lector') + '">' + (m.activa?'Activa':'Inactiva') + '</span></td><td><button class="bdanger" data-mid="' + m.id + '" data-act="' + m.activa + '" onclick="toggleMarca(this.dataset.mid,this.dataset.act===\'true\')">' + (m.activa?'Desactivar':'Activar') + '</button></td></tr>';
-    }).join('');
+  sb.from('marcas').select('*').order('nombre').then(function(rm) {
+    var marcas = rm.data || [];
     document.getElementById('newUserMarca').innerHTML = marcas.filter(function(m) { return m.activa; }).map(function(m) { return '<option value="' + m.id + '">' + m.nombre + '</option>'; }).join('');
+    // Load canales for all brands
+    sb.from('marca_canales').select('*').then(function(rc) {
+      var canalesPorMarca = {};
+      (rc.data || []).forEach(function(c) {
+        if (!canalesPorMarca[c.marca_id]) canalesPorMarca[c.marca_id] = [];
+        canalesPorMarca[c.marca_id].push(c);
+      });
+      var CANAL_LABELS = {email:'📧 Email', push:'🔔 Push', whatsapp:'💬 WhatsApp', onsite:'🌐 OnSite'};
+      var CANAL_KEYS = ['email','push','whatsapp','onsite'];
+      var html = '';
+      marcas.forEach(function(m) {
+        var canales = canalesPorMarca[m.id] || [];
+        var canalesCount = canales.length;
+        var canalBadges = canales.map(function(c) {
+          return '<span style="font-size:10px;background:rgba(240,78,35,0.15);color:var(--orange);border-radius:4px;padding:2px 6px;margin-right:3px">' + (CANAL_LABELS[c.canal] || c.canal) + '</span>';
+        }).join('') || '<span style="font-size:10px;color:var(--text3)">Sin canales</span>';
+        // Main brand row
+        html += '<tr>';
+        html += '<td class="lc" style="font-weight:600">' + m.nombre + '</td>';
+        html += '<td><span class="role-badge ' + (m.activa?'role-administrador':'role-lector') + '">' + (m.activa?'Activa':'Inactiva') + '</span></td>';
+        html += '<td>' + canalBadges + '</td>';
+        html += '<td style="white-space:nowrap">';
+        html += '<button class="btn-sm" data-mid="' + m.id + '" onclick="toggleCanalEdit(\'' + m.id + '\')" style="margin-right:4px">Canales</button>';
+        html += '<button class="bdanger" data-mid="' + m.id + '" data-act="' + m.activa + '" onclick="toggleMarca(this.dataset.mid,this.dataset.act===\'true\')">' + (m.activa?'Desactivar':'Activar') + '</button>';
+        html += '</td></tr>';
+        // Expandable canal edit row (hidden by default)
+        html += '<tr id="cedit-' + m.id + '" style="display:none"><td colspan="4" style="background:rgba(255,255,255,0.03);padding:14px 20px">';
+        html += '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text2);margin-bottom:10px">Sheets por canal — ' + m.nombre + '</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+        CANAL_KEYS.forEach(function(key) {
+          var existing = canales.find(function(c) { return c.canal === key; });
+          var cid = existing ? existing.id : null;
+          var sid = existing ? (existing.sheet_id || '') : '';
+          html += '<div style="display:flex;flex-direction:column;gap:4px">';
+          html += '<label style="font-size:11px;color:var(--text2)">' + (CANAL_LABELS[key] || key) + '</label>';
+          html += '<div style="display:flex;gap:6px;align-items:center">';
+          html += '<input class="ifield" id="cs-' + m.id + '-' + key + '" style="font-size:11px;padding:5px 8px;flex:1" placeholder="Sheet ID" value="' + sid + '">';
+          if (cid) {
+            html += '<button class="btn-sm" data-cid="' + cid + '" data-mid="' + m.id + '" data-key="' + key + '" onclick="guardarCanal(this.dataset.cid,this.dataset.mid,this.dataset.key,true)">Guardar</button>';
+            html += '<button class="bdanger" data-cid="' + cid + '" onclick="eliminarCanal(this.dataset.cid,\'' + m.id + '\')" style="font-size:10px;padding:3px 7px">✕</button>';
+          } else {
+            html += '<button class="btn-sm" data-mid="' + m.id + '" data-key="' + key + '" onclick="guardarCanal(null,this.dataset.mid,this.dataset.key,false)">+ Agregar</button>';
+          }
+          html += '</div></div>';
+        });
+        html += '</div></td></tr>';
+      });
+      document.getElementById('adminMarcasTable').innerHTML = html;
+    });
   });
   sb.from('usuario_marcas').select('*,marcas(nombre)').order('marcas(nombre)').then(function(r) {
     var asig = r.data || [];
@@ -1198,18 +1310,43 @@ function loadAdminData() {
 }
 function agregarMarca() {
   var nombre = document.getElementById('newMarcaNombre').value.trim();
-  var sheet_id = document.getElementById('newMarcaSheetId').value.trim();
+  var sheetEmail  = document.getElementById('newMarcaSheetEmail').value.trim();
+  var sheetPush   = document.getElementById('newMarcaSheetPush').value.trim();
+  var sheetWA     = document.getElementById('newMarcaSheetWA').value.trim();
+  var sheetOnSite = document.getElementById('newMarcaSheetOnSite').value.trim();
   var msg = document.getElementById('marcasMsg');
-  if (!nombre || !sheet_id) { msg.style.color='var(--red)'; msg.textContent='Completá todos los campos'; return; }
-  var sheet_url = 'https://docs.google.com/spreadsheets/d/' + sheet_id;
-  sb.from('marcas').insert({nombre:nombre, sheet_id:sheet_id, sheet_url:sheet_url, activa:true}).then(function(r) {
+  if (!nombre || !sheetEmail) { msg.style.color='var(--red)'; msg.textContent='Completá nombre y Sheet ID de Email'; return; }
+  var sheet_url = 'https://docs.google.com/spreadsheets/d/' + sheetEmail;
+  msg.style.color='var(--text2)'; msg.textContent='Guardando...';
+  sb.from('marcas').insert({nombre:nombre, sheet_id:sheetEmail, sheet_url:sheet_url, activa:true}).select().then(function(r) {
     if (r.error) { msg.style.color='var(--red)'; msg.textContent='Error: '+r.error.message; return; }
-    msg.style.color='#22c55e'; msg.textContent='✓ Marca agregada';
-    document.getElementById('newMarcaNombre').value='';
-    document.getElementById('newMarcaSheetId').value='';
-    loadAdminData();
-    setTimeout(function() { msg.textContent=''; }, 3000);
+    var marcaId = r.data && r.data[0] && r.data[0].id;
+    if (!marcaId) { msg.style.color='var(--red)'; msg.textContent='Error al obtener ID de marca'; return; }
+    // Build canal rows
+    var canales = [];
+    if (sheetEmail)  canales.push({marca_id:marcaId, canal:'email',   sheet_id:sheetEmail,  activo:true});
+    if (sheetPush)   canales.push({marca_id:marcaId, canal:'push',    sheet_id:sheetPush,   activo:true});
+    if (sheetWA)     canales.push({marca_id:marcaId, canal:'whatsapp',sheet_id:sheetWA,     activo:true});
+    if (sheetOnSite) canales.push({marca_id:marcaId, canal:'onsite',  sheet_id:sheetOnSite, activo:true});
+    if (!canales.length) {
+      finalizarAgregar(msg);
+      return;
+    }
+    sb.from('marca_canales').insert(canales).then(function(r2) {
+      if (r2.error) { msg.style.color='var(--red)'; msg.textContent='Marca creada pero error en canales: '+r2.error.message; return; }
+      finalizarAgregar(msg);
+    });
   });
+}
+function finalizarAgregar(msg) {
+  msg.style.color='#22c55e'; msg.textContent='✓ Marca y canales agregados';
+  document.getElementById('newMarcaNombre').value='';
+  document.getElementById('newMarcaSheetEmail').value='';
+  document.getElementById('newMarcaSheetPush').value='';
+  document.getElementById('newMarcaSheetWA').value='';
+  document.getElementById('newMarcaSheetOnSite').value='';
+  loadAdminData();
+  setTimeout(function() { msg.textContent=''; }, 3000);
 }
 function toggleMarca(id, activa) {
   sb.from('marcas').update({activa:!activa}).eq('id',id).then(function() { loadAdminData(); });
@@ -1276,6 +1413,40 @@ function saveNombre(id) {
 
 function removeAcceso(id) {
   sb.from('usuario_marcas').delete().eq('id',id).then(function() { loadAdminData(); });
+}
+
+function toggleCanalEdit(marcaId) {
+  var row = document.getElementById('cedit-' + marcaId);
+  if (!row) return;
+  row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+function guardarCanal(canalId, marcaId, canal, isUpdate) {
+  var input = document.getElementById('cs-' + marcaId + '-' + canal);
+  var sheetId = input ? input.value.trim() : '';
+  if (!sheetId) { alert('Ingresá el Sheet ID'); return; }
+  input.disabled = true;
+  var promise = isUpdate
+    ? sb.from('marca_canales').update({sheet_id: sheetId, activo: true}).eq('id', canalId)
+    : sb.from('marca_canales').insert({marca_id: marcaId, canal: canal, sheet_id: sheetId, activo: true});
+  promise.then(function(r) {
+    input.disabled = false;
+    if (r.error) { alert('Error: ' + r.error.message); return; }
+    loadAdminData();
+  });
+}
+
+function eliminarCanal(canalId, marcaId) {
+  if (!confirm('¿Eliminar este canal?')) return;
+  sb.from('marca_canales').delete().eq('id', canalId).then(function(r) {
+    if (r.error) { alert('Error: ' + r.error.message); return; }
+    // Keep expand open after reload
+    loadAdminData();
+    setTimeout(function() {
+      var row = document.getElementById('cedit-' + marcaId);
+      if (row) row.style.display = '';
+    }, 400);
+  });
 }
 
 // ── CONCLUSIONES ──────────────────────────────────────────────────────────────
