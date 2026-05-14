@@ -430,7 +430,7 @@ const sb = supabase.createClient(SB_URL, SB_ANON);
 
 let currentUser = null, currentRol = null, allMarcas = [], currentMarca = null;
 let allSheets = [], currentSheet = null, allDataRows = [], filteredRows = [];
-var emailCardsHTML = '', currentCanal = 'email', canalCardsCache = {};
+var emailCardsHTML = '', currentCanal = 'email', canalCardsCache = {}, canalDataCache = {};
 var allCanalSheets = {}, currentSheetFileId = null;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -571,6 +571,7 @@ function loadCanalSheets() {
   if (!currentMarca) return;
   emailCardsHTML = '';
   canalCardsCache = {};
+  canalDataCache = {};
   allCanalSheets = {};
   currentSheetFileId = null;
   document.getElementById('metricsGrid').innerHTML = '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
@@ -870,8 +871,9 @@ function renderAll(totalsRow, dataRows) {
       '<div class="mvar ' + varCls(c.v) + '">' + (c.v !== null ? varStr(c.v) : '—') + '</div>' +
     '</div>';
   }).join('');
-  // Guardar en cache por canal y mantener emailCardsHTML por compat
+  // Guardar en cache por canal
   canalCardsCache[currentCanal] = cardsHTML;
+  canalDataCache[currentCanal] = allDataRows; // guardar datos crudos para re-filtrar al volver
   if (currentCanal === 'email') emailCardsHTML = cardsHTML;
 
   // Init tabs
@@ -909,6 +911,22 @@ function renderCanalTab(canal) {
       document.getElementById('metricsGrid').innerHTML = cached;
       document.getElementById('metricsGrid').style.display = '';
       if (ts) ts.style.display = '';
+      // Re-filtrar con los datos del canal activo y el filtro actual
+      var canalRows = canalDataCache[canal] || [];
+      allDataRows = canalRows;
+      var desde = document.getElementById('filtroDesde').value;
+      var hasta = document.getElementById('filtroHasta').value;
+      if (desde || hasta) {
+        filteredRows = canalRows.filter(function(r) {
+          var d = parseFecha(r[0]);
+          if (!d) return true;
+          if (desde && d < new Date(desde + 'T00:00:00')) return false;
+          if (hasta && d > new Date(hasta + 'T23:59:59')) return false;
+          return true;
+        });
+      } else {
+        filteredRows = canalRows;
+      }
       renderTabla(filteredRows);
     } else {
       // No cacheado aún — cargar desde sheet
