@@ -1336,11 +1336,18 @@ function loadAdminData() {
       // Marca separator row
       html += '<tr><td colspan="4" style="background:rgba(240,78,35,0.08);padding:8px 14px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--orange)">' + mn + '</td></tr>';
       byMarca[mn].forEach(function(a) {
-        if (a.nombre) {
-          html += '<tr><td class="lc" style="padding-left:20px">' + a.nombre + '</td><td class="lc"></td><td><span class="role-badge role-' + a.rol + '">' + a.rol.toUpperCase() + '</span></td><td><button class="bdanger" data-aid="' + a.id + '" onclick="removeAcceso(this.dataset.aid)">Quitar</button></td></tr>';
-        } else {
-          html += '<tr><td class="lc" style="padding-left:20px"><input class="ifield" style="width:150px;padding:3px 8px;font-size:11px" placeholder="Nombre del usuario" id="nm-' + a.id + '"> <button class="btn-sm" data-nmid="' + a.id + '" style="font-size:10px;padding:3px 8px" onclick="saveNombre(this.dataset.nmid)">Guardar</button></td><td class="lc"></td><td><span class="role-badge role-' + a.rol + '">' + a.rol.toUpperCase() + '</span></td><td><button class="bdanger" data-aid="' + a.id + '" onclick="removeAcceso(this.dataset.aid)">Quitar</button></td></tr>';
-        }
+        var nombreCell = a.nombre
+          ? '<td class="lc" style="padding-left:20px">' + a.nombre + '</td>'
+          : '<td class="lc" style="padding-left:20px"><input class="ifield" style="width:150px;padding:3px 8px;font-size:11px" placeholder="Nombre del usuario" id="nm-' + a.id + '"> <button class="btn-sm" data-nmid="' + a.id + '" style="font-size:10px;padding:3px 8px" onclick="saveNombre(this.dataset.nmid)">Guardar</button></td>';
+        var rolCell = '<td><div style="display:flex;gap:6px;align-items:center">' +
+          '<select class="sfield" id="rol-' + a.id + '" style="font-size:11px;padding:4px 8px;width:130px">' +
+            '<option value="lector"' + (a.rol==='lector'?' selected':'') + '>Lector</option>' +
+            '<option value="analista"' + (a.rol==='analista'?' selected':'') + '>Analista</option>' +
+            '<option value="administrador"' + (a.rol==='administrador'?' selected':'') + '>Administrador</option>' +
+          '</select>' +
+          '<button class="btn-sm" data-aid="' + a.id + '" onclick="cambiarRol(this.dataset.aid)" style="font-size:10px;padding:3px 8px">Guardar</button>' +
+        '</div></td>';
+        html += '<tr>' + nombreCell + '<td></td>' + rolCell + '<td><button class="bdanger" data-aid="' + a.id + '" onclick="removeAcceso(this.dataset.aid)">Quitar</button></td></tr>';
       });
     });
     document.getElementById('adminUsuariosTable').innerHTML = html;
@@ -1465,12 +1472,12 @@ function saveNombre(id) {
   });
 }
 
-function saveNombre(id) {
-  var input = document.getElementById('nm-' + id);
-  var nombre = input ? input.value.trim() : '';
-  if (!nombre) return;
-  sb.from('usuario_marcas').update({nombre: nombre}).eq('id', id).then(function(r) {
-    if (r.error) { alert('Error al guardar: ' + r.error.message); return; }
+function cambiarRol(id) {
+  var select = document.getElementById('rol-' + id);
+  var nuevoRol = select ? select.value : null;
+  if (!nuevoRol) return;
+  sb.from('usuario_marcas').update({rol: nuevoRol}).eq('id', id).then(function(r) {
+    if (r.error) { alert('Error al cambiar rol: ' + r.error.message); return; }
     loadAdminData();
   });
 }
