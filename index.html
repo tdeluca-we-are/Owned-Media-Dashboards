@@ -538,7 +538,12 @@ function loadMarcasYRol() {
         document.getElementById('btnAdminNav').classList.remove('hidden');
         loadAdminData();
       }
-      if (allMarcas.length > 0) selectMarca(allMarcas[0]);
+      if (allMarcas.length > 0) {
+        var lastId = null;
+        try { lastId = localStorage.getItem('weare_last_marca'); } catch(e) {}
+        var last = lastId && allMarcas.find(function(m) { return m.id === lastId; });
+        selectMarca(last || allMarcas[0]);
+      }
     });
   });
 }
@@ -563,6 +568,7 @@ function selectMarca(m) {
   document.querySelectorAll('#marcaMenu .dd-item').forEach(function(o) { o.classList.remove('active'); });
   var opt = document.getElementById('mopt-' + m.id);
   if (opt) opt.classList.add('active');
+  try { localStorage.setItem('weare_last_marca', m.id); } catch(e) {}
   loadCanalSheets();
 }
 
