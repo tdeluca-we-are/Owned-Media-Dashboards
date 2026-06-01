@@ -1337,14 +1337,24 @@ function agregarMarca() {
     if (sheetWA)     canales.push({marca_id:marcaId, canal:'whatsapp',sheet_id:sheetWA,     activo:true});
     if (sheetOnSite) canales.push({marca_id:marcaId, canal:'onsite',  sheet_id:sheetOnSite, activo:true});
     if (!canales.length) {
-      finalizarAgregar(msg);
+      autoAsignarAdmin(marcaId, msg);
       return;
     }
     sb.from('marca_canales').insert(canales).then(function(r2) {
       if (r2.error) { msg.style.color='var(--red)'; msg.textContent='Marca creada pero error en canales: '+r2.error.message; return; }
-      finalizarAgregar(msg);
+      autoAsignarAdmin(marcaId, msg);
     });
   });
+}
+function autoAsignarAdmin(marcaId, msg) {
+  if (!currentUser) { finalizarAgregar(msg); return; }
+  var nombreAdmin = document.getElementById('userEmail') ? document.getElementById('userEmail').textContent : currentUser.email;
+  sb.from('usuario_marcas').insert({
+    user_id: currentUser.id,
+    marca_id: marcaId,
+    rol: 'administrador',
+    nombre: nombreAdmin
+  }).then(function() { finalizarAgregar(msg); });
 }
 function finalizarAgregar(msg) {
   msg.style.color='#22c55e'; msg.textContent='✓ Marca y canales agregados';
