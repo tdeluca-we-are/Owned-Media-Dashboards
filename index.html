@@ -50,6 +50,10 @@ body{font-family:var(--font);background:var(--bg4);color:var(--text);min-height:
 .dd-item.active{background:rgba(240,78,35,0.12);color:var(--orange)}
 .dd-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
 .dd-item.active .dd-dot{background:var(--orange)}
+.dd-search{position:sticky;top:0;background:var(--bg2);padding:8px;border-bottom:1px solid var(--border2);z-index:1}
+.dd-search input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:12px;color:var(--text);outline:none;box-sizing:border-box}
+.dd-search input:focus{border-color:var(--orange)}
+.dd-empty{padding:12px;font-size:12px;color:var(--text3);text-align:center}
 .top-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .user-pill{font-size:12px;color:var(--text2);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
 .role-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em}
@@ -483,7 +487,14 @@ function toggleDD(which) {
   // Close all
   document.querySelectorAll('.dd-btn').forEach(function(b) { b.classList.remove('open'); });
   document.querySelectorAll('.dd-menu').forEach(function(m) { m.classList.remove('open'); });
-  if (!isOpen) { btn.classList.add('open'); menu.classList.add('open'); }
+  if (!isOpen) {
+    btn.classList.add('open');
+    menu.classList.add('open');
+    if (which === 'marca') {
+      var s = document.getElementById('marcaSearch');
+      if (s) { s.value = ''; filterMarcaMenu(''); setTimeout(function() { s.focus(); }, 30); }
+    }
+  }
 }
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.dd-wrap')) {
@@ -570,12 +581,27 @@ function applyRoleUI() {
 }
 
 function renderMarcaMenu() {
-  var html = '';
+  var html = '<div class="dd-search"><input type="text" id="marcaSearch" placeholder="Buscar marca..." oninput="filterMarcaMenu(this.value)" onclick="event.stopPropagation()"></div>';
+  html += '<div id="marcaItems">';
   allMarcas.forEach(function(m) {
-    html += '<div class="dd-item" id="mopt-' + m.id + '" data-mid="' + m.id + '" onclick="selectMarcaById(this.dataset.mid);toggleDD(\'marca\')">';
+    var n = (m.nombre || '').toLowerCase().replace(/"/g, '&quot;');
+    html += '<div class="dd-item" id="mopt-' + m.id + '" data-mid="' + m.id + '" data-nombre="' + n + '" onclick="selectMarcaById(this.dataset.mid);toggleDD(\'marca\')">';
     html += '<div class="dd-dot"></div>' + m.nombre + '</div>';
   });
+  html += '</div><div class="dd-empty" id="marcaEmpty" style="display:none">Sin resultados</div>';
   document.getElementById('marcaMenu').innerHTML = html;
+}
+
+function filterMarcaMenu(q) {
+  q = (q || '').trim().toLowerCase();
+  var visible = 0;
+  document.querySelectorAll('#marcaItems .dd-item').forEach(function(el) {
+    var match = !q || (el.dataset.nombre || '').indexOf(q) >= 0;
+    el.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  var empty = document.getElementById('marcaEmpty');
+  if (empty) empty.style.display = visible ? 'none' : 'block';
 }
 
 function selectMarcaById(id) {
