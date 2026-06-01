@@ -519,34 +519,54 @@ function initApp(user) {
 // ── MARCAS ────────────────────────────────────────────────────────────────────
 function loadMarcasYRol() {
   sb.from('usuario_marcas').select('rol,marca_id').eq('user_id', currentUser.id).then(function(r1) {
-    var asig = r1.data;
-    if (!asig || asig.length === 0) return;
-    var ids = asig.map(function(a) { return a.marca_id; });
-    sb.from('marcas').select('*').in('id', ids).eq('activa', true).then(function(r2) {
-      var marcas = r2.data;
-      if (!marcas || marcas.length === 0) return;
-      var roles = asig.map(function(a) { return a.rol; });
-      currentRol = roles.indexOf('administrador') >= 0 ? 'administrador' : roles.indexOf('analista') >= 0 ? 'analista' : 'lector';
-      var badge = document.getElementById('userRoleBadge');
-      badge.textContent = currentRol.charAt(0).toUpperCase() + currentRol.slice(1);
-      badge.className = 'role-badge role-' + currentRol;
-      allMarcas = marcas.map(function(m) {
-        var found = asig.find(function(a) { return a.marca_id === m.id; });
-        return Object.assign({}, m, {rol: found ? found.rol : 'lector'});
-      });
-      renderMarcaMenu();
-      if (currentRol === 'administrador') {
-        document.getElementById('btnAdminNav').classList.remove('hidden');
+    var asig = r1.data || [];
+    var roles = asig.map(function(a) { return a.rol; });
+    currentRol = roles.indexOf('administrador') >= 0 ? 'administrador' : roles.indexOf('analista') >= 0 ? 'analista' : 'lector';
+    var badge = document.getElementById('userRoleBadge');
+    badge.textContent = currentRol.charAt(0).toUpperCase() + currentRol.slice(1);
+    badge.className = 'role-badge role-' + currentRol;
+    applyRoleUI();
+    if (currentRol === 'administrador') {
+      document.getElementById('btnAdminNav').classList.remove('hidden');
+      // Admin ve TODAS las marcas activas
+      sb.from('marcas').select('*').eq('activa', true).order('nombre').then(function(r2) {
+        allMarcas = (r2.data || []).map(function(m) { return Object.assign({}, m, {rol: 'administrador'}); });
+        renderMarcaMenu();
         loadAdminData();
-      }
-      if (allMarcas.length > 0) {
-        var lastId = null;
-        try { lastId = localStorage.getItem('weare_last_marca'); } catch(e) {}
-        var last = lastId && allMarcas.find(function(m) { return m.id === lastId; });
-        selectMarca(last || allMarcas[0]);
-      }
-    });
+        restoreLastMarca();
+      });
+    } else {
+      // Analista/Lector: solo sus marcas asignadas
+      if (!asig.length) return;
+      var ids = asig.map(function(a) { return a.marca_id; });
+      sb.from('marcas').select('*').in('id', ids).eq('activa', true).then(function(r2) {
+        var marcas = r2.data || [];
+        if (!marcas.length) return;
+        allMarcas = marcas.map(function(m) {
+          var found = asig.find(function(a) { return a.marca_id === m.id; });
+          return Object.assign({}, m, {rol: found ? found.rol : 'lector'});
+        });
+        renderMarcaMenu();
+        restoreLastMarca();
+      });
+    }
   });
+}
+
+function restoreLastMarca() {
+  if (!allMarcas.length) return;
+  var lastId = null;
+  try { lastId = localStorage.getItem('weare_last_marca'); } catch(e) {}
+  var last = lastId && allMarcas.find(function(m) { return m.id === lastId; });
+  selectMarca(last || allMarcas[0]);
+}
+
+function applyRoleUI() {
+  // Exportar: oculto para lectores
+  var dlBtns = document.getElementById('dlBtns');
+  if (dlBtns) dlBtns.dataset.roleHide = currentRol === 'lector' ? '1' : '0';
+  // Botón actualizar: visible para todos
+  // Conclusiones edit: se controla en renderConclusiones via canEdit
 }
 
 function renderMarcaMenu() {
@@ -1201,8 +1221,10 @@ function showDashboard() {
 
 function renderTabla(rows) {
   document.getElementById('recordCount').textContent = rows.length + ' días';
-  document.getElementById('dlBtns').style.display = 'flex';
-  document.getElementById('dlBtns').style.display = 'flex';
+  // Solo mostrar exportar si no es lector
+  if (currentRol !== 'lector') {
+    document.getElementById('dlBtns').style.display = 'flex';
+  }
   if (rows.length === 0) {
     document.getElementById('tablaBody').innerHTML = '<tr><td colspan="21"><div class="empty-state">Sin datos</div></td></tr>';
     return;
