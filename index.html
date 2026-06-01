@@ -1476,14 +1476,25 @@ function cambiarRol(id) {
   var select = document.getElementById('rol-' + id);
   var nuevoRol = select ? select.value : null;
   if (!nuevoRol) return;
-  sb.from('usuario_marcas').update({rol: nuevoRol}).eq('id', id).then(function(r) {
+  sb.from('usuario_marcas').update({rol: nuevoRol}).eq('id', id).select().then(function(r) {
     if (r.error) { alert('Error al cambiar rol: ' + r.error.message); return; }
+    if (!r.data || r.data.length === 0) {
+      alert('No se actualizó ninguna fila. Probable causa: RLS de Supabase bloquea el UPDATE en usuario_marcas para tu rol actual.');
+      return;
+    }
     loadAdminData();
   });
 }
 
 function removeAcceso(id) {
-  sb.from('usuario_marcas').delete().eq('id',id).then(function() { loadAdminData(); });
+  sb.from('usuario_marcas').delete().eq('id',id).select().then(function(r) {
+    if (r.error) { alert('Error al quitar acceso: ' + r.error.message); return; }
+    if (!r.data || r.data.length === 0) {
+      alert('No se eliminó ninguna fila. Probable causa: RLS de Supabase bloquea el DELETE en usuario_marcas.');
+      return;
+    }
+    loadAdminData();
+  });
 }
 
 function toggleCanalEdit(marcaId) {
