@@ -438,6 +438,22 @@ let allSheets = [], currentSheet = null, allDataRows = [], filteredRows = [];
 var emailCardsHTML = '', currentCanal = 'email', canalCardsCache = {}, canalDataCache = {};
 var allCanalSheets = {}, currentSheetFileId = null;
 
+// ── SHEETS API CACHE ─────────────────────────────────────────────────────────
+// Cachea por URL durante SHEETS_TTL ms. Guarda la PROMISE (no el valor) para
+// deduplicar requests concurrentes al mismo URL.
+var _sheetsCache = new Map();
+var SHEETS_TTL = 60000;
+function sheetsFetch(url) {
+  var entry = _sheetsCache.get(url);
+  var now = Date.now();
+  if (entry && (now - entry.ts) < SHEETS_TTL) return entry.promise;
+  var p = fetch(url).then(function(r) { return r.json(); });
+  p.catch(function() { _sheetsCache.delete(url); });
+  _sheetsCache.set(url, {ts: now, promise: p});
+  return p;
+}
+function invalidateSheetsCache() { _sheetsCache.clear(); }
+
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function pn(v) {
   if (!v || v === '#DIV/0!' || v === '#REF!' || v === '-' || v === '') return null;
@@ -666,8 +682,7 @@ var CANAL_TAB_PREFIXES = {
 
 function loadSheetsForId(sheetId, canal) {
   currentSheetFileId = sheetId;
-  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
-    .then(function(r) { return r.json(); })
+  sheetsFetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
     .then(function(data) {
       var allTabs = (data.sheets || []).map(function(s) { return s.properties; });
       // Tabs que tienen nombre de dashboard
@@ -712,8 +727,7 @@ function loadSheetData() {
   document.getElementById('tablaBody').innerHTML = '<tr><td colspan="21"><div class="loading-state"><div class="spinner"></div></div></td></tr>';
   var sn = encodeURIComponent(currentSheet.title);
   var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/' + sn + '!A1:Z500?key=' + GKEY;
-  fetch(url)
-    .then(function(r) { return r.json(); })
+  sheetsFetch(url)
     .then(function(data) {
       var rows = data.values || [];
       // row0=headers grupo, row1=headers sub, row2=headers Target/Real, row3=TOTALES, row4+=diarios
@@ -952,8 +966,7 @@ function loadAcumuladoData() {
   }
   // For each canal file, fetch its first matching tab
   var promises = canalIds.map(function(sheetId) {
-    return fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
-      .then(function(r) { return r.json(); })
+    return sheetsFetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
       .then(function(data) {
         var tabs = (data.sheets || []).map(function(s) { return s.properties; }).filter(function(p) {
           return p.title.indexOf('| Dashboard') >= 0 || p.title.indexOf('Dash-Dinamico') >= 0 || p.title.indexOf('dash-dinamico') >= 0;
@@ -962,7 +975,7 @@ function loadAcumuladoData() {
         if (!tabs.length) return [];
         var sn = encodeURIComponent(tabs[0].title);
         var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/' + sn + '!A1:Z500?key=' + GKEY;
-        return fetch(url).then(function(r) { return r.json(); }).then(function(d) { return d.values || []; }).catch(function() { return []; });
+        return sheetsFetch(url).then(function(d) { return d.values || []; }).catch(function() { return []; });
       }).catch(function() { return []; });
   });
   Promise.all(promises).then(function(allRows) {
@@ -1540,6 +1553,7 @@ function guardarCanal(canalId, marcaId, canal, isUpdate) {
   promise.then(function(r) {
     input.disabled = false;
     if (r.error) { alert('Error: ' + r.error.message); return; }
+    invalidateSheetsCache();
     loadAdminData();
   });
 }
