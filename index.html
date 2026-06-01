@@ -399,6 +399,7 @@ tbody td:nth-child(17),tbody td:nth-child(19),tbody td:nth-child(21){border-left
       <div class="admin-card" style="margin-top:16px">
         <div class="admin-card-title">Marcas registradas</div>
         <table class="atbl"><thead><tr><th>Marca</th><th>Estado</th><th>Canales</th><th></th></tr></thead><tbody id="adminMarcasTable"></tbody></table>
+        <div id="marcasDelMsg" class="smsg" style="margin-top:8px"></div>
       </div>
     </div>
     <div class="acontent" id="tabUsuarios">
@@ -1265,9 +1266,10 @@ function loadAdminData() {
         html += '<td class="lc" style="font-weight:600">' + m.nombre + '</td>';
         html += '<td><span class="role-badge ' + (m.activa?'role-administrador':'role-lector') + '">' + (m.activa?'Activa':'Inactiva') + '</span></td>';
         html += '<td>' + canalBadges + '</td>';
-        html += '<td style="white-space:nowrap">';
-        html += '<button class="btn-sm" data-mid="' + m.id + '" onclick="toggleCanalEdit(\'' + m.id + '\')" style="margin-right:4px">Canales</button>';
+        html += '<td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap">';
+        html += '<button class="btn-sm" data-mid="' + m.id + '" onclick="toggleCanalEdit(\'' + m.id + '\')">Canales</button>';
         html += '<button class="bdanger" data-mid="' + m.id + '" data-act="' + m.activa + '" onclick="toggleMarca(this.dataset.mid,this.dataset.act===\'true\')">' + (m.activa?'Desactivar':'Activar') + '</button>';
+        html += '<button class="bdanger" data-mid="' + m.id + '" data-nom="' + m.nombre + '" onclick="eliminarMarca(this.dataset.mid,this.dataset.nom)" style="background:rgba(220,38,38,0.2);border-color:#dc2626">🗑 Eliminar</button>';
         html += '</td></tr>';
         // Expandable canal edit row (hidden by default)
         html += '<tr id="cedit-' + m.id + '" style="display:none"><td colspan="4" style="background:rgba(255,255,255,0.03);padding:14px 20px">';
@@ -1374,6 +1376,22 @@ function finalizarAgregar(msg) {
 }
 function toggleMarca(id, activa) {
   sb.from('marcas').update({activa:!activa}).eq('id',id).then(function() { loadAdminData(); });
+}
+function eliminarMarca(id, nombre) {
+  if (!confirm('¿Eliminar la marca "' + nombre + '"?\nEsto eliminará también todos sus canales y accesos. Esta acción no se puede deshacer.')) return;
+  var msg = document.getElementById('marcasDelMsg');
+  msg.style.color = 'var(--text2)'; msg.textContent = 'Eliminando...';
+  // Eliminar en cadena: marca_canales → usuario_marcas → marca
+  sb.from('marca_canales').delete().eq('marca_id', id).then(function() {
+    sb.from('usuario_marcas').delete().eq('marca_id', id).then(function() {
+      sb.from('marcas').delete().eq('id', id).then(function(r) {
+        if (r.error) { msg.style.color='var(--red)'; msg.textContent='Error: '+r.error.message; return; }
+        msg.style.color='#22c55e'; msg.textContent='✓ Marca eliminada';
+        loadAdminData();
+        setTimeout(function() { msg.textContent=''; }, 3000);
+      });
+    });
+  });
 }
 function asignarAcceso(user_id, email, nombre, marca_id, rol, msg) {
   sb.from('usuarios').upsert({id: user_id, email: email}, {onConflict: 'id'}).then(function() {
@@ -1632,6 +1650,8 @@ document.addEventListener('keydown', function(e) {
 });
 sb.auth.onAuthStateChange(function(event, session) {
   if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
+    // Si ya está inicializado con el mismo usuario, no reiniciar (evita reset al volver a la pestaña)
+    if (currentUser && currentUser.id === session.user.id) return;
     initApp(session.user);
   }
 });
