@@ -454,6 +454,13 @@ function sheetsFetch(url) {
 }
 function invalidateSheetsCache() { _sheetsCache.clear(); }
 
+// Extrae el ID de un Sheet si el input es la URL completa. Si ya es el ID, lo devuelve igual.
+function extractSheetId(input) {
+  var v = (input || '').trim();
+  var m = v.match(/\/d\/([^/?#]+)/);
+  return m ? m[1] : v;
+}
+
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function pn(v) {
   if (!v || v === '#DIV/0!' || v === '#REF!' || v === '-' || v === '') return null;
@@ -1394,10 +1401,10 @@ function loadAdminData() {
 }
 function agregarMarca() {
   var nombre = document.getElementById('newMarcaNombre').value.trim();
-  var sheetEmail  = document.getElementById('newMarcaSheetEmail').value.trim();
-  var sheetPush   = document.getElementById('newMarcaSheetPush').value.trim();
-  var sheetWA     = document.getElementById('newMarcaSheetWA').value.trim();
-  var sheetOnSite = document.getElementById('newMarcaSheetOnSite').value.trim();
+  var sheetEmail  = extractSheetId(document.getElementById('newMarcaSheetEmail').value);
+  var sheetPush   = extractSheetId(document.getElementById('newMarcaSheetPush').value);
+  var sheetWA     = extractSheetId(document.getElementById('newMarcaSheetWA').value);
+  var sheetOnSite = extractSheetId(document.getElementById('newMarcaSheetOnSite').value);
   var msg = document.getElementById('marcasMsg');
   if (!nombre || !sheetEmail) { msg.style.color='var(--red)'; msg.textContent='Completá nombre y Sheet ID de Email'; return; }
   var sheet_url = 'https://docs.google.com/spreadsheets/d/' + sheetEmail;
@@ -1544,8 +1551,9 @@ function toggleCanalEdit(marcaId) {
 
 function guardarCanal(canalId, marcaId, canal, isUpdate) {
   var input = document.getElementById('cs-' + marcaId + '-' + canal);
-  var sheetId = input ? input.value.trim() : '';
+  var sheetId = input ? extractSheetId(input.value) : '';
   if (!sheetId) { alert('Ingresá el Sheet ID'); return; }
+  if (input) input.value = sheetId;
   input.disabled = true;
   var promise = isUpdate
     ? sb.from('marca_canales').update({sheet_id: sheetId, activo: true}).eq('id', canalId)
