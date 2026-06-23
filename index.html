@@ -1010,46 +1010,8 @@ function loadAcumuladoData() {
       seen[key] = true;
       return true;
     }).map(function(r) { return r.rows; });
-    var sumN = {};
+    // Combinar filas diarias por fecha sumando columnas numéricas
     var numCols = [1,2,4,5,6,7,10,11,12,13,14,15,18,19];
-    var rateCols = [8,9,16,17,20,21];
-    allRows.forEach(function(rows) {
-      var t = rows[2] || [];
-      numCols.forEach(function(i) {
-        var v = pn(t[i]);
-        if (v !== null) sumN[i] = (sumN[i] || 0) + v;
-      });
-    });
-    // Recalcular tasas desde sumas
-    var rCR    = sumN[7]&&sumN[5]   ? ((sumN[7]/sumN[5])*100).toFixed(1)+'%'   : '-';
-    var tCR    = sumN[6]&&sumN[4]   ? ((sumN[6]/sumN[4])*100).toFixed(1)+'%'   : '-';
-    var rOR    = sumN[15]&&sumN[13] ? ((sumN[15]/sumN[13])*100).toFixed(1)+'%' : '-';
-    var tOR    = sumN[14]&&sumN[12] ? ((sumN[14]/sumN[12])*100).toFixed(1)+'%' : '-';
-    var rCTOR  = sumN[19]&&sumN[15] ? ((sumN[19]/sumN[15])*100).toFixed(1)+'%' : '-';
-    var tCTOR  = sumN[18]&&sumN[14] ? ((sumN[18]/sumN[14])*100).toFixed(1)+'%' : '-';
-    var rTicket = sumN[7] ? sumN[11]/sumN[7] : null;
-    var tTicket = sumN[6] ? sumN[10]/sumN[6] : null;
-    function pN2(s){ return (!s||s==='-')?null:parseFloat(String(s).replace('%',''))||null; }
-    var cards = [
-      {l:'Facturación', t:fp(sumN[1]||null),  r:fp(sumN[2]||null),  v:calcVar(sumN[2],sumN[1]),   a:'#f04e23'},
-      {l:'Sesiones',    t:fn(sumN[4]||null),  r:fn(sumN[5]||null),  v:calcVar(sumN[5],sumN[4]),   a:'#3d4f6b'},
-      {l:'Órdenes',     t:fn(sumN[6]||null),  r:fn(sumN[7]||null),  v:calcVar(sumN[7],sumN[6]),   a:'#f04e23'},
-      {l:'CR',          t:tCR,  r:rCR,  v:calcVar(pN2(rCR),pN2(tCR)),   a:'#3d4f6b'},
-      {l:'Ticket prom.',t:fp(tTicket), r:fp(rTicket), v:calcVar(rTicket,tTicket), a:'#f04e23'},
-      {l:'Envíos',      t:fn(sumN[12]||null), r:fn(sumN[13]||null), v:calcVar(sumN[13],sumN[12]), a:'#3d4f6b'},
-      {l:'Aperturas',   t:fn(sumN[14]||null), r:fn(sumN[15]||null), v:calcVar(sumN[15],sumN[14]), a:'#f04e23'},
-      {l:'Open Rate',   t:tOR,  r:rOR,  v:calcVar(pN2(rOR),pN2(tOR)),   a:'#3d4f6b'},
-      {l:'Clicks',      t:fn(sumN[18]||null), r:fn(sumN[19]||null), v:calcVar(sumN[19],sumN[18]), a:'#f04e23'},
-      {l:'CTOR',        t:tCTOR,r:rCTOR,v:calcVar(pN2(rCTOR),pN2(tCTOR)),a:'#3d4f6b'},
-    ];
-    document.getElementById('metricsGrid').innerHTML = cards.map(function(c) {
-      return '<div class="mcard" style="--card-accent:'+c.a+'">' +
-        '<div class="mlabel">'+c.l+'</div>' +
-        '<span class="mtarget-badge">OBJ TD</span><span class="mtarget">'+c.t+'</span>' +
-        '<span class="mreal-badge">REAL</span><span class="mreal">'+c.r+'</span>' +
-        '<div class="mvar '+varCls(c.v)+'">'+(c.v!==null?varStr(c.v):'—')+'</div></div>';
-    }).join('');
-    // Combinar filas diarias por fecha
     var dateMap = {}, dateOrder = [];
     allRows.forEach(function(rows) {
       rows.slice(3).filter(function(r) {
@@ -1064,7 +1026,11 @@ function loadAcumuladoData() {
     });
     var combined = dateOrder.map(function(f){ return dateMap[f]; });
     combined.sort(function(a,b){ var da=parseFecha(a[0]),db=parseFecha(b[0]); return da&&db?da-db:0; });
-    renderTabla(combined);
+    // Tratamos Acumulado como un canal virtual: las filas diarias son la suma
+    // por fecha de todos los canales. applyFilter() recalcula KPIs y tabla
+    // respetando el filtro de fechas actual (lo mantiene al moverse entre tabs).
+    allDataRows = combined;
+    applyFilter();
   });
 }
 
