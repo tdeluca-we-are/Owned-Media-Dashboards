@@ -961,31 +961,55 @@ function renderCanalTab(canal) {
 
 function loadAcumuladoData() {
   if (!currentMarca) return;
-  // Gather all available canal sheet IDs
-  var canalIds = Object.values(allCanalSheets).filter(Boolean);
-  if (!canalIds.length && allSheets.length && currentMarca.sheet_id) {
-    // Old compat: use allSheets from current file
-    canalIds = [currentMarca.sheet_id];
+  // Pares [canal, sheetId] — necesitamos el canal para encontrar la pestaña correcta
+  var canalEntries = Object.keys(allCanalSheets)
+    .filter(function(k) { return allCanalSheets[k]; })
+    .map(function(k) { return [k, allCanalSheets[k]]; });
+  if (!canalEntries.length && currentMarca.sheet_id) {
+    canalEntries = [['email', currentMarca.sheet_id]];
   }
-  if (!canalIds.length) {
+  if (!canalEntries.length) {
     document.getElementById('metricsGrid').innerHTML = '<div class="error-state" style="grid-column:1/-1">No hay canales configurados</div>';
     return;
   }
-  // For each canal file, fetch its first matching tab
-  var promises = canalIds.map(function(sheetId) {
+  // Para cada canal, fetchear la pestaña que matchea sus prefijos en el archivo
+  var promises = canalEntries.map(function(entry) {
+    var canal = entry[0], sheetId = entry[1];
     return sheetsFetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + GKEY + '&fields=sheets.properties')
       .then(function(data) {
-        var tabs = (data.sheets || []).map(function(s) { return s.properties; }).filter(function(p) {
+        var allTabs = (data.sheets || []).map(function(s) { return s.properties; });
+        var dashTabs = allTabs.filter(function(p) {
           return p.title.indexOf('| Dashboard') >= 0 || p.title.indexOf('Dash-Dinamico') >= 0 || p.title.indexOf('dash-dinamico') >= 0;
         });
-        if (!tabs.length) tabs = (data.sheets || []).slice(0, 1).map(function(s) { return s.properties; });
-        if (!tabs.length) return [];
-        var sn = encodeURIComponent(tabs[0].title);
+        var prefixes = CANAL_TAB_PREFIXES[canal] || [];
+        var bestTab = dashTabs.find(function(p) {
+          return prefixes.some(function(px) { return p.title.indexOf(px) >= 0; });
+        });
+        // Sin tab específica del canal:
+        //  - si hay 1 sola dash tab, asumimos que es la del canal (un archivo por canal)
+        //  - si hay varias, no podemos identificar cuál — saltamos para no duplicar
+        if (!bestTab) {
+          if (dashTabs.length === 1) bestTab = dashTabs[0];
+          else if (!dashTabs.length && allTabs.length) bestTab = allTabs[0];
+          else return {sheetId: sheetId, title: null, rows: []};
+        }
+        var sn = encodeURIComponent(bestTab.title);
         var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/' + sn + '!A1:Z500?key=' + GKEY;
-        return sheetsFetch(url).then(function(d) { return d.values || []; }).catch(function() { return []; });
-      }).catch(function() { return []; });
+        return sheetsFetch(url).then(function(d) {
+          return {sheetId: sheetId, title: bestTab.title, rows: d.values || []};
+        }).catch(function() { return {sheetId: sheetId, title: bestTab.title, rows: []}; });
+      }).catch(function() { return {sheetId: sheetId, title: null, rows: []}; });
   });
-  Promise.all(promises).then(function(allRows) {
+  Promise.all(promises).then(function(results) {
+    // Dedup por (sheetId|tab) para no contar dos veces la misma pestaña
+    var seen = {};
+    var allRows = results.filter(function(r) {
+      if (!r.title) return false;
+      var key = r.sheetId + '|' + r.title;
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    }).map(function(r) { return r.rows; });
     var sumN = {};
     var numCols = [1,2,4,5,6,7,10,11,12,13,14,15,18,19];
     var rateCols = [8,9,16,17,20,21];
