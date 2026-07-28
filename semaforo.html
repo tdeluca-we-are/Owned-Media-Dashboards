@@ -119,6 +119,13 @@ tr.clickable:hover td{background:rgba(255,255,255,.03)}
 .sem-forzado{position:relative}
 .sem-forzado::after{content:'';position:absolute;top:2px;right:3px;width:0;height:0;
   border-left:5px solid transparent;border-top:5px solid rgba(255,255,255,.8)}
+/* fila de célula: separa visualmente los grupos de marcas */
+.grid tr.crow td{background:var(--bg3);border-top:1px solid var(--border);padding:7px 14px}
+.grid tr.crow td:first-child{background:var(--bg3)}
+.crow-name{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+.crow-kam{font-size:11px;color:var(--text2);font-weight:500;text-transform:none;letter-spacing:0;margin-left:8px}
+.crow-mini{display:inline-flex;gap:3px;margin-left:10px;vertical-align:middle}
+.crow-mini i{width:9px;height:9px;border-radius:2px;display:inline-block}
 
 /* chips */
 .chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:20px;white-space:nowrap}
@@ -146,15 +153,26 @@ tr.clickable:hover td{background:rgba(255,255,255,.03)}
 
 /* bloques de números */
 .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.metric{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px}
+.metric{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:13px;
+  border-top:2px solid var(--text3);position:relative}
+.metric.up{border-top-color:var(--green)}.metric.down{border-top-color:var(--red)}
 .metric-name{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px}
 .metric input{width:100%;font-family:var(--mono);font-size:13px;padding:7px 9px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:8px;outline:none;text-align:right}
 .metric input:focus{border-color:var(--orange)}
 .metric .mlab{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:0 0 3px 2px;font-weight:700}
 .metric .mgap{margin-top:7px}
-.metric-dev{margin-top:10px;text-align:center;font-family:var(--mono);font-size:15px;font-weight:700}
-.dev-ok{color:var(--green)}.dev-bad{color:var(--red)}.dev-none{color:var(--text3);font-size:12px;font-weight:400}
+.metric-dev{margin-top:11px;text-align:center;font-family:var(--mono);font-size:21px;font-weight:700;line-height:1.1}
+.metric-dev .arrow{font-size:15px;margin-right:3px}
+.dev-ok{color:var(--green)}.dev-bad{color:var(--red)}
+.dev-none{color:var(--text3);font-size:12px;font-weight:400}
 .metric-view{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--text2);margin-top:3px}
+/* barra real vs objetivo */
+.metric-bar{height:6px;background:rgba(255,255,255,.07);border-radius:20px;overflow:hidden;margin-top:9px;position:relative}
+.metric-bar span{display:block;height:100%;border-radius:20px;transition:width .25s}
+.metric-bar span.ok{background:var(--green)}.metric-bar span.bad{background:var(--red)}
+.metric-bar::after{content:'';position:absolute;top:-2px;bottom:-2px;left:calc(100% - 1px);width:2px;background:var(--text2)}
+.metric-foot{display:flex;justify-content:space-between;font-size:9.5px;color:var(--text3);margin-top:5px;
+  text-transform:uppercase;letter-spacing:.05em;font-weight:700}
 
 /* servicios en el drawer */
 .srv{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:7px;flex-wrap:wrap}
@@ -170,17 +188,53 @@ tr.clickable:hover td{background:rgba(255,255,255,.03)}
 .srv-nota{width:100%;font-family:var(--font);font-size:12px;padding:6px 9px;background:var(--bg3);color:var(--text);
   border:1px solid var(--border2);border-radius:8px;outline:none}
 .srv-nota:focus{border-color:var(--orange)}
+/* el servicio es lo que se carga, así que manda visualmente */
+.srv.pend{border-left:3px solid var(--text3)}
+.srv.set-verde{border-left:3px solid #16a34a}
+.srv.set-amarillo{border-left:3px solid #f59e0b}
+.srv.set-rojo{border-left:3px solid #dc2626}
+.seg.big button{font-size:11px;padding:7px 12px}
 
-/* preguntas */
-.qbox{margin-bottom:14px}
-.qlab{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;line-height:1.4}
-.qlab b{color:var(--orange);font-family:var(--mono);margin-right:5px}
+/* resumen del color de la marca: calculado, no editable de entrada */
+.resumen{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:var(--bg2);
+  border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px 15px}
+.resumen-dot{width:34px;height:34px;border-radius:9px;flex-shrink:0}
+.resumen-dot.verde{background:#16a34a}.resumen-dot.amarillo{background:#f59e0b}
+.resumen-dot.rojo{background:#dc2626}.resumen-dot.sin_servicio{background:rgba(255,255,255,.08)}
+.resumen-txt{flex:1;min-width:140px}
+.resumen-est{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.resumen-sub{font-size:11.5px;color:var(--text3);margin-top:2px}
+.link-mini{background:none;border:none;color:var(--text3);font-family:var(--font);font-size:11px;
+  cursor:pointer;text-decoration:underline;padding:0}
+.link-mini:hover{color:var(--orange)}
+
+/* preguntas: cada una es una tarjeta numerada */
+.qbox{background:var(--bg2);border:1px solid var(--border2);border-left:3px solid var(--orange);
+  border-radius:var(--radius-lg);padding:13px 15px;margin-bottom:11px}
+.qbox.q-plan{border-left-color:var(--blue)}
+.qhdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.qnum{flex-shrink:0;width:23px;height:23px;border-radius:50%;background:var(--orange);color:#fff;
+  font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.qbox.q-plan .qnum{background:var(--blue);color:#0b1929;font-size:13px}
+.qlab{font-size:12.5px;font-weight:600;color:var(--text);line-height:1.35;padding-top:3px}
+.qsub{font-size:11px;color:var(--text3);font-weight:400;margin-top:2px}
 textarea.q{width:100%;min-height:76px;font-family:var(--font);font-size:13px;line-height:1.5;padding:10px 12px;
-  background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;resize:vertical}
+  background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;resize:vertical}
 textarea.q:focus{border-color:var(--orange)}
-.qview{font-size:13px;line-height:1.55;color:var(--text);background:var(--bg2);border:1px solid var(--border2);
-  border-left:2px solid var(--orange);border-radius:var(--radius);padding:10px 13px;white-space:pre-wrap}
-.qview.vacio{color:var(--text3);font-style:italic;border-left-color:var(--text3)}
+.qview{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap}
+.qview.vacio{color:var(--text3);font-style:italic}
+.qfill{display:flex;gap:5px;margin-top:8px}
+.qfill i{flex:1;height:3px;border-radius:20px;background:rgba(255,255,255,.09)}
+.qfill i.done{background:var(--green)}
+
+/* hilo de comentarios del plan de acción */
+.cmt{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;margin-bottom:7px}
+.cmt-meta{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px}
+.cmt-txt{font-size:12.5px;line-height:1.5;white-space:pre-wrap}
+.cmt-add{display:flex;gap:7px;margin-top:9px}
+.cmt-add input{flex:1;font-family:var(--font);font-size:12.5px;padding:9px 11px;background:var(--bg2);color:var(--text);
+  border:1px solid var(--border2);border-radius:var(--radius);outline:none;min-width:0}
+.cmt-add input:focus{border-color:var(--orange)}
 
 /* varios */
 .empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px}
@@ -386,7 +440,9 @@ function cargar(){
     fetchAll('sem_v_marcas_mes', '*'),
     fetchAll('sem_v_detalle', '*'),
     fetchAll('sem_usuarios', '*', function(q){ return q.order('nombre'); }),
-    fetchAll('sem_usuario_marcas', '*')
+    fetchAll('sem_usuario_marcas', '*'),
+    fetchAll('sem_celulas', '*', function(q){ return q.order('nombre'); }),
+    fetchAll('sem_comentarios', '*', function(q){ return q.order('creado_at'); })
   ]).then(function(res){
     D.marcas    = res[0];
     D.servicios = res[1];
@@ -395,10 +451,13 @@ function cargar(){
     D.det       = res[4];
     D.usuarios  = res[5];
     D.um        = res[6];
+    D.celulas   = res[7];
+    D.coment    = res[8];
     D.misMarcas = D.um.filter(function(x){ return x.usuario_id === me.id; })
                       .map(function(x){ return x.marca_id; });
     D.marcaById    = {}; D.marcas.forEach(function(m){ D.marcaById[m.id] = m; });
     D.servicioById = {}; D.servicios.forEach(function(s){ D.servicioById[s.id] = s; });
+    D.celulaById   = {}; D.celulas.forEach(function(c){ D.celulaById[c.id] = c; });
     render();
   }).catch(function(e){
     $('panes').innerHTML = '<div class="empty">No se pudieron cargar los datos.<br><span class="muted">' +
@@ -427,6 +486,8 @@ function render(){
   var defs = [
     ['tablero',  'Tablero',  D.marcas.filter(function(m){ return m.activa; }).length, false],
     ['carga',    'Carga mensual', pend, pend > 0],
+    ['marca',    'Por marca', null, false],
+    ['servicio', 'Por servicio', null, false],
     ['estados',  'Por estado', null, false]
   ];
   if (esAdmin){
@@ -441,11 +502,20 @@ function render(){
     b.onclick = function(){ tab = b.dataset.t; render(); };
   });
 
-  if (tab === 'tablero')      renderTablero();
-  else if (tab === 'carga')   renderCarga();
-  else if (tab === 'estados') renderEstados();
-  else if (tab === 'marcas')  renderMarcas();
-  else if (tab === 'accesos') renderAccesos();
+  if (tab === 'tablero')       renderTablero();
+  else if (tab === 'carga')    renderCarga();
+  else if (tab === 'marca')    renderPorMarca();
+  else if (tab === 'servicio') renderPorServicio();
+  else if (tab === 'estados')  renderEstados();
+  else if (tab === 'marcas')   renderMarcas();
+  else if (tab === 'accesos')  renderAccesos();
+}
+
+// nombre de la célula de una marca (o el cajón de las que no tienen)
+function celulaDe(marcaId){
+  var m = D.marcaById[marcaId];
+  var c = m && m.celula_id ? D.celulaById[m.celula_id] : null;
+  return c || {id: 0, nombre: 'Sin célula', kam: null};
 }
 
 function pendientesDe(periodo){
@@ -455,13 +525,14 @@ function pendientesDe(periodo){
 }
 
 // ══ TABLERO ═══════════════════════════════════════════════════════════════
-var tbMeses = 12, tbBusca = '', tbSoloActivas = true;
+var tbMeses = 12, tbBusca = '', tbSoloActivas = true, tbCelula = '';
 
 function renderTablero(){
   var meses = ultimosMeses(tbMeses);
   var ultimo = meses[meses.length - 1];
   var marcas = D.marcas.filter(function(m){
     if (tbSoloActivas && !m.activa) return false;
+    if (tbCelula && String(celulaDe(m.id).id) !== tbCelula) return false;
     return !tbBusca || m.nombre.toLowerCase().indexOf(tbBusca.toLowerCase()) >= 0;
   });
 
@@ -477,6 +548,11 @@ function renderTablero(){
   html += '<div class="filters">' +
     '<label>Meses</label><select id="tbN">' +
       [6,12,18,24].map(function(n){ return '<option value="'+n+'"'+(n===tbMeses?' selected':'')+'>'+n+'</option>'; }).join('') +
+    '</select>' +
+    '<label>Célula</label><select id="tbC"><option value="">Todas</option>' +
+      celulasConMarcas().map(function(c){
+        return '<option value="' + c.id + '"' + (tbCelula == c.id ? ' selected' : '') + '>' +
+          esc(c.nombre) + (c.kam ? ' — ' + esc(c.kam) : '') + '</option>'; }).join('') +
     '</select>' +
     '<input type="search" id="tbQ" placeholder="Buscar marca…" value="' + esc(tbBusca) + '">' +
     '<label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text2)">' +
@@ -510,46 +586,64 @@ function renderTablero(){
 
   if (!marcas.length) html += '<tr><td colspan="' + (meses.length + 1) + '"><div class="empty">No hay marcas para mostrar</div></td></tr>';
 
-  marcas.forEach(function(m){
-    var srvs = serviciosDe(m.id);
-    var open = !!abiertas[m.id];
-    html += '<tr><td><span class="caret' + (open ? ' open' : '') + '" data-toggle="' + m.id + '">&#9654;</span>' +
-      '<span class="strong">' + esc(m.nombre) + '</span>' +
-      (m.activa ? '' : ' <span class="chip grey">baja</span>') +
-      ' <span class="muted" style="font-size:11px">' + srvs.length + '</span></td>';
-    meses.forEach(function(p){
-      var r = regDe(m.id, p);
-      html += '<td class="cell">' + celda(r ? r.estado : null, m.id, p, r && r.estado_forzado) + '</td>';
+  agruparPorCelula(marcas).forEach(function(g){
+    // encabezado de la célula, con el resumen de colores del último mes cerrado
+    var res = {verde:0, amarillo:0, rojo:0};
+    g.marcas.forEach(function(m){
+      var r = regDe(m.id, ultimo);
+      if (r && res[r.estado] != null) res[r.estado]++;
     });
-    html += '</tr>';
+    html += '<tr class="crow"><td><span class="crow-name">' + esc(g.celula.nombre) + '</span>' +
+      (g.celula.kam ? '<span class="crow-kam">KAM ' + esc(g.celula.kam) + '</span>' : '') +
+      '<span class="crow-kam">' + g.marcas.length + ' marca' + (g.marcas.length === 1 ? '' : 's') + '</span>' +
+      '<span class="crow-mini">' +
+        (res.verde ? '<i style="background:#16a34a" title="' + res.verde + ' en verde"></i>' : '') +
+        (res.amarillo ? '<i style="background:#f59e0b" title="' + res.amarillo + ' en amarillo"></i>' : '') +
+        (res.rojo ? '<i style="background:#dc2626" title="' + res.rojo + ' en rojo"></i>' : '') +
+      '</span></td><td colspan="' + meses.length + '"></td></tr>';
 
-    if (open){
-      // servicios: los contratados hoy + los que aparezcan en el histórico visible
-      var vistos = {};
-      srvs.forEach(function(s){ vistos[s.id] = true; });
-      D.det.forEach(function(d){
-        if (d.marca_id === m.id && meses.indexOf(d.periodo) >= 0) vistos[d.servicio_id] = true;
+    g.marcas.forEach(function(m){
+      var srvs = serviciosDe(m.id);
+      var open = !!abiertas[m.id];
+      html += '<tr><td><span class="caret' + (open ? ' open' : '') + '" data-toggle="' + m.id + '">&#9654;</span>' +
+        '<span class="strong">' + esc(m.nombre) + '</span>' +
+        (m.activa ? '' : ' <span class="chip grey">baja</span>') +
+        ' <span class="muted" style="font-size:11px">' + srvs.length + '</span></td>';
+      meses.forEach(function(p){
+        var r = regDe(m.id, p);
+        html += '<td class="cell">' + celda(r ? r.estado : null, m.id, p, r && r.estado_forzado) + '</td>';
       });
-      Object.keys(vistos).map(function(id){ return D.servicioById[Number(id)]; })
-        .filter(Boolean)
-        .sort(function(a,b){ return a.orden - b.orden; })
-        .forEach(function(s){
-          html += '<tr class="srow"><td>' + esc(s.nombre) + '</td>';
-          meses.forEach(function(p){
-            var d = D.det.find(function(x){
-              return x.marca_id === m.id && x.periodo === p && x.servicio_id === s.id; });
-            var r = regDe(m.id, p);
-            html += '<td class="cell">' + celda(r ? (d ? d.estado : 'sin_servicio') : null, m.id, p) + '</td>';
-          });
-          html += '</tr>';
+      html += '</tr>';
+
+      if (open){
+        // servicios: los contratados hoy + los que aparezcan en el histórico visible
+        var vistos = {};
+        srvs.forEach(function(s){ vistos[s.id] = true; });
+        D.det.forEach(function(d){
+          if (d.marca_id === m.id && meses.indexOf(d.periodo) >= 0) vistos[d.servicio_id] = true;
         });
-    }
+        Object.keys(vistos).map(function(id){ return D.servicioById[Number(id)]; })
+          .filter(Boolean)
+          .sort(function(a,b){ return a.orden - b.orden; })
+          .forEach(function(s){
+            html += '<tr class="srow"><td>' + esc(s.nombre) + '</td>';
+            meses.forEach(function(p){
+              var d = D.det.find(function(x){
+                return x.marca_id === m.id && x.periodo === p && x.servicio_id === s.id; });
+              var r = regDe(m.id, p);
+              html += '<td class="cell">' + celda(r ? (d ? d.estado : 'sin_servicio') : null, m.id, p) + '</td>';
+            });
+            html += '</tr>';
+          });
+      }
+    });
   });
   html += '</tbody></table></div></div>';
 
   $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
 
   $('tbN').onchange = function(){ tbMeses = Number(this.value); renderTablero(); };
+  $('tbC').onchange = function(){ tbCelula = this.value; renderTablero(); };
   $('tbQ').oninput  = function(){ tbBusca = this.value; renderTablero(); };
   $('tbA').onchange = function(){ tbSoloActivas = this.checked; renderTablero(); };
   $('tbExpand').onclick = function(){ marcas.forEach(function(m){ abiertas[m.id] = true; }); renderTablero(); };
@@ -578,6 +672,29 @@ function bindCeldas(){
   Array.prototype.forEach.call(document.querySelectorAll('.sem[data-m]'), function(el){
     el.onclick = function(){ abrirCierre(Number(el.dataset.m), el.dataset.p); };
   });
+}
+// agrupa marcas por célula; las que no tienen quedan siempre al final
+function agruparPorCelula(marcas){
+  var grupos = {};
+  marcas.forEach(function(m){
+    var c = celulaDe(m.id);
+    if (!grupos[c.id]) grupos[c.id] = {celula: c, marcas: []};
+    grupos[c.id].marcas.push(m);
+  });
+  return Object.keys(grupos).map(function(k){ return grupos[k]; })
+    .sort(function(a, b){
+      if (a.celula.id === 0) return 1;
+      if (b.celula.id === 0) return -1;
+      return a.celula.nombre.localeCompare(b.celula.nombre);
+    });
+}
+// solo las células que hoy tienen alguna marca, más el cajón "Sin célula" si aplica
+function celulasConMarcas(){
+  var usadas = {};
+  D.marcas.forEach(function(m){ usadas[celulaDe(m.id).id] = true; });
+  var out = D.celulas.filter(function(c){ return usadas[c.id]; });
+  if (usadas[0]) out.push({id: 0, nombre: 'Sin célula', kam: null});
+  return out;
 }
 
 // ══ CARGA MENSUAL ═════════════════════════════════════════════════════════
@@ -654,8 +771,227 @@ function devCell(v){
   return '<span class="' + (Number(v) >= 0 ? 'dev-ok' : 'dev-bad') + '">' + fmtPct(v) + '</span>';
 }
 
+// ══ POR MARCA ═════════════════════════════════════════════════════════════
+var pmMarca = '', pmMeses = 12;
+
+function renderPorMarca(){
+  var activas = D.marcas.filter(function(m){ return m.activa; });
+  if (!pmMarca && activas.length) pmMarca = String(activas[0].id);
+  var m = D.marcaById[Number(pmMarca)];
+  var meses = ultimosMeses(pmMeses);
+
+  var html = '<div class="filters">' +
+    '<label>Marca</label><select id="pmM">' + opcionesMarca(pmMarca) + '</select>' +
+    '<label>Meses</label><select id="pmN">' +
+      [6,12,18,24].map(function(n){ return '<option value="'+n+'"'+(n===pmMeses?' selected':'')+'>'+n+'</option>'; }).join('') +
+    '</select></div>';
+
+  if (!m){
+    $('panes').innerHTML = '<div class="pane active">' + html + '<div class="empty">No hay marcas cargadas</div></div>';
+    if ($('pmM')) $('pmM').onchange = function(){ pmMarca = this.value; renderPorMarca(); };
+    return;
+  }
+
+  var c = celulaDe(m.id);
+  var srvs = serviciosDe(m.id);
+  // el último mes que tenga cierre, no el último del calendario
+  var cierres = D.mes.filter(function(r){ return r.marca_id === m.id; })
+                     .sort(function(a,b){ return a.periodo < b.periodo ? 1 : -1; });
+  var ult = cierres[0];
+
+  html += '<div class="section" style="padding:16px 20px">' +
+    '<div class="resumen" style="border:none;background:transparent;padding:0">' +
+      '<div class="resumen-dot ' + (ult ? ult.estado : 'sin_servicio') + '"></div>' +
+      '<div class="resumen-txt">' +
+        '<div class="resumen-est" style="font-size:19px">' + esc(m.nombre) + '</div>' +
+        '<div class="resumen-sub">' + esc(c.nombre) + (c.kam ? ' · KAM ' + esc(c.kam) : '') +
+          ' · ' + srvs.length + ' servicio' + (srvs.length === 1 ? '' : 's') +
+          ' · ' + cierres.length + ' mes' + (cierres.length === 1 ? '' : 'es') + ' cargado' + (cierres.length === 1 ? '' : 's') +
+        '</div>' +
+      '</div>' +
+      (ult ? '<div style="text-align:right"><div class="chip ' + chipDe(ult.estado) + '">' + ELABEL[ult.estado] + '</div>' +
+             '<div class="resumen-sub" style="margin-top:5px">' + periodoLargo(ult.periodo) + '</div></div>' : '') +
+    '</div></div>';
+
+  if (ult){
+    html += '<div class="kpi-row">' +
+      kpi('Facturación', fmtPct(ult.fact_desvio), 'objetivo ' + fmtN(ult.fact_obj) + ' · real ' + fmtN(ult.fact_real),
+          ult.fact_desvio == null ? 'mute' : (ult.fact_desvio >= 0 ? 'ok' : 'bad')) +
+      kpi('Órdenes', fmtPct(ult.ord_desvio), 'objetivo ' + fmtN(ult.ord_obj) + ' · real ' + fmtN(ult.ord_real),
+          ult.ord_desvio == null ? 'mute' : (ult.ord_desvio >= 0 ? 'ok' : 'bad')) +
+      kpi('Sesiones', fmtPct(ult.ses_desvio), 'objetivo ' + fmtN(ult.ses_obj) + ' · real ' + fmtN(ult.ses_real),
+          ult.ses_desvio == null ? 'mute' : (ult.ses_desvio >= 0 ? 'ok' : 'bad')) +
+    '</div>';
+  }
+
+  // grilla servicios × meses de esta marca
+  var vistos = {};
+  srvs.forEach(function(s){ vistos[s.id] = true; });
+  D.det.forEach(function(d){
+    if (d.marca_id === m.id && meses.indexOf(d.periodo) >= 0) vistos[d.servicio_id] = true;
+  });
+  var lista = Object.keys(vistos).map(function(id){ return D.servicioById[Number(id)]; })
+    .filter(Boolean).sort(function(a,b){ return a.orden - b.orden; });
+
+  html += '<div class="section"><div class="section-hdr"><span class="section-title">Semáforo por servicio</span></div>' +
+    '<div class="twrap"><table class="grid"><thead><tr><th>Servicio</th>' +
+    meses.map(function(p){ return '<th style="text-align:center">' + periodoLabel(p) + '</th>'; }).join('') +
+    '</tr></thead><tbody>';
+  html += '<tr><td class="strong">Marca (peor servicio)</td>' + meses.map(function(p){
+      var r = regDe(m.id, p);
+      return '<td class="cell">' + celda(r ? r.estado : null, m.id, p, r && r.estado_forzado) + '</td>';
+    }).join('') + '</tr>';
+  if (!lista.length)
+    html += '<tr><td colspan="' + (meses.length + 1) + '"><div class="empty">Esta marca todavía no tiene servicios asignados</div></td></tr>';
+  lista.forEach(function(s){
+    html += '<tr class="srow"><td>' + esc(s.nombre) + '</td>' + meses.map(function(p){
+      var d = D.det.find(function(x){ return x.marca_id === m.id && x.periodo === p && x.servicio_id === s.id; });
+      var r = regDe(m.id, p);
+      return '<td class="cell">' + celda(r ? (d ? d.estado : 'sin_servicio') : null, m.id, p) + '</td>';
+    }).join('') + '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  // el relato mes a mes: qué pasó y qué se hizo
+  html += '<div class="section"><div class="section-hdr"><span class="section-title">Historia mes a mes</span></div>' +
+    '<div style="padding:16px 20px">';
+  if (!cierres.length) html += '<div class="empty">Todavía no hay ningún cierre cargado para esta marca</div>';
+  cierres.forEach(function(r){
+    var nc = D.coment.filter(function(k){ return k.registro_id === r.registro_id; }).length;
+    html += '<div class="qbox" style="border-left-color:' + colorDe(r.estado) + '">' +
+      '<div class="qhdr"><span class="qnum" style="background:' + colorDe(r.estado) + '">' +
+        ELABEL[r.estado].charAt(0) + '</span>' +
+      '<div class="qlab">' + periodoLargo(r.periodo) +
+        '<div class="qsub">' + [
+          'Fact ' + fmtPct(r.fact_desvio), 'Órd ' + fmtPct(r.ord_desvio), 'Ses ' + fmtPct(r.ses_desvio)
+        ].join(' · ') + (nc ? ' · ' + nc + ' comentario' + (nc === 1 ? '' : 's') : '') + '</div>' +
+      '</div>' +
+      '<button class="mini" data-abrir="' + m.id + '|' + r.periodo + '">Ver</button></div>' +
+      [['1', r.q1], ['2', r.q2], ['3', r.q3]].map(function(q){
+        return '<div style="margin-bottom:7px"><span class="qsub" style="font-weight:700">' + q[0] + '.</span> ' +
+          '<span class="qview' + (q[1] ? '' : ' vacio') + '">' + (esc(q[1]) || 'sin responder') + '</span></div>';
+      }).join('') +
+      (r.plan_accion ? '<div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border2)">' +
+        '<span class="qsub" style="font-weight:700;color:var(--blue)">PLAN DE ACCIÓN</span> ' +
+        '<span class="qview">' + esc(r.plan_accion) + '</span></div>' : '') +
+    '</div>';
+  });
+  html += '</div></div>';
+
+  $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
+  $('pmM').onchange = function(){ pmMarca = this.value; renderPorMarca(); };
+  $('pmN').onchange = function(){ pmMeses = Number(this.value); renderPorMarca(); };
+  bindCeldas();
+  Array.prototype.forEach.call(document.querySelectorAll('[data-abrir]'), function(b){
+    b.onclick = function(ev){
+      ev.stopPropagation();
+      var p = b.dataset.abrir.split('|');
+      abrirCierre(Number(p[0]), p[1]);
+    };
+  });
+}
+
+// select de marcas agrupado por célula
+function opcionesMarca(sel){
+  return agruparPorCelula(D.marcas.filter(function(m){ return m.activa; })).map(function(g){
+    return '<optgroup label="' + esc(g.celula.nombre) + (g.celula.kam ? ' — ' + esc(g.celula.kam) : '') + '">' +
+      g.marcas.map(function(m){
+        return '<option value="' + m.id + '"' + (sel == m.id ? ' selected' : '') + '>' + esc(m.nombre) + '</option>';
+      }).join('') + '</optgroup>';
+  }).join('');
+}
+function colorDe(estado){
+  return {verde:'#16a34a', amarillo:'#f59e0b', rojo:'#dc2626'}[estado] || 'var(--text3)';
+}
+function chipDe(estado){
+  return {verde:'green', amarillo:'amber', rojo:'red'}[estado] || 'grey';
+}
+
+// ══ POR SERVICIO ══════════════════════════════════════════════════════════
+var psServicio = '', psMeses = 12, psSoloConServicio = true;
+
+function renderPorServicio(){
+  if (!psServicio && D.servicios.length) psServicio = String(D.servicios[0].id);
+  var s = D.servicioById[Number(psServicio)];
+  var meses = ultimosMeses(psMeses);
+  var ultimo = meses[meses.length - 1];
+
+  var html = '<div class="filters">' +
+    '<label>Servicio</label><select id="psS">' +
+      D.servicios.map(function(x){ return '<option value="' + x.id + '"' + (psServicio == x.id ? ' selected' : '') +
+        '>' + esc(x.nombre) + '</option>'; }).join('') +
+    '</select>' +
+    '<label>Meses</label><select id="psN">' +
+      [6,12,18,24].map(function(n){ return '<option value="'+n+'"'+(n===psMeses?' selected':'')+'>'+n+'</option>'; }).join('') +
+    '</select>' +
+    '<label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text2)">' +
+      '<input type="checkbox" id="psC"' + (psSoloConServicio ? ' checked' : '') + '> solo marcas con el servicio</label>' +
+  '</div>';
+
+  // marcas que tienen el servicio contratado hoy, o que lo tuvieron en el histórico visible
+  var conServicio = {};
+  D.ms.forEach(function(x){ if (x.servicio_id === Number(psServicio)) conServicio[x.marca_id] = true; });
+  D.det.forEach(function(d){
+    if (d.servicio_id === Number(psServicio) && d.estado !== 'sin_servicio' && meses.indexOf(d.periodo) >= 0)
+      conServicio[d.marca_id] = true;
+  });
+  var marcas = D.marcas.filter(function(m){
+    if (!m.activa) return false;
+    return psSoloConServicio ? !!conServicio[m.id] : true;
+  });
+
+  // estado de este servicio en el último mes cerrado
+  function estadoServicio(marcaId, periodo){
+    var d = D.det.find(function(x){
+      return x.marca_id === marcaId && x.periodo === periodo && x.servicio_id === Number(psServicio); });
+    var r = regDe(marcaId, periodo);
+    if (!r) return null;
+    return d ? d.estado : 'sin_servicio';
+  }
+  var cnt = {verde:0, amarillo:0, rojo:0, sin_servicio:0}, sinCargar = 0;
+  marcas.forEach(function(m){
+    var e = estadoServicio(m.id, ultimo);
+    if (e == null) sinCargar++; else cnt[e]++;
+  });
+
+  html += '<div class="kpi-row">' +
+    kpi('Verde', cnt.verde, esc(s ? s.nombre : '') + ' · ' + periodoLargo(ultimo), 'ok') +
+    kpi('Amarillo', cnt.amarillo, periodoLargo(ultimo), 'warn') +
+    kpi('Rojo', cnt.rojo, periodoLargo(ultimo), 'bad') +
+    kpi('Sin servicio', cnt.sin_servicio, 'ese mes', 'mute') +
+    kpi('Sin cargar', sinCargar, 'de ' + marcas.length + ' marcas', sinCargar ? 'mute' : 'ok') +
+  '</div>';
+
+  html += '<div class="section"><div class="section-hdr"><span class="section-title">' +
+    esc(s ? s.nombre : '') + ' — todas las marcas</span></div>' +
+    '<div class="twrap"><table class="grid"><thead><tr><th>Marca</th>' +
+    meses.map(function(p){ return '<th style="text-align:center">' + periodoLabel(p) + '</th>'; }).join('') +
+    '</tr></thead><tbody>';
+
+  if (!marcas.length)
+    html += '<tr><td colspan="' + (meses.length + 1) + '"><div class="empty">Ninguna marca tiene este servicio asignado</div></td></tr>';
+
+  agruparPorCelula(marcas).forEach(function(g){
+    html += '<tr class="crow"><td><span class="crow-name">' + esc(g.celula.nombre) + '</span>' +
+      (g.celula.kam ? '<span class="crow-kam">KAM ' + esc(g.celula.kam) + '</span>' : '') +
+      '</td><td colspan="' + meses.length + '"></td></tr>';
+    g.marcas.forEach(function(m){
+      html += '<tr><td class="strong">' + esc(m.nombre) + '</td>' + meses.map(function(p){
+        return '<td class="cell">' + celda(estadoServicio(m.id, p), m.id, p) + '</td>';
+      }).join('') + '</tr>';
+    });
+  });
+  html += '</tbody></table></div></div>';
+
+  $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
+  $('psS').onchange = function(){ psServicio = this.value; renderPorServicio(); };
+  $('psN').onchange = function(){ psMeses = Number(this.value); renderPorServicio(); };
+  $('psC').onchange = function(){ psSoloConServicio = this.checked; renderPorServicio(); };
+  bindCeldas();
+}
+
 // ══ POR ESTADO ════════════════════════════════════════════════════════════
-var flEstado = 'amarillo', flPeriodo = '', flServicio = '', flMarca = '', flQ = '';
+var flEstado = 'amarillo', flPeriodo = '', flServicio = '', flMarca = '', flQ = '', flCelula = '';
 
 function renderEstados(){
   if (flPeriodo === '') flPeriodo = mesAnterior(1);
@@ -672,6 +1008,7 @@ function renderEstados(){
     if (flPeriodo !== 'todos' && d.periodo !== flPeriodo) return false;
     if (flServicio && d.servicio_id !== Number(flServicio)) return false;
     if (flMarca && d.marca_id !== Number(flMarca)) return false;
+    if (flCelula && String(celulaDe(d.marca_id).id) !== flCelula) return false;
     if (flQ){
       var hay = (d.marca + ' ' + d.servicio + ' ' + (d.q1||'') + ' ' + (d.q2||'') + ' ' +
                  (d.q3||'') + ' ' + (d.nota||'')).toLowerCase();
@@ -699,6 +1036,10 @@ function renderEstados(){
       D.servicios.map(function(s){ return '<option value="' + s.id + '"' + (flServicio == s.id ? ' selected' : '') + '>' +
         esc(s.nombre) + '</option>'; }).join('') +
     '</select>' +
+    '<label>Célula</label><select id="flC"><option value="">Todas</option>' +
+      celulasConMarcas().map(function(c){ return '<option value="' + c.id + '"' + (flCelula == c.id ? ' selected' : '') +
+        '>' + esc(c.nombre) + '</option>'; }).join('') +
+    '</select>' +
     '<label>Marca</label><select id="flM"><option value="">Todas</option>' +
       D.marcas.map(function(m){ return '<option value="' + m.id + '"' + (flMarca == m.id ? ' selected' : '') + '>' +
         esc(m.nombre) + '</option>'; }).join('') +
@@ -718,21 +1059,25 @@ function renderEstados(){
   '</div>';
 
   html += '<div class="section"><div class="twrap"><table><thead><tr>' +
-    '<th>Mes</th><th>Marca</th><th>Servicio</th><th>Estado</th>' +
-    '<th>¿Por qué ese color?</th><th>¿Qué se está haciendo?</th><th>Foco del cliente</th>' +
+    '<th>Mes</th><th>Marca</th><th>Célula</th><th>Servicio</th><th>Estado</th>' +
+    '<th>¿Por qué ese color?</th><th>¿Qué se está haciendo?</th><th>Foco del cliente</th><th>Plan de acción</th>' +
   '</tr></thead><tbody>';
 
-  if (!rows.length) html += '<tr><td colspan="7"><div class="empty">Nada que mostrar con estos filtros</div></td></tr>';
+  if (!rows.length) html += '<tr><td colspan="9"><div class="empty">Nada que mostrar con estos filtros</div></td></tr>';
 
   rows.forEach(function(r){
+    var c = celulaDe(r.marca_id);
     html += '<tr class="clickable" data-m="' + r.marca_id + '" data-p="' + r.periodo + '">' +
       '<td class="muted" style="white-space:nowrap">' + periodoLabel(r.periodo) + '</td>' +
       '<td class="strong">' + esc(r.marca) + '</td>' +
+      '<td class="muted" style="font-size:11.5px">' + esc(c.nombre) +
+        (c.kam ? '<br>' + esc(c.kam) : '') + '</td>' +
       '<td>' + esc(r.servicio) + '</td>' +
       '<td><span class="sem sem-' + r.estado + '" style="display:inline-block">' + ELABEL[r.estado] + '</span></td>' +
       '<td><div class="wrap-cell">' + (esc(r.q1) || '<span class="muted">—</span>') + '</div></td>' +
       '<td><div class="wrap-cell">' + (esc(r.q2) || '<span class="muted">—</span>') + '</div></td>' +
       '<td><div class="wrap-cell">' + (esc(r.q3) || '<span class="muted">—</span>') + '</div></td>' +
+      '<td><div class="wrap-cell">' + (esc(r.plan_accion) || '<span class="muted">—</span>') + '</div></td>' +
     '</tr>';
   });
   html += '</tbody></table></div></div>';
@@ -741,6 +1086,7 @@ function renderEstados(){
   $('flE').onchange = function(){ flEstado = this.value; renderEstados(); };
   $('flP').onchange = function(){ flPeriodo = this.value; renderEstados(); };
   $('flS').onchange = function(){ flServicio = this.value; renderEstados(); };
+  $('flC').onchange = function(){ flCelula = this.value; renderEstados(); };
   $('flM').onchange = function(){ flMarca = this.value; renderEstados(); };
   $('flQ').oninput  = function(){ flQ = this.value; renderEstados(); };
   $('flCsv').onclick = function(){ exportarCsv(rows); };
@@ -750,10 +1096,13 @@ function renderEstados(){
 }
 
 function exportarCsv(rows){
-  var cab = ['Mes','Marca','Servicio','Estado','Nota del servicio', PREGUNTAS[0], PREGUNTAS[1], PREGUNTAS[2]];
+  var cab = ['Mes','Marca','Célula','KAM','Servicio','Estado','Nota del servicio',
+             PREGUNTAS[0], PREGUNTAS[1], PREGUNTAS[2], 'Plan de acción'];
   var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
   var csv = [cab.map(q).join(';')].concat(rows.map(function(r){
-    return [r.periodo.slice(0,7), r.marca, r.servicio, ELABEL[r.estado], r.nota, r.q1, r.q2, r.q3].map(q).join(';');
+    var c = celulaDe(r.marca_id);
+    return [r.periodo.slice(0,7), r.marca, c.nombre, c.kam, r.servicio, ELABEL[r.estado], r.nota,
+            r.q1, r.q2, r.q3, r.plan_accion].map(q).join(';');
   })).join('\r\n');
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'}));
@@ -771,18 +1120,47 @@ function renderMarcas(){
     '<div class="addrow"><input id="nmNombre" placeholder="Nombre de la marca">' +
     '<button class="btn-orange" id="nmAdd">Agregar</button></div></div>';
 
+  // células: alta y quién las lleva
+  html += '<div class="section"><div class="section-hdr"><span class="section-title">' +
+    D.celulas.length + ' células</span></div>' +
+    '<div class="addrow"><input id="ncNombre" placeholder="Nombre de la célula">' +
+    '<input id="ncKam" placeholder="KAM que la lleva">' +
+    '<button class="btn-orange" id="ncAdd">Agregar célula</button></div>';
+  if (D.celulas.length){
+    html += '<div class="twrap"><table><thead><tr><th>Célula</th><th>KAM</th><th>Marcas</th><th></th>' +
+      '</tr></thead><tbody>';
+    D.celulas.forEach(function(c){
+      var n = D.marcas.filter(function(m){ return m.celula_id === c.id; }).length;
+      html += '<tr><td class="strong">' + esc(c.nombre) + '</td>' +
+        '<td><input class="srv-nota" data-kam="' + c.id + '" style="max-width:200px" value="' +
+          esc(c.kam || '') + '" placeholder="sin asignar"></td>' +
+        '<td class="num">' + n + '</td>' +
+        '<td style="text-align:right">' +
+          (n === 0 ? '<button class="mini danger" data-del-celula="' + c.id + '">Eliminar</button>' : '') +
+        '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
   html += '<div class="section"><div class="section-hdr"><span class="section-title">' +
     D.marcas.length + ' marcas</span></div><div class="twrap"><table><thead><tr>' +
-    '<th>Marca</th><th>Servicios contratados</th><th>Meses cargados</th><th></th>' +
+    '<th>Marca</th><th>Célula</th><th>Servicios contratados</th><th>Meses cargados</th><th></th>' +
   '</tr></thead><tbody>';
 
-  if (!D.marcas.length) html += '<tr><td colspan="4"><div class="empty">Todavía no hay marcas</div></td></tr>';
+  if (!D.marcas.length) html += '<tr><td colspan="5"><div class="empty">Todavía no hay marcas</div></td></tr>';
 
   D.marcas.forEach(function(m){
     var ids = D.ms.filter(function(x){ return x.marca_id === m.id; }).map(function(x){ return x.servicio_id; });
     var meses = D.mes.filter(function(r){ return r.marca_id === m.id; }).length;
     html += '<tr><td class="strong">' + esc(m.nombre) +
       (m.activa ? '' : ' <span class="chip grey">baja</span>') + '</td>' +
+      '<td><select class="mini" data-celula="' + m.id + '" style="padding:5px 8px">' +
+        '<option value="">— sin célula —</option>' +
+        D.celulas.map(function(c){
+          return '<option value="' + c.id + '"' + (m.celula_id === c.id ? ' selected' : '') + '>' +
+            esc(c.nombre) + '</option>'; }).join('') +
+      '</select></td>' +
       '<td>' + D.servicios.map(function(s){
         return '<button class="mini' + (ids.indexOf(s.id) >= 0 ? ' on' : '') + '" data-srv="' + m.id + ':' + s.id +
           '" style="margin:2px 3px 2px 0">' + esc(s.nombre) + '</button>';
@@ -806,6 +1184,46 @@ function renderMarcas(){
     });
   };
   $('nmNombre').onkeydown = function(ev){ if (ev.key === 'Enter') $('nmAdd').click(); };
+
+  $('ncAdd').onclick = function(){
+    var nombre = $('ncNombre').value.trim();
+    if (!nombre) return;
+    sb.from('sem_celulas').insert({nombre: nombre, kam: $('ncKam').value.trim() || null}).then(function(r){
+      if (r.error) return toast(r.error.message, true);
+      toast('Célula agregada'); cargar();
+    });
+  };
+  $('ncNombre').onkeydown = function(ev){ if (ev.key === 'Enter') $('ncAdd').click(); };
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-celula]'), function(s){
+    s.onchange = function(){
+      var mid = Number(s.dataset.celula);
+      sb.from('sem_marcas').update({celula_id: s.value ? Number(s.value) : null}).eq('id', mid)
+        .then(function(r){
+          if (r.error) return toast(r.error.message, true);
+          toast('Célula asignada'); cargar();
+        });
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-kam]'), function(i){
+    i.onchange = function(){
+      sb.from('sem_celulas').update({kam: i.value.trim() || null}).eq('id', Number(i.dataset.kam))
+        .then(function(r){
+          if (r.error) return toast(r.error.message, true);
+          toast('KAM actualizado'); cargar();
+        });
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-del-celula]'), function(b){
+    b.onclick = function(){
+      var id = Number(b.dataset.delCelula);
+      if (!confirm('¿Eliminar la célula "' + D.celulaById[id].nombre + '"? No tiene marcas asignadas.')) return;
+      sb.from('sem_celulas').delete().eq('id', id).then(function(r){
+        if (r.error) return toast(r.error.message, true);
+        toast('Célula eliminada'); cargar();
+      });
+    };
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-srv]'), function(b){
     b.onclick = function(){
@@ -942,8 +1360,11 @@ function abrirCierre(marcaId, periodo){
 
   form = {
     marca_id: marcaId, periodo: periodo, editable: editable,
+    registro_id: r ? r.registro_id : null,
     estado_manual: r ? r.estado_manual : null,
+    mostrarForzar: !!(r && r.estado_manual),   // el forzado arranca escondido
     q1: r ? (r.q1 || '') : '', q2: r ? (r.q2 || '') : '', q3: r ? (r.q3 || '') : '',
+    plan_accion: r ? (r.plan_accion || '') : '',
     fact_obj: r ? r.fact_obj : null, fact_real: r ? r.fact_real : null,
     ord_obj:  r ? r.ord_obj  : null, ord_real:  r ? r.ord_real  : null,
     ses_obj:  r ? r.ses_obj  : null, ses_real:  r ? r.ses_real  : null,
@@ -953,8 +1374,10 @@ function abrirCierre(marcaId, periodo){
     })
   };
 
+  var c = celulaDe(marcaId);
   $('dName').textContent = m.nombre;
   $('dMeta').innerHTML = periodoLargo(periodo) +
+    ' · <span class="muted">' + esc(c.nombre) + (c.kam ? ' · KAM ' + esc(c.kam) : '') + '</span>' +
     (r ? ' · <span class="muted">cargado por ' + esc(r.cargado_por || '—') + '</span>'
        : ' · <span class="muted">sin cargar</span>') +
     (editable ? '' : ' · <span class="chip grey">solo lectura</span>');
@@ -969,39 +1392,15 @@ function pintarDrawer(){
   var vigente = f.estado_manual || calc;
   var html = '';
 
-  // estado de la marca
-  html += '<div class="dsec">Semáforo de la marca</div>';
-  html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
-    '<span class="sem sem-' + vigente + '" style="display:inline-block;padding:9px 16px;font-size:12px">' +
-      ELABEL[vigente] + '</span>' +
-    '<span class="muted" style="font-size:11.5px">' +
-      (f.estado_manual ? 'forzado a mano (el cálculo da ' + ELABEL[calc] + ')' : 'calculado: el peor de los servicios') +
-    '</span>';
-  if (f.editable){
-    html += '<div class="spacer"></div><div class="seg">' +
-      ['verde','amarillo','rojo'].map(function(e){
-        return '<button class="' + e + (f.estado_manual === e ? ' on' : '') + '" data-force="' + e + '">' +
-          ELABEL[e] + '</button>'; }).join('') +
-      (f.estado_manual ? '<button data-force="">Auto</button>' : '') +
-    '</div>';
-  }
-  html += '</div>';
-
-  // bloques de números
-  html += '<div class="dsec">Desvío vs objetivo</div><div class="metric-row">' +
-    metricBox('Facturación', 'fact', 0) +
-    metricBox('Órdenes', 'ord', 0) +
-    metricBox('Sesiones', 'ses', 0) +
-  '</div>';
-
-  // servicios
-  html += '<div class="dsec">Servicios</div>';
+  // 1) los servicios primero: es lo que realmente se carga
+  html += '<div class="dsec">Semáforo de cada servicio</div>';
   if (!f.servicios.length)
     html += '<div class="note">Esta marca no tiene servicios asignados. Cargalos en la solapa Marcas.</div>';
   f.servicios.forEach(function(s, i){
-    html += '<div class="srv"><span class="srv-name">' + esc(s.nombre) + '</span>';
+    html += '<div class="srv ' + (s.estado === 'sin_servicio' ? 'pend' : 'set-' + s.estado) + '">' +
+      '<span class="srv-name">' + esc(s.nombre) + '</span>';
     if (f.editable){
-      html += '<div class="seg">' + ESTADOS.map(function(e){
+      html += '<div class="seg big">' + ESTADOS.map(function(e){
         return '<button class="' + e + (s.estado === e ? ' on' : '') + '" data-est="' + i + ':' + e + '">' +
           (e === 'sin_servicio' ? 'S/serv' : ELABEL[e]) + '</button>'; }).join('') + '</div>' +
         '<input class="srv-nota" data-nota="' + i + '" placeholder="Nota del servicio (opcional)" value="' +
@@ -1013,15 +1412,77 @@ function pintarDrawer(){
     html += '</div>';
   });
 
-  // preguntas
-  html += '<div class="dsec">Las 3 preguntas del cierre</div>';
+  // 2) el color de la marca sale solo de lo de arriba; forzarlo es la excepción
+  html += '<div class="dsec">Semáforo de la marca</div>';
+  html += '<div class="resumen">' +
+    '<div class="resumen-dot ' + vigente + '"></div>' +
+    '<div class="resumen-txt"><div class="resumen-est">' + ELABEL[vigente] + '</div>' +
+    '<div class="resumen-sub">' +
+      (f.estado_manual
+        ? 'forzado a mano · por servicios daría ' + ELABEL[calc]
+        : 'calculado automáticamente: el peor de los ' + f.servicios.length + ' servicios') +
+    '</div></div>' +
+    (f.editable && !f.mostrarForzar
+      ? '<button class="link-mini" data-forzar-toggle="1">forzar otro color</button>' : '') +
+  '</div>';
+  if (f.editable && f.mostrarForzar){
+    html += '<div style="display:flex;align-items:center;gap:9px;margin-top:8px;flex-wrap:wrap">' +
+      '<span class="qsub">Forzar a:</span><div class="seg">' +
+      ['verde','amarillo','rojo'].map(function(e){
+        return '<button class="' + e + (f.estado_manual === e ? ' on' : '') + '" data-force="' + e + '">' +
+          ELABEL[e] + '</button>'; }).join('') +
+      '<button data-force="">Volver a automático</button></div></div>';
+  }
+
+  // 3) bloques de números
+  html += '<div class="dsec">Desvío vs objetivo</div><div class="metric-row">' +
+    metricBox('Facturación', 'fact', 0) +
+    metricBox('Órdenes', 'ord', 0) +
+    metricBox('Sesiones', 'ses', 0) +
+  '</div>';
+
+  // 4) las preguntas, cada una como tarjeta numerada
+  var resp = ['q1','q2','q3'].filter(function(k){ return (f[k] || '').trim(); }).length;
+  html += '<div class="dsec">Las 3 preguntas del cierre' +
+    '<span style="float:right;color:' + (resp === 3 ? 'var(--green)' : 'var(--text3)') + '">' +
+      resp + '/3 respondidas</span></div>';
   ['q1','q2','q3'].forEach(function(k, i){
-    html += '<div class="qbox"><div class="qlab"><b>' + (i + 1) + '.</b>' + esc(PREGUNTAS[i]) + '</div>';
+    html += '<div class="qbox"><div class="qhdr"><span class="qnum">' + (i + 1) + '</span>' +
+      '<div class="qlab">' + esc(PREGUNTAS[i]) + '</div></div>';
     html += f.editable
       ? '<textarea class="q" data-q="' + k + '">' + esc(f[k]) + '</textarea>'
       : '<div class="qview' + (f[k] ? '' : ' vacio') + '">' + (esc(f[k]) || 'Sin respuesta') + '</div>';
     html += '</div>';
   });
+
+  // 5) plan de acción + hilo de comentarios
+  html += '<div class="dsec">Plan de acción</div>';
+  html += '<div class="qbox q-plan"><div class="qhdr"><span class="qnum">&#9873;</span>' +
+    '<div class="qlab">Plan de acción de la marca' +
+      '<div class="qsub">Qué vamos a hacer este mes, con qué prioridad</div></div></div>';
+  html += f.editable
+    ? '<textarea class="q" data-q="plan_accion">' + esc(f.plan_accion) + '</textarea>'
+    : '<div class="qview' + (f.plan_accion ? '' : ' vacio') + '">' + (esc(f.plan_accion) || 'Sin plan cargado') + '</div>';
+
+  var cmts = f.registro_id
+    ? D.coment.filter(function(k){ return k.registro_id === f.registro_id; })
+    : [];
+  html += '<div style="margin-top:13px;padding-top:12px;border-top:1px solid var(--border2)">' +
+    '<div class="cmt-meta" style="margin-bottom:8px">Comentarios (' + cmts.length + ')</div>';
+  cmts.forEach(function(k){
+    html += '<div class="cmt"><div class="cmt-meta">' + esc(k.autor || 'anónimo') + ' · ' +
+      new Date(k.creado_at).toLocaleDateString('es-AR', {day:'2-digit', month:'short', year:'2-digit'}) +
+      '</div><div class="cmt-txt">' + esc(k.texto) + '</div></div>';
+  });
+  if (!cmts.length)
+    html += '<div class="qsub" style="margin-bottom:4px">Todavía no hay comentarios.</div>';
+  if (f.editable){
+    html += f.registro_id
+      ? '<div class="cmt-add"><input id="cmtTxt" placeholder="Sumar un comentario…">' +
+        '<button class="mini" id="cmtAdd">Agregar</button></div>'
+      : '<div class="qsub">Guardá el cierre para poder sumar comentarios.</div>';
+  }
+  html += '</div></div>';
 
   $('dBody').innerHTML = html;
 
@@ -1036,11 +1497,18 @@ function pintarDrawer(){
   bindDrawer();
 }
 
+// el desvío solo existe si están los dos números, igual que en la vista de Postgres
+function desvio(obj, real){
+  if (obj == null || real == null || !(Number(obj) > 0)) return null;
+  return (Number(real) - Number(obj)) / Number(obj) * 100;
+}
+
 function metricBox(nombre, k, dec){
   var f = form;
   var obj = f[k + '_obj'], real = f[k + '_real'];
-  var dev = (obj != null && Number(obj) > 0) ? (Number(real || 0) - Number(obj)) / Number(obj) * 100 : null;
-  var html = '<div class="metric"><div class="metric-name">' + nombre + '</div>';
+  var dev = desvio(obj, real);
+  var html = '<div class="metric ' + (dev == null ? '' : (dev >= 0 ? 'up' : 'down')) +
+    '" data-metric="' + k + '"><div class="metric-name">' + nombre + '</div>';
   if (f.editable){
     html += '<div class="mlab">Objetivo</div><input type="number" step="any" data-k="' + k + '_obj" value="' +
       (obj == null ? '' : obj) + '">' +
@@ -1050,8 +1518,8 @@ function metricBox(nombre, k, dec){
     html += '<div class="metric-view"><span>Objetivo</span><span>' + fmtN(obj, dec) + '</span></div>' +
             '<div class="metric-view"><span>Real</span><span>' + fmtN(real, dec) + '</span></div>';
   }
-  html += '<div class="metric-dev ' + (dev == null ? 'dev-none' : (dev >= 0 ? 'dev-ok' : 'dev-bad')) + '">' +
-    (dev == null ? 'sin objetivo' : fmtPct(dev)) + '</div></div>';
+  html += metricDev(dev) + metricBar(obj, real) +
+    '<div class="metric-foot"><span>real</span><span>objetivo</span></div></div>';
   return html;
 }
 
@@ -1075,15 +1543,51 @@ function bindDrawer(){
   Array.prototype.forEach.call(document.querySelectorAll('[data-k]'), function(i){
     i.oninput = function(){
       form[i.dataset.k] = i.value === '' ? null : num(i.value);
-      // solo repinto los desvíos para no perder el foco del input
+      // solo repinto el desvío y la barra, para no perder el foco del input
       var k = i.dataset.k.split('_')[0];
-      var box = i.closest('.metric').querySelector('.metric-dev');
+      var caja = i.closest('.metric');
       var obj = form[k + '_obj'], real = form[k + '_real'];
-      var dev = (obj != null && Number(obj) > 0) ? (Number(real || 0) - Number(obj)) / Number(obj) * 100 : null;
-      box.className = 'metric-dev ' + (dev == null ? 'dev-none' : (dev >= 0 ? 'dev-ok' : 'dev-bad'));
-      box.textContent = dev == null ? 'sin objetivo' : fmtPct(dev);
+      var dev = desvio(obj, real);
+      caja.className = 'metric ' + (dev == null ? '' : (dev >= 0 ? 'up' : 'down'));
+      caja.querySelector('.metric-dev').outerHTML = metricDev(dev);
+      caja.querySelector('.metric-bar').outerHTML = metricBar(obj, real);
     };
   });
+  // el forzado del color general está escondido hasta que se pide
+  var ft = document.querySelector('[data-forzar-toggle]');
+  if (ft) ft.onclick = function(){ form.mostrarForzar = true; pintarDrawer(); };
+
+  if ($('cmtAdd')) $('cmtAdd').onclick = agregarComentario;
+  if ($('cmtTxt')) $('cmtTxt').onkeydown = function(ev){ if (ev.key === 'Enter') agregarComentario(); };
+}
+
+// el desvío grande con la flecha
+function metricDev(dev){
+  if (dev == null) return '<div class="metric-dev dev-none">sin dato</div>';
+  return '<div class="metric-dev ' + (dev >= 0 ? 'dev-ok' : 'dev-bad') + '">' +
+    '<span class="arrow">' + (dev >= 0 ? '&#9650;' : '&#9660;') + '</span>' + fmtPct(dev) + '</div>';
+}
+// barra del real contra el objetivo; la marca del 100% es el borde derecho
+function metricBar(obj, real){
+  if (obj == null || real == null || !(Number(obj) > 0)) return '<div class="metric-bar"></div>';
+  var pct = Math.max(0, Math.min(100, (Number(real || 0) / Number(obj)) * 100));
+  var cls = Number(real || 0) >= Number(obj) ? 'ok' : 'bad';
+  return '<div class="metric-bar"><span class="' + cls + '" style="width:' + pct + '%"></span></div>';
+}
+
+function agregarComentario(){
+  var txt = ($('cmtTxt').value || '').trim();
+  if (!txt || !form.registro_id) return;
+  $('cmtAdd').disabled = true;
+  sb.from('sem_comentarios')
+    .insert({registro_id: form.registro_id, autor: me.nombre || me.email, texto: txt})
+    .select()
+    .then(function(r){
+      if (r.error) { $('cmtAdd').disabled = false; return toast(r.error.message, true); }
+      D.coment = D.coment.concat(r.data || []);
+      toast('Comentario agregado');
+      pintarDrawer();
+    });
 }
 
 function guardarCierre(){
@@ -1092,6 +1596,7 @@ function guardarCierre(){
   var payload = {
     marca_id: f.marca_id, periodo: f.periodo, estado_manual: f.estado_manual,
     q1: f.q1 || null, q2: f.q2 || null, q3: f.q3 || null,
+    plan_accion: f.plan_accion || null,
     fact_obj: f.fact_obj, fact_real: f.fact_real,
     ord_obj:  f.ord_obj,  ord_real:  f.ord_real,
     ses_obj:  f.ses_obj,  ses_real:  f.ses_real,
