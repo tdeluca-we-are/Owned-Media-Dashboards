@@ -280,13 +280,15 @@ function boot(){
   sb.auth.getUser().then(function(ru){
     var u = ru.data.user;
     if (!u) return;
-    sb.from('slot_usuarios').select('*').eq('user_id', u.id).maybeSingle().then(function(r){
-      if (!r.data){
+    // vincula la cuenta con la autorización cargada por mail y devuelve la fila
+    sb.rpc('slot_vincular').then(function(r){
+      var fila = r.data && r.data.length ? r.data[0] : null;
+      if (!fila){
         $('authErr').innerHTML = 'Tu usuario no tiene acceso al sistema de slots.<br>Pedile a un administrador que te habilite.';
         sb.auth.signOut();
         return;
       }
-      me = r.data;
+      me = fila;
       $('authScreen').style.display = 'none';
       $('app').classList.add('visible');
       $('userPill').textContent = me.nombre || u.email;
@@ -329,7 +331,7 @@ function loadAll(){
     D.ocupacion.sort(function(a,b){
       return (a.servicio_orden - b.servicio_orden) || a.nombre.localeCompare(b.nombre);
     });
-    render();
+    if (me.rol === 'admin') loadAccesos().then(render); else render();
   });
 }
 function reload(){ loadAll(); }
@@ -346,6 +348,7 @@ function render(){
     if (D.recon.length) defs.push({ id:'recon', label:'Reconciliar', count: D.recon.length, warn:true });
   }
   defs.push({ id:'ref', label:'Referencia' });
+  if (me.rol === 'admin') defs.push({ id:'accesos', label:'Accesos' });
 
   if (!defs.some(function(d){ return d.id === tab; })) tab = defs[0].id;
 
@@ -364,11 +367,13 @@ function render(){
   if (tab === 'alertas')   html = viewAlertas();
   if (tab === 'recon')     html = viewRecon();
   if (tab === 'ref')       html = viewRef();
+  if (tab === 'accesos')   html = viewAccesos();
   $('panes').innerHTML = html;
   if (tab === 'equipo')    wireEquipo();
   if (tab === 'comercial') wireComercial();
   if (tab === 'cuentas')   wireCuentas();
   if (tab === 'recon')     wireRecon();
+  if (tab === 'accesos')   wireAccesos();
 }
 
 // ══ EQUIPO ═════════════════════════════════════════════════════════════════
@@ -986,6 +991,127 @@ function wireRecon(){
           if (r.error) return toast('No se pudo marcar: ' + r.error.message, true);
           toast('Marcada como resuelta'); reload();
         });
+    };
+  });
+}
+
+// ══ ACCESOS ════════════════════════════════════════════════════════════════
+// Se autoriza por mail. La persona puede no tener cuenta todavía: cuando la
+// crea y entra, la fila se vincula sola.
+var accesos = [];
+
+function loadAccesos(){
+  return sb.from('slot_v_accesos').select('*').then(function(r){
+    accesos = r.data || [];
+    return r;
+  });
+}
+
+var ESTADO_CHIP = {
+  'activo':                'green',
+  'nunca entró':           'orange',
+  'falta crear la cuenta': 'red',
+  'desactivado':           'grey'
+};
+
+function viewAccesos(){
+  var h = '';
+  h += '<div class="note">Habilitás por mail. Si la persona todavía no tiene cuenta en Supabase, ' +
+       'la fila queda esperando: cuando cree la cuenta con ese mismo mail y entre, se vincula sola.</div>';
+
+  var sinCuenta = accesos.filter(function(a){ return a.estado === 'falta crear la cuenta'; });
+
+  h += '<div class="kpi-row">' +
+    kpi('Habilitados', accesos.filter(function(a){ return a.activo; }).length, 'con acceso a la app') +
+    kpi('Ya entraron', accesos.filter(function(a){ return a.estado === 'activo'; }).length, 'al menos una vez', 'ok') +
+    kpi('Falta la cuenta', sinCuenta.length, 'no existen en Supabase', sinCuenta.length ? 'bad' : 'ok') +
+  '</div>';
+
+  // alta
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Dar acceso</span></div>' +
+    '<div class="filters" style="padding:14px 16px">' +
+      '<input id="aEmail" placeholder="mail@we-are.com.ar" style="min-width:230px">' +
+      '<input id="aNombre" placeholder="Nombre" style="min-width:150px">' +
+      '<select id="aRol">' +
+        '<option value="lider">Líder</option>' +
+        '<option value="comercial">Comercial</option>' +
+        '<option value="admin">Admin</option>' +
+      '</select>' +
+      '<select id="aLider"><option value="">— qué líder es —</option>' +
+        D.lideres.map(function(l){ return '<option value="' + l.id + '">' + esc(l.nombre) + '</option>'; }).join('') +
+      '</select>' +
+      '<button class="btn primary" id="aAdd">Agregar</button>' +
+    '</div>' +
+    '<div class="note" style="margin:0 16px 14px">Un <strong>líder</strong> solo puede editar la gente de su célula, ' +
+    'por eso hay que decir qué líder es. <strong>Comercial</strong> ve todo en modo lectura. ' +
+    '<strong>Admin</strong> edita todo y administra accesos.</div>' +
+  '</div>';
+
+  // padrón
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Quién tiene acceso</span>' +
+       '<span class="chip grey">' + accesos.length + '</span></div>';
+  if (!accesos.length){
+    h += '<div class="empty">Todavía no habilitaste a nadie.</div>';
+  } else {
+    h += '<div class="twrap"><table><thead><tr><th>Mail</th><th>Nombre</th><th>Rol</th>' +
+         '<th>Líder</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead><tbody>';
+    accesos.slice().sort(function(a,b){
+      return (a.rol || '').localeCompare(b.rol || '') || (a.nombre || a.email).localeCompare(b.nombre || b.email);
+    }).forEach(function(a){
+      h += '<tr>' +
+        '<td class="strong">' + esc(a.email) + '</td>' +
+        '<td>' + esc(a.nombre || '—') + '</td>' +
+        '<td><span class="chip ' + (a.rol === 'admin' ? 'red' : a.rol === 'lider' ? 'orange' : 'grey') + '">' + esc(a.rol) + '</span></td>' +
+        '<td class="muted">' + esc(a.lider || '—') + '</td>' +
+        '<td><span class="chip ' + (ESTADO_CHIP[a.estado] || 'grey') + '">' + esc(a.estado) + '</span></td>' +
+        '<td class="muted">' + (a.ultimo_ingreso ? new Date(a.ultimo_ingreso).toLocaleDateString('es-AR') : '—') + '</td>' +
+        '<td><button class="btn small" data-toggle="' + a.id + '" data-activo="' + (a.activo ? 1 : 0) + '">' +
+          (a.activo ? 'Desactivar' : 'Reactivar') + '</button></td>' +
+      '</tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+
+  if (sinCuenta.length){
+    h += '<div class="section"><div class="section-hdr">' +
+      '<span class="section-title">Les falta crear la cuenta</span>' +
+      '<span class="chip red">' + sinCuenta.length + '</span></div>' +
+      '<div class="note">Estos mails están habilitados acá, pero todavía no existen como usuario en Supabase, ' +
+      'así que no van a poder entrar. Cada uno tiene que tener su cuenta creada con ese mismo mail. ' +
+      'Eso se hace desde <strong>Supabase → Authentication → Users</strong>, o invitándolos por mail desde ahí.' +
+      '<br><br>' + sinCuenta.map(function(a){ return esc(a.email); }).join(' · ') + '</div></div>';
+  }
+  return h;
+}
+
+function wireAccesos(){
+  var btn = $('aAdd');
+  if (btn) btn.onclick = function(){
+    var email = ($('aEmail').value || '').trim().toLowerCase();
+    var nombre = ($('aNombre').value || '').trim();
+    var rol = $('aRol').value;
+    var lider = $('aLider').value;
+    if (!email || email.indexOf('@') < 0) return toast('Poné un mail válido', true);
+    if (rol === 'lider' && !lider) return toast('Elegí qué líder es', true);
+    sb.from('slot_usuarios').insert({
+      email: email, nombre: nombre || null, rol: rol,
+      lider_id: lider ? Number(lider) : null
+    }).then(function(r){
+      if (r.error){
+        return toast(r.error.code === '23505' ? 'Ese mail ya tiene acceso' : 'No se pudo: ' + r.error.message, true);
+      }
+      toast('Acceso dado a ' + email);
+      loadAccesos().then(render);
+    });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('button[data-toggle]'), function(b){
+    b.onclick = function(){
+      var activo = b.dataset.activo === '1';
+      sb.from('slot_usuarios').update({ activo: !activo }).eq('id', Number(b.dataset.toggle)).then(function(r){
+        if (r.error) return toast('No se pudo: ' + r.error.message, true);
+        loadAccesos().then(render);
+      });
     };
   });
 }
