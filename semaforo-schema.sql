@@ -98,8 +98,13 @@ create table if not exists sem_usuario_marcas (
   primary key (usuario_id, marca_id)
 );
 
+-- El mail tiene que ser el mismo con el que se entra a Supabase (@we-are.com.ar).
+-- La primera corrida sembró @we-ecommerce.com por error; esto lo corrige.
+update sem_usuarios set email = 'tdeluca@we-are.com.ar'
+ where lower(email) = 'tdeluca@we-ecommerce.com';
+
 insert into sem_usuarios (email, nombre, rol) values
-  ('tdeluca@we-ecommerce.com', 'Tomás De Luca', 'admin')
+  ('tdeluca@we-are.com.ar', 'Tomás De Luca', 'admin')
 on conflict do nothing;
 
 -- ── IDENTIDAD Y PERMISOS ────────────────────────────────────────────────────
