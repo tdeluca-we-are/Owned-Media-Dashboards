@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We Are — Slots</title>
+<link rel="icon" type="image/png" href="Iso.png">
+<link rel="apple-touch-icon" href="Iso.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1929;--bg2:#112240;--bg3:#1a3355;
+  --border:rgba(255,255,255,0.18);--border2:rgba(255,255,255,0.15);
+  --text:#f0f0f0;--text2:#8892a4;--text3:#3d4f6b;
+  --orange:#f04e23;--orange2:#d43d16;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#7a9eca;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* auth */
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-xl);padding:40px;width:100%;max-width:380px}
+.text-logo-xl{font-size:36px;font-weight:800;letter-spacing:-0.03em;text-align:center;margin-bottom:6px}
+.text-logo-sm{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.logo-we{color:#f0f0f0}.logo-are{color:var(--orange)}
+.auth-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:24px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em}
+.fg input,.fg select{font-family:var(--font);font-size:14px;padding:11px 14px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--orange)}
+.btn-primary{width:100%;font-family:var(--font);font-size:14px;font-weight:600;padding:12px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;margin-top:6px}
+.btn-primary:hover{background:var(--orange2)}
+.auth-error{font-size:12px;color:var(--orange);text-align:center;margin-top:10px;min-height:18px}
+
+/* shell */
+.app{display:none;min-height:100vh;flex-direction:column}.app.visible{display:flex}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:200}
+.top-left{display:flex;align-items:center;gap:10px}
+.top-divider{width:1px;height:20px;background:var(--border2)}
+.top-right{display:flex;align-items:center;gap:8px}
+.user-pill{font-size:12px;color:var(--text2);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
+.role-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em}
+.role-admin{background:rgba(240,78,35,0.15);color:#f04e23;border:1px solid rgba(240,78,35,0.3)}
+.role-lider{background:rgba(61,79,107,0.3);color:#7a9eca;border:1px solid rgba(61,79,107,0.5)}
+.role-comercial{background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25)}
+.btn-sm{font-family:var(--font);font-size:12px;padding:6px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer}
+.btn-sm:hover{color:var(--orange);border-color:var(--orange)}
+.btn-orange{font-family:var(--font);font-size:12px;font-weight:600;padding:8px 16px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer}
+.btn-orange:hover{background:var(--orange2)}
+.btn-orange:disabled{opacity:.4;cursor:default}
+.main{padding:20px 24px;max-width:1500px;width:100%;margin:0 auto}
+
+/* tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+.tab{font-family:var(--font);font-size:13px;font-weight:500;padding:8px 18px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:7px}
+.tab:hover{border-color:var(--orange);color:var(--text)}
+.tab.active{background:var(--orange);color:#fff;border-color:var(--orange);font-weight:600}
+.tab-count{font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(255,255,255,.14);padding:1px 6px;border-radius:20px}
+.tab.active .tab-count{background:rgba(0,0,0,.25)}
+.tab-count.warn{background:var(--red);color:#fff}
+.pane{display:none}.pane.active{display:block}
+
+/* filtros */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.filters select,.filters input{font-family:var(--font);font-size:12px;padding:7px 11px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none}
+.filters select:focus,.filters input:focus{border-color:var(--orange)}
+.filters input[type=search]{min-width:200px}
+
+/* kpis */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:var(--radius-lg);padding:13px 16px}
+.kpi-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:700;font-family:var(--mono);line-height:1;letter-spacing:-.02em}
+.kpi-sub{font-size:11px;color:var(--text2);margin-top:5px}
+.kpi.ok{border-top-color:var(--green)}.kpi.bad{border-top-color:var(--red)}.kpi.warn{border-top-color:var(--amber)}
+
+/* secciones y tablas */
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:18px}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);gap:12px}
+.section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:9px 14px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2);position:sticky;top:0}
+td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:rgba(255,255,255,.03)}
+.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+.muted{color:var(--text3)}
+.strong{font-weight:600}
+
+/* barra de ocupación */
+.occ{display:flex;align-items:center;gap:9px;min-width:150px}
+.occ-bar{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:20px;overflow:hidden;min-width:60px}
+.occ-fill{height:100%;border-radius:20px;transition:width .3s}
+.occ-fill.ok{background:var(--green)}
+.occ-fill.full{background:var(--amber)}
+.occ-fill.over{background:var(--red)}
+.occ-txt{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap;min-width:52px;text-align:right}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:20px;white-space:nowrap}
+.chip.green{background:rgba(34,197,94,.13);color:#22c55e;border:1px solid rgba(34,197,94,.28)}
+.chip.red{background:rgba(239,68,68,.13);color:#ef4444;border:1px solid rgba(239,68,68,.28)}
+.chip.amber{background:rgba(245,158,11,.13);color:#f59e0b;border:1px solid rgba(245,158,11,.28)}
+.chip.blue{background:rgba(122,158,202,.13);color:#7a9eca;border:1px solid rgba(122,158,202,.28)}
+.chip.grey{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border2)}
+.chip.orange{background:rgba(240,78,35,.13);color:#f04e23;border:1px solid rgba(240,78,35,.3)}
+.tier-pill{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;border:1px solid}
+.tier-complejo{background:rgba(240,78,35,.14);color:#f04e23;border-color:rgba(240,78,35,.35)}
+.tier-1{background:rgba(245,158,11,.14);color:#f59e0b;border-color:rgba(245,158,11,.35)}
+.tier-2{background:rgba(122,158,202,.14);color:#7a9eca;border-color:rgba(122,158,202,.35)}
+.tier-3{background:rgba(34,197,94,.12);color:#22c55e;border-color:rgba(34,197,94,.3)}
+.tier-4{background:rgba(255,255,255,.06);color:var(--text2);border-color:var(--border2)}
+.tier-none{background:transparent;color:var(--text3);border-color:var(--text3);border-style:dashed}
+
+/* drawer */
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none}
+.drawer-bg.open{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);border-left:1px solid var(--border);z-index:301;transform:translateX(100%);transition:transform .22s;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.drawer-name{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.drawer-meta{font-size:12px;color:var(--text2);margin-top:4px}
+.drawer-body{padding:18px 22px;overflow-y:auto;flex:1}
+.drawer-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.drawer-close:hover{color:var(--orange)}
+.dsec{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin:20px 0 9px}
+.dsec:first-child{margin-top:0}
+.arow{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:7px}
+.arow-name{flex:1;font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arow-actions{display:flex;gap:4px;flex-shrink:0}
+.mini{font-family:var(--font);font-size:10px;font-weight:600;padding:3.5px 8px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;white-space:nowrap}
+.mini:hover{border-color:var(--orange);color:var(--orange)}
+.mini.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.mini.danger:hover{border-color:var(--red);color:var(--red)}
+.addrow{display:flex;gap:7px;margin-top:10px}
+.addrow select,.addrow input{flex:1;font-family:var(--font);font-size:12.5px;padding:9px 11px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;min-width:0}
+.addrow select:focus,.addrow input:focus{border-color:var(--orange)}
+
+/* varios */
+.empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px}
+.note{font-size:12px;color:var(--text2);background:rgba(240,78,35,.07);border:1px solid rgba(240,78,35,.2);border-left:2px solid var(--orange);border-radius:var(--radius);padding:11px 14px;margin-bottom:16px;line-height:1.55}
+.note.blue{background:rgba(122,158,202,.07);border-color:rgba(122,158,202,.2);border-left-color:var(--blue)}
+.matrix td.cell{text-align:center;font-family:var(--mono);font-weight:700;font-size:13px}
+.cell-free{color:var(--green)}.cell-zero{color:var(--text3)}.cell-over{color:var(--red)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px 20px;font-size:13px;z-index:500;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.err{border-color:var(--red);color:#fca5a5}
+.loading{text-align:center;padding:60px;color:var(--text3);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="text-logo-xl"><span class="logo-we">WE</span><span class="logo-are">ARE</span></div>
+    <div class="auth-title">Sistema de Slots</div>
+    <div class="auth-sub">Capacidad del equipo, en tiempo real</div>
+    <div class="fg"><label>Email</label><input type="email" id="email" autocomplete="username"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="pass" autocomplete="current-password"></div>
+    <button class="btn-primary" id="loginBtn">Entrar</button>
+    <div class="auth-error" id="authErr"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div class="app" id="app">
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="text-logo-sm"><span class="logo-we">WE</span><span class="logo-are">ARE</span></div>
+      <div class="top-divider"></div>
+      <span style="font-size:13px;font-weight:600">Slots</span>
+    </div>
+    <div class="top-right">
+      <span class="user-pill" id="userPill"></span>
+      <span class="role-badge" id="roleBadge"></span>
+      <button class="btn-sm" id="logoutBtn">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs" id="tabs"></div>
+    <div id="panes"><div class="loading">Cargando…</div></div>
+  </div>
+</div>
+
+<div class="drawer-bg" id="drawerBg"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hdr">
+    <div><div class="drawer-name" id="dName"></div><div class="drawer-meta" id="dMeta"></div></div>
+    <button class="drawer-close" id="dClose">&times;</button>
+  </div>
+  <div class="drawer-body" id="dBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+
+var me = null;              // fila de slot_usuarios
+var D = {};                 // todos los datos cargados
+var tab = 'equipo';
+var drawerPersona = null;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function n2(v){ var x = Number(v)||0; return x % 1 === 0 ? String(x) : x.toFixed(2); }
+function toast(msg, isErr){
+  var t = $('toast'); t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._t); t._t = setTimeout(function(){ t.className = 'toast'; }, 2600);
+}
+function tierPill(code){
+  if (!code) return '<span class="tier-pill tier-none">sin tier</span>';
+  var cls = 'tier-' + code;
+  var label = code === 'complejo' ? 'COMPLEJO' : 'T' + code;
+  return '<span class="tier-pill ' + cls + '">' + label + '</span>';
+}
+// Una persona puede tomar una cuenta de tier T si su cuartil llega al mínimo del tier.
+function puedeTomar(cuartil, tierCode){
+  var t = D.tiers.find(function(x){ return x.codigo === tierCode; });
+  if (!t || cuartil == null) return false;
+  return Number(cuartil) >= Number(t.cuartil_min);
+}
+function occBar(neta, cap){
+  var pct = cap > 0 ? Math.min(100, (neta / cap) * 100) : (neta > 0 ? 100 : 0);
+  var cls = neta > cap ? 'over' : (neta >= cap ? 'full' : 'ok');
+  return '<div class="occ"><div class="occ-bar"><div class="occ-fill ' + cls +
+         '" style="width:' + pct + '%"></div></div>' +
+         '<span class="occ-txt">' + n2(neta) + ' / ' + n2(cap) + '</span></div>';
+}
+function vendibleChip(v){
+  var x = Number(v) || 0;
+  if (x < 0)  return '<span class="chip red">' + n2(x) + ' sobrecarga</span>';
+  if (x === 0) return '<span class="chip grey">sin slots</span>';
+  return '<span class="chip green">' + n2(x) + ' libre' + (x === 1 ? '' : 's') + '</span>';
+}
+function puedeEditarPersona(p){
+  if (!me) return false;
+  if (me.rol === 'admin') return true;
+  return me.rol === 'lider' && p.lider_id === me.lider_id;
+}
+
+// ── auth ───────────────────────────────────────────────────────────────────
+$('loginBtn').onclick = function(){
+  var e = $('email').value.trim(), p = $('pass').value;
+  if (!e || !p) { $('authErr').textContent = 'Completá email y contraseña'; return; }
+  $('authErr').textContent = '';
+  sb.auth.signInWithPassword({ email: e, password: p }).then(function(r){
+    if (r.error) { $('authErr').textContent = 'Email o contraseña incorrectos'; return; }
+    boot();
+  });
+};
+$('pass').onkeydown = function(ev){ if (ev.key === 'Enter') $('loginBtn').click(); };
+$('logoutBtn').onclick = function(){ sb.auth.signOut().then(function(){ location.reload(); }); };
+
+sb.auth.getSession().then(function(r){ if (r.data.session) boot(); });
+
+function boot(){
+  sb.auth.getUser().then(function(ru){
+    var u = ru.data.user;
+    if (!u) return;
+    sb.from('slot_usuarios').select('*').eq('user_id', u.id).maybeSingle().then(function(r){
+      if (!r.data){
+        $('authErr').innerHTML = 'Tu usuario no tiene acceso al sistema de slots.<br>Pedile a un administrador que te habilite.';
+        sb.auth.signOut();
+        return;
+      }
+      me = r.data;
+      $('authScreen').style.display = 'none';
+      $('app').classList.add('visible');
+      $('userPill').textContent = me.nombre || u.email;
+      $('roleBadge').textContent = me.rol;
+      $('roleBadge').className = 'role-badge role-' + me.rol;
+      if (me.rol === 'comercial') tab = 'comercial';
+      loadAll();
+    });
+  });
+}
+
+// ── carga ──────────────────────────────────────────────────────────────────
+function loadAll(){
+  Promise.all([
+    sb.from('slot_tiers').select('*').order('orden'),
+    sb.from('slot_servicios').select('*').order('orden'),
+    sb.from('slot_lideres').select('*').order('nombre'),
+    sb.from('slot_celulas').select('*').order('nombre'),
+    sb.from('slot_cuentas').select('*').order('nombre'),
+    sb.from('slot_v_ocupacion').select('*'),
+    sb.from('slot_v_asignaciones').select('*'),
+    sb.from('slot_v_alertas').select('*'),
+    sb.from('slot_v_reconciliacion').select('*')
+  ]).then(function(r){
+    var err = r.find(function(x){ return x.error; });
+    if (err) { $('panes').innerHTML = '<div class="empty">Error cargando datos: ' + esc(err.error.message) + '</div>'; return; }
+    D.tiers      = r[0].data;
+    D.servicios  = r[1].data;
+    D.lideres    = r[2].data;
+    D.celulas    = r[3].data;
+    D.cuentas    = r[4].data;
+    D.ocupacion  = r[5].data;
+    D.asigs      = r[6].data;
+    D.alertas    = r[7].data;
+    D.recon      = r[8].data || [];
+    D.ocupacion.sort(function(a,b){
+      return (a.servicio_orden - b.servicio_orden) || a.nombre.localeCompare(b.nombre);
+    });
+    render();
+  });
+}
+function reload(){ loadAll(); }
+
+// ── render principal ───────────────────────────────────────────────────────
+function render(){
+  var sinTier = D.cuentas.filter(function(c){ return c.activa && !c.tier; }).length;
+  var defs = [];
+  if (me.rol !== 'comercial') defs.push({ id:'equipo', label:'Equipo' });
+  defs.push({ id:'comercial', label:'Comercial' });
+  if (me.rol !== 'comercial') {
+    defs.push({ id:'cuentas', label:'Cuentas', count: sinTier, warn: sinTier > 0 });
+    defs.push({ id:'alertas', label:'Alertas', count: D.alertas.length, warn: D.alertas.length > 0 });
+    if (D.recon.length) defs.push({ id:'recon', label:'Reconciliar', count: D.recon.length, warn:true });
+  }
+  defs.push({ id:'ref', label:'Referencia' });
+
+  if (!defs.some(function(d){ return d.id === tab; })) tab = defs[0].id;
+
+  $('tabs').innerHTML = defs.map(function(d){
+    var c = d.count != null ? '<span class="tab-count' + (d.warn ? ' warn' : '') + '">' + d.count + '</span>' : '';
+    return '<button class="tab' + (tab === d.id ? ' active' : '') + '" data-tab="' + d.id + '">' + d.label + c + '</button>';
+  }).join('');
+  Array.prototype.forEach.call($('tabs').children, function(b){
+    b.onclick = function(){ tab = b.dataset.tab; render(); };
+  });
+
+  var html = '';
+  if (tab === 'equipo')    html = viewEquipo();
+  if (tab === 'comercial') html = viewComercial();
+  if (tab === 'cuentas')   html = viewCuentas();
+  if (tab === 'alertas')   html = viewAlertas();
+  if (tab === 'recon')     html = viewRecon();
+  if (tab === 'ref')       html = viewRef();
+  $('panes').innerHTML = html;
+  if (tab === 'equipo')    wireEquipo();
+  if (tab === 'comercial') wireComercial();
+  if (tab === 'cuentas')   wireCuentas();
+  if (tab === 'recon')     wireRecon();
+}
+
+// ══ EQUIPO ═════════════════════════════════════════════════════════════════
+var fEquipo = { lider:'', servicio:'', celula:'', q:'', soloMios:false };
+
+function equipoRows(){
+  return D.ocupacion.filter(function(p){
+    if (!p.activa) return false;
+    if (fEquipo.soloMios && p.lider_id !== me.lider_id) return false;
+    if (fEquipo.lider && String(p.lider_id) !== fEquipo.lider) return false;
+    if (fEquipo.servicio && String(p.servicio_id) !== fEquipo.servicio) return false;
+    if (fEquipo.celula && String(p.celula_id) !== fEquipo.celula) return false;
+    if (fEquipo.q){
+      var q = fEquipo.q.toLowerCase();
+      var enCuentas = D.asigs.some(function(a){
+        return a.persona_id === p.persona_id && a.cuenta.toLowerCase().indexOf(q) >= 0;
+      });
+      if (p.nombre.toLowerCase().indexOf(q) < 0 && !enCuentas) return false;
+    }
+    return true;
+  });
+}
+
+function viewEquipo(){
+  var rows = equipoRows();
+  var cap = rows.reduce(function(s,p){ return s + Number(p.cap_max); }, 0);
+  var ocu = rows.reduce(function(s,p){ return s + Number(p.neta); }, 0);
+  var libres = rows.reduce(function(s,p){ return s + Math.max(0, Number(p.vendible)); }, 0);
+  var sobre = rows.filter(function(p){ return Number(p.vendible) < 0; }).length;
+  var pct = cap > 0 ? Math.round((ocu / cap) * 100) : 0;
+
+  var h = '';
+  h += '<div class="kpi-row">' +
+    kpi('Personas', rows.length, rows.length ? 'en ' + new Set(rows.map(function(p){return p.servicio;})).size + ' servicios' : '') +
+    kpi('Ocupación', pct + '%', n2(ocu) + ' de ' + n2(cap) + ' de capacidad', pct > 100 ? 'bad' : (pct >= 90 ? 'warn' : 'ok')) +
+    kpi('Slots libres', n2(libres), 'listos para vender', libres > 0 ? 'ok' : 'warn') +
+    kpi('Sobrecargados', sobre, sobre ? 'por encima de su capacidad' : 'ninguno', sobre ? 'bad' : 'ok') +
+  '</div>';
+
+  h += '<div class="filters">' +
+    '<input type="search" id="fq" placeholder="Buscar persona o cuenta…" value="' + esc(fEquipo.q) + '">' +
+    selectFilter('fLider', 'Todos los líderes', D.lideres, fEquipo.lider) +
+    selectFilter('fServicio', 'Todos los servicios', D.servicios, fEquipo.servicio) +
+    selectFilter('fCelula', 'Todas las células', D.celulas, fEquipo.celula) +
+    (me.rol === 'lider' ? '<label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer">' +
+      '<input type="checkbox" id="fMios"' + (fEquipo.soloMios ? ' checked' : '') + '> Solo mi equipo</label>' : '') +
+  '</div>';
+
+  if (!rows.length) return h + '<div class="empty">No hay personas que coincidan con el filtro.</div>';
+
+  // agrupado por servicio
+  var porServicio = {};
+  rows.forEach(function(p){ (porServicio[p.servicio] = porServicio[p.servicio] || []).push(p); });
+
+  Object.keys(porServicio).forEach(function(sv){
+    var g = porServicio[sv];
+    var gLibres = g.reduce(function(s,p){ return s + Math.max(0, Number(p.vendible)); }, 0);
+    h += '<div class="section"><div class="section-hdr">' +
+         '<span class="section-title">' + esc(sv) + '</span>' +
+         '<span class="chip ' + (gLibres > 0 ? 'green' : 'grey') + '">' + n2(gLibres) + ' slots libres</span>' +
+         '</div><div class="twrap"><table><thead><tr>' +
+         '<th>Persona</th><th>Célula</th><th>Líder</th><th class="num">Cuartil</th>' +
+         '<th>Tier máx</th><th>Ocupación</th><th class="num">Cuentas</th><th>Disponible</th>' +
+         '</tr></thead><tbody>';
+    g.forEach(function(p){
+      h += '<tr class="clickable" data-persona="' + p.persona_id + '">' +
+        '<td class="strong">' + esc(p.nombre) + (p.cuentas_sin_tier > 0 ?
+            ' <span class="chip amber" title="cuentas sin tier clasificado">' + p.cuentas_sin_tier + ' s/tier</span>' : '') + '</td>' +
+        '<td class="muted">' + esc(p.celula || '—') + '</td>' +
+        '<td class="muted">' + esc(p.lider || '—') + '</td>' +
+        '<td class="num">' + (p.cuartil != null ? p.cuartil : '—') + '</td>' +
+        '<td>' + tierPill(p.tier_max) + '</td>' +
+        '<td>' + occBar(Number(p.neta), Number(p.cap_max)) + '</td>' +
+        '<td class="num">' + p.cuentas_activas + '</td>' +
+        '<td>' + vendibleChip(p.vendible) + '</td>' +
+      '</tr>';
+    });
+    h += '</tbody></table></div></div>';
+  });
+  return h;
+}
+
+function kpi(label, val, sub, cls){
+  return '<div class="kpi ' + (cls || '') + '"><div class="kpi-label">' + label + '</div>' +
+         '<div class="kpi-val">' + val + '</div>' +
+         (sub ? '<div class="kpi-sub">' + esc(sub) + '</div>' : '') + '</div>';
+}
+function selectFilter(id, placeholder, items, val){
+  return '<select id="' + id + '"><option value="">' + placeholder + '</option>' +
+    items.map(function(i){
+      return '<option value="' + i.id + '"' + (String(i.id) === val ? ' selected' : '') + '>' + esc(i.nombre) + '</option>';
+    }).join('') + '</select>';
+}
+
+function wireEquipo(){
+  var q = $('fq');
+  if (q) q.oninput = function(){ fEquipo.q = q.value; var pos = q.selectionStart; render(); var n = $('fq'); if(n){ n.focus(); n.setSelectionRange(pos,pos); } };
+  [['fLider','lider'],['fServicio','servicio'],['fCelula','celula']].forEach(function(pair){
+    var el = $(pair[0]); if (el) el.onchange = function(){ fEquipo[pair[1]] = el.value; render(); };
+  });
+  var m = $('fMios'); if (m) m.onchange = function(){ fEquipo.soloMios = m.checked; render(); };
+  Array.prototype.forEach.call(document.querySelectorAll('tr[data-persona]'), function(tr){
+    tr.onclick = function(){ openDrawer(Number(tr.dataset.persona)); };
+  });
+}
+
+// ══ DRAWER: detalle y edición de una persona ══════════════════════════════
+function openDrawer(pid){
+  drawerPersona = pid;
+  var p = D.ocupacion.find(function(x){ return x.persona_id === pid; });
+  if (!p) return;
+  $('dName').textContent = p.nombre;
+  $('dMeta').innerHTML = esc(p.servicio) + ' · ' + esc(p.celula || 'sin célula') +
+    ' · líder ' + esc(p.lider || '—') + ' · cuartil ' + (p.cuartil != null ? p.cuartil : '—');
+  renderDrawer();
+  $('drawer').classList.add('open');
+  $('drawerBg').classList.add('open');
+}
+function closeDrawer(){
+  $('drawer').classList.remove('open');
+  $('drawerBg').classList.remove('open');
+  drawerPersona = null;
+}
+$('dClose').onclick = closeDrawer;
+$('drawerBg').onclick = closeDrawer;
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeDrawer(); });
+
+function renderDrawer(){
+  var pid = drawerPersona;
+  var p = D.ocupacion.find(function(x){ return x.persona_id === pid; });
+  if (!p) { closeDrawer(); return; }
+  var editable = puedeEditarPersona(p);
+  var mias = D.asigs.filter(function(a){ return a.persona_id === pid; });
+
+  var h = '';
+  h += '<div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:4px">' +
+    kpi('Carga neta', n2(p.neta), 'de ' + n2(p.cap_max)) +
+    kpi('Cuentas', p.cuentas_activas, 'activas') +
+    kpi('Disponible', n2(p.vendible), Number(p.vendible) < 0 ? 'sobrecarga' : 'slots', Number(p.vendible) < 0 ? 'bad' : 'ok') +
+  '</div>';
+
+  if (editable){
+    h += '<div class="dsec">Capacidad máxima</div>' +
+         '<div class="addrow"><input type="number" step="0.5" min="0" id="dCap" value="' + p.cap_max + '">' +
+         '<button class="btn-orange" id="dCapSave" style="flex:0 0 auto">Guardar</button></div>';
+  }
+
+  var grupos = [
+    ['activa',        'Cuentas activas'],
+    ['baja_prevista', 'Bajas previstas — liberan slot'],
+    ['proyectada',    'Próximos cierres — ocupan slot']
+  ];
+  grupos.forEach(function(g){
+    var items = mias.filter(function(a){ return a.estado === g[0]; });
+    if (!items.length && g[0] !== 'activa') return;
+    h += '<div class="dsec">' + g[1] + ' (' + items.length + ')</div>';
+    if (!items.length){ h += '<div class="muted" style="font-size:12px;padding:6px 2px">Sin cuentas.</div>'; }
+    items.forEach(function(a){
+      h += '<div class="arow">' +
+        tierPill(a.cuenta_tier) +
+        '<span class="arow-name">' + esc(a.cuenta) + '</span>' +
+        '<span class="occ-txt">' + n2(a.peso) + '</span>' +
+        (editable ? '<span class="arow-actions">' +
+          (g[0] !== 'activa'        ? '<button class="mini" data-est="activa"        data-id="' + a.id + '">Activa</button>' : '') +
+          (g[0] !== 'baja_prevista' ? '<button class="mini" data-est="baja_prevista" data-id="' + a.id + '">Baja</button>' : '') +
+          (g[0] !== 'proyectada'    ? '<button class="mini" data-est="proyectada"    data-id="' + a.id + '">Cierre</button>' : '') +
+          '<button class="mini danger" data-del="' + a.id + '">Quitar</button>' +
+        '</span>' : '') +
+      '</div>';
+    });
+  });
+
+  if (editable){
+    var yaTiene = mias.map(function(a){ return a.cuenta_id; });
+    var libres = D.cuentas.filter(function(c){ return c.activa && yaTiene.indexOf(c.id) < 0; });
+    h += '<div class="dsec">Asignar una cuenta</div>' +
+      '<div class="addrow">' +
+        '<select id="dNueva"><option value="">Elegí una cuenta…</option>' +
+          libres.map(function(c){
+            var av = puedeTomar(p.cuartil, c.tier) || !c.tier ? '' : ' ⚠';
+            return '<option value="' + c.id + '">' + esc(c.nombre) + (c.tier ? ' · T' + c.tier : ' · sin tier') + av + '</option>';
+          }).join('') +
+        '</select>' +
+        '<select id="dEstado" style="flex:0 0 130px">' +
+          '<option value="activa">Activa</option>' +
+          '<option value="proyectada">Próximo cierre</option>' +
+        '</select>' +
+        '<button class="btn-orange" id="dAdd" style="flex:0 0 auto">Sumar</button>' +
+      '</div>' +
+      '<div class="addrow"><input type="text" id="dNuevaCuenta" placeholder="…o creá una cuenta nueva">' +
+      '<button class="btn-orange" id="dCrear" style="flex:0 0 auto">Crear</button></div>' +
+      '<div class="muted" style="font-size:11px;margin-top:8px">⚠ marca cuentas de un tier por encima del cuartil de ' + esc(p.nombre) + '.</div>';
+  } else {
+    h += '<div class="note blue" style="margin-top:20px">Solo el líder de esta persona o un administrador pueden editar sus cuentas.</div>';
+  }
+
+  $('dBody').innerHTML = h;
+  wireDrawer(p);
+}
+
+function wireDrawer(p){
+  var b;
+  Array.prototype.forEach.call($('dBody').querySelectorAll('[data-est]'), function(el){
+    el.onclick = function(){
+      sb.from('slot_asignaciones').update({ estado: el.dataset.est }).eq('id', Number(el.dataset.id))
+        .then(function(r){
+          if (r.error) return toast('No se pudo cambiar: ' + r.error.message, true);
+          toast('Actualizado'); loadAllThenDrawer();
+        });
+    };
+  });
+  Array.prototype.forEach.call($('dBody').querySelectorAll('[data-del]'), function(el){
+    el.onclick = function(){
+      sb.from('slot_asignaciones').delete().eq('id', Number(el.dataset.del)).then(function(r){
+        if (r.error) return toast('No se pudo quitar: ' + r.error.message, true);
+        toast('Cuenta quitada'); loadAllThenDrawer();
+      });
+    };
+  });
+  b = $('dCapSave');
+  if (b) b.onclick = function(){
+    var v = Number($('dCap').value);
+    if (!(v >= 0)) return toast('Capacidad inválida', true);
+    sb.from('slot_personas').update({ cap_max: v }).eq('id', p.persona_id).then(function(r){
+      if (r.error) return toast('No se pudo guardar: ' + r.error.message, true);
+      toast('Capacidad actualizada'); loadAllThenDrawer();
+    });
+  };
+  b = $('dAdd');
+  if (b) b.onclick = function(){
+    var cid = Number($('dNueva').value);
+    if (!cid) return toast('Elegí una cuenta', true);
+    sb.from('slot_asignaciones').insert({
+      persona_id: p.persona_id, cuenta_id: cid, servicio_id: p.servicio_id, estado: $('dEstado').value
+    }).then(function(r){
+      if (r.error) return toast('No se pudo asignar: ' + r.error.message, true);
+      toast('Cuenta asignada'); loadAllThenDrawer();
+    });
+  };
+  b = $('dCrear');
+  if (b) b.onclick = function(){
+    var nom = $('dNuevaCuenta').value.trim();
+    if (!nom) return toast('Escribí el nombre de la cuenta', true);
+    sb.from('slot_cuentas').insert({ nombre: nom }).select().single().then(function(r){
+      if (r.error) return toast('No se pudo crear: ' + r.error.message, true);
+      return sb.from('slot_asignaciones').insert({
+        persona_id: p.persona_id, cuenta_id: r.data.id, servicio_id: p.servicio_id, estado: 'activa'
+      }).then(function(r2){
+        if (r2.error) return toast('Cuenta creada pero no asignada: ' + r2.error.message, true);
+        toast('Cuenta creada y asignada'); loadAllThenDrawer();
+      });
+    });
+  };
+}
+function loadAllThenDrawer(){
+  var pid = drawerPersona;
+  Promise.all([
+    sb.from('slot_cuentas').select('*').order('nombre'),
+    sb.from('slot_v_ocupacion').select('*'),
+    sb.from('slot_v_asignaciones').select('*'),
+    sb.from('slot_v_alertas').select('*')
+  ]).then(function(r){
+    D.cuentas   = r[0].data;
+    D.ocupacion = r[1].data;
+    D.asigs     = r[2].data;
+    D.alertas   = r[3].data;
+    D.ocupacion.sort(function(a,b){
+      return (a.servicio_orden - b.servicio_orden) || a.nombre.localeCompare(b.nombre);
+    });
+    render();
+    if (pid){ drawerPersona = pid; renderDrawer(); }
+  });
+}
+
+// ══ COMERCIAL ══════════════════════════════════════════════════════════════
+var fCom = { tier:'', servicio:'' };
+
+function viewComercial(){
+  var h = '';
+  h += '<div class="note">Estos números salen solos de las cuentas asignadas. No hay nada que tipear: si un líder suma o saca una cuenta, acá cambia en el momento.</div>';
+
+  h += '<div class="filters">' +
+    '<span style="font-size:12px;color:var(--text2)">Quiero vender</span>' +
+    '<select id="cServicio"><option value="">cualquier servicio</option>' +
+      D.servicios.map(function(s){ return '<option value="' + s.id + '"' + (String(s.id) === fCom.servicio ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'; }).join('') +
+    '</select>' +
+    '<span style="font-size:12px;color:var(--text2)">a una cuenta</span>' +
+    '<select id="cTier"><option value="">de cualquier tier</option>' +
+      D.tiers.map(function(t){ return '<option value="' + t.codigo + '"' + (t.codigo === fCom.tier ? ' selected' : '') + '>' + (t.codigo === 'complejo' ? 'TIER complejo' : 'TIER ' + t.codigo) + ' · ' + esc(t.concepto) + '</option>'; }).join('') +
+    '</select>' +
+  '</div>';
+
+  // candidatos: quien tiene slot libre y el cuartil suficiente para ese tier
+  var cand = D.ocupacion.filter(function(p){
+    if (!p.activa || Number(p.vendible) <= 0) return false;
+    if (fCom.servicio && String(p.servicio_id) !== fCom.servicio) return false;
+    if (fCom.tier && !puedeTomar(p.cuartil, fCom.tier)) return false;
+    return true;
+  }).sort(function(a,b){ return Number(b.vendible) - Number(a.vendible); });
+
+  var totalLibres = cand.reduce(function(s,p){ return s + Number(p.vendible); }, 0);
+  var celulasCon = new Set(cand.map(function(p){ return p.celula || '—'; })).size;
+
+  h += '<div class="kpi-row">' +
+    kpi('Slots vendibles', n2(totalLibres), fCom.tier ? 'para una cuenta de ese tier' : 'en total', totalLibres > 0 ? 'ok' : 'bad') +
+    kpi('Personas con lugar', cand.length, 'pueden tomar la cuenta') +
+    kpi('Células', celulasCon, 'con capacidad') +
+  '</div>';
+
+  // matriz célula × servicio
+  var servs = D.servicios.filter(function(s){
+    return !fCom.servicio || String(s.id) === fCom.servicio;
+  });
+  var celulas = D.celulas.slice().filter(function(c){
+    return D.ocupacion.some(function(p){ return p.celula_id === c.id && p.activa; });
+  });
+
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Slots libres por célula y servicio</span></div>' +
+       '<div class="twrap"><table class="matrix"><thead><tr><th>Célula</th>' +
+       servs.map(function(s){ return '<th style="text-align:center">' + esc(s.nombre) + '</th>'; }).join('') +
+       '<th style="text-align:center">Total</th></tr></thead><tbody>';
+  celulas.forEach(function(c){
+    var fila = '', total = 0;
+    servs.forEach(function(s){
+      var gente = D.ocupacion.filter(function(p){
+        return p.activa && p.celula_id === c.id && p.servicio_id === s.id &&
+               (!fCom.tier || puedeTomar(p.cuartil, fCom.tier));
+      });
+      if (!gente.length){ fila += '<td class="cell cell-zero">·</td>'; return; }
+      var libre = gente.reduce(function(sum,p){ return sum + Math.max(0, Number(p.vendible)); }, 0);
+      var over  = gente.some(function(p){ return Number(p.vendible) < 0; });
+      total += libre;
+      var cls = libre > 0 ? 'cell-free' : (over ? 'cell-over' : 'cell-zero');
+      fila += '<td class="cell ' + cls + '">' + (libre > 0 ? n2(libre) : (over ? '!' : '0')) + '</td>';
+    });
+    h += '<tr><td class="strong">' + esc(c.nombre) + '</td>' + fila +
+         '<td class="cell ' + (total > 0 ? 'cell-free' : 'cell-zero') + '">' + n2(total) + '</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+
+  // quién puede tomarla
+  h += '<div class="section"><div class="section-hdr">' +
+       '<span class="section-title">Quién puede tomarla</span>' +
+       '<span class="chip ' + (cand.length ? 'green' : 'red') + '">' + cand.length + ' candidatos</span></div>';
+  if (!cand.length){
+    h += '<div class="empty">Nadie tiene capacidad para eso hoy.' +
+         (fCom.tier ? '<br>Probá con un tier más bajo o mirá quién está sobrecargado.' : '') + '</div>';
+  } else {
+    h += '<div class="twrap"><table><thead><tr><th>Persona</th><th>Servicio</th><th>Célula</th>' +
+         '<th class="num">Cuartil</th><th>Tier máx</th><th>Ocupación</th><th>Disponible</th></tr></thead><tbody>';
+    cand.forEach(function(p){
+      h += '<tr' + (me.rol !== 'comercial' ? ' class="clickable" data-persona="' + p.persona_id + '"' : '') + '>' +
+        '<td class="strong">' + esc(p.nombre) + '</td>' +
+        '<td class="muted">' + esc(p.servicio) + '</td>' +
+        '<td class="muted">' + esc(p.celula || '—') + '</td>' +
+        '<td class="num">' + (p.cuartil != null ? p.cuartil : '—') + '</td>' +
+        '<td>' + tierPill(p.tier_max) + '</td>' +
+        '<td>' + occBar(Number(p.neta), Number(p.cap_max)) + '</td>' +
+        '<td>' + vendibleChip(p.vendible) + '</td>' +
+      '</tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function wireComercial(){
+  var s = $('cServicio'); if (s) s.onchange = function(){ fCom.servicio = s.value; render(); };
+  var t = $('cTier');     if (t) t.onchange = function(){ fCom.tier = t.value; render(); };
+  Array.prototype.forEach.call(document.querySelectorAll('tr[data-persona]'), function(tr){
+    tr.onclick = function(){ openDrawer(Number(tr.dataset.persona)); };
+  });
+}
+
+// ══ CUENTAS ════════════════════════════════════════════════════════════════
+var fCta = { q:'', soloSinTier:false };
+
+function viewCuentas(){
+  var sinTier = D.cuentas.filter(function(c){ return c.activa && !c.tier; });
+  var h = '';
+  if (sinTier.length){
+    h += '<div class="note">Hay <strong>' + sinTier.length + ' cuentas sin tier</strong>. Mientras no lo tengan, cada una pesa 1 slot ' +
+         'y la capacidad se calcula igual que en la planilla vieja. Clasificarlas es lo que hace que el peso por complejidad empiece a valer.</div>';
+  }
+  h += '<div class="filters">' +
+    '<input type="search" id="qCta" placeholder="Buscar cuenta…" value="' + esc(fCta.q) + '">' +
+    '<label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer">' +
+    '<input type="checkbox" id="qSinTier"' + (fCta.soloSinTier ? ' checked' : '') + '> Solo sin tier</label></div>';
+
+  var rows = D.cuentas.filter(function(c){
+    if (fCta.soloSinTier && c.tier) return false;
+    if (fCta.q && c.nombre.toLowerCase().indexOf(fCta.q.toLowerCase()) < 0) return false;
+    return true;
+  });
+
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Cuentas</span>' +
+       '<span class="chip grey">' + rows.length + '</span></div><div class="twrap"><table><thead><tr>' +
+       '<th>Cuenta</th><th>Tier</th><th class="num">Peso</th><th>Quién la atiende</th><th></th>' +
+       '</tr></thead><tbody>';
+  rows.forEach(function(c){
+    var quien = D.asigs.filter(function(a){ return a.cuenta_id === c.id && a.estado !== 'proyectada'; });
+    var servicios = {};
+    quien.forEach(function(a){
+      var p = D.ocupacion.find(function(x){ return x.persona_id === a.persona_id; });
+      if (p) servicios[p.servicio] = p.nombre;
+    });
+    var t = D.tiers.find(function(x){ return x.codigo === c.tier; });
+    h += '<tr>' +
+      '<td class="strong">' + esc(c.nombre) +
+        (c.revisar ? ' <span class="chip amber" title="' + esc(c.nota || '') + '">revisar</span>' : '') + '</td>' +
+      '<td>' + (me.rol === 'comercial'
+          ? tierPill(c.tier)
+          : '<select class="tier-sel" data-cta="' + c.id + '" style="font-family:var(--mono);font-size:11px;padding:3px 7px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px">' +
+            '<option value="">sin tier</option>' +
+            D.tiers.map(function(tt){
+              return '<option value="' + tt.codigo + '"' + (tt.codigo === c.tier ? ' selected' : '') + '>' +
+                     (tt.codigo === 'complejo' ? 'complejo' : 'T' + tt.codigo) + ' · ' + tt.peso + '</option>';
+            }).join('') + '</select>') + '</td>' +
+      '<td class="num">' + (t ? t.peso : '1.00') + '</td>' +
+      '<td class="muted" style="font-size:11.5px">' +
+        (Object.keys(servicios).length
+          ? Object.keys(servicios).map(function(k){ return esc(k) + ': ' + esc(servicios[k]); }).join(' · ')
+          : '<span class="chip red">sin nadie asignado</span>') + '</td>' +
+      '<td class="muted" style="font-size:11px">' + esc(c.nota || '') + '</td>' +
+    '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  return h;
+}
+
+function wireCuentas(){
+  var q = $('qCta');
+  if (q) q.oninput = function(){ fCta.q = q.value; var pos = q.selectionStart; render(); var n = $('qCta'); if(n){ n.focus(); n.setSelectionRange(pos,pos); } };
+  var s = $('qSinTier'); if (s) s.onchange = function(){ fCta.soloSinTier = s.checked; render(); };
+  Array.prototype.forEach.call(document.querySelectorAll('.tier-sel'), function(sel){
+    sel.onchange = function(){
+      sb.from('slot_cuentas').update({ tier: sel.value || null }).eq('id', Number(sel.dataset.cta))
+        .then(function(r){
+          if (r.error) return toast('No se pudo guardar: ' + r.error.message, true);
+          toast('Tier actualizado'); reload();
+        });
+    };
+  });
+}
+
+// ══ ALERTAS ════════════════════════════════════════════════════════════════
+function viewAlertas(){
+  if (!D.alertas.length) return '<div class="empty">Sin alertas. Todo el equipo está dentro de su capacidad.</div>';
+  var etiquetas = {
+    sobrecarga:    ['Sobrecarga', 'red'],
+    tier_excedido: ['Tier por encima del cuartil', 'amber'],
+    sin_capacidad: ['Sin capacidad cargada', 'blue'],
+    sin_cuartil:   ['Sin cuartil cargado', 'blue']
+  };
+  var porTipo = {};
+  D.alertas.forEach(function(a){ (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a); });
+
+  var h = '';
+  Object.keys(porTipo).forEach(function(tipo){
+    var meta = etiquetas[tipo] || [tipo, 'grey'];
+    h += '<div class="section"><div class="section-hdr">' +
+         '<span class="section-title">' + esc(meta[0]) + '</span>' +
+         '<span class="chip ' + meta[1] + '">' + porTipo[tipo].length + '</span></div>' +
+         '<div class="twrap"><table><thead><tr><th>Persona</th><th>Servicio</th><th>Célula</th><th>Detalle</th></tr></thead><tbody>';
+    porTipo[tipo].forEach(function(a){
+      h += '<tr class="clickable" data-persona="' + a.persona_id + '">' +
+        '<td class="strong">' + esc(a.persona) + '</td>' +
+        '<td class="muted">' + esc(a.servicio) + '</td>' +
+        '<td class="muted">' + esc(a.celula || '—') + '</td>' +
+        '<td>' + esc(a.detalle) + '</td></tr>';
+    });
+    h += '</tbody></table></div></div>';
+  });
+  setTimeout(function(){
+    Array.prototype.forEach.call(document.querySelectorAll('tr[data-persona]'), function(tr){
+      tr.onclick = function(){ openDrawer(Number(tr.dataset.persona)); };
+    });
+  }, 0);
+  return h;
+}
+
+// ══ RECONCILIACIÓN ═════════════════════════════════════════════════════════
+function viewRecon(){
+  var h = '<div class="note">La planilla declaraba a mano cuántas cuentas tenía cada uno, y esos números no coinciden con las cuentas que estaban listadas al lado. ' +
+          'Acá está cada diferencia. Abrí la persona, dejá sus cuentas como corresponde y marcala como resuelta.</div>';
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Diferencias entre la planilla y las cuentas cargadas</span>' +
+       '<span class="chip amber">' + D.recon.length + '</span></div><div class="twrap"><table><thead><tr>' +
+       '<th>Persona</th><th>Servicio</th><th>Líder</th><th class="num">Decía</th><th class="num">Hay</th>' +
+       '<th class="num">Dif.</th><th class="num">Bajas</th><th class="num">Cierres</th><th></th>' +
+       '</tr></thead><tbody>';
+  D.recon.forEach(function(r){
+    var dif = Number(r.diferencia);
+    h += '<tr class="clickable" data-persona="' + r.persona_id + '">' +
+      '<td class="strong">' + esc(r.nombre) + '</td>' +
+      '<td class="muted">' + esc(r.servicio) + '</td>' +
+      '<td class="muted">' + esc(r.lider || '—') + '</td>' +
+      '<td class="num">' + r.planilla_activas + '</td>' +
+      '<td class="num">' + r.reales + '</td>' +
+      '<td class="num">' + (dif === 0 ? '<span class="muted">0</span>' :
+          '<span class="chip ' + (dif > 0 ? 'blue' : 'amber') + '">' + (dif > 0 ? '+' : '') + dif + '</span>') + '</td>' +
+      '<td class="num">' + (r.planilla_bajas || 0) + '</td>' +
+      '<td class="num">' + (r.planilla_cierres || 0) + '</td>' +
+      '<td><button class="mini" data-resolver="' + r.persona_id + '">Marcar resuelta</button></td>' +
+    '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  return h;
+}
+function wireRecon(){
+  Array.prototype.forEach.call(document.querySelectorAll('tr[data-persona]'), function(tr){
+    tr.onclick = function(e){
+      if (e.target.dataset.resolver) return;
+      openDrawer(Number(tr.dataset.persona));
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-resolver]'), function(b){
+    b.onclick = function(e){
+      e.stopPropagation();
+      sb.from('slot_reconciliacion')
+        .update({ resuelto: true, resuelto_at: new Date().toISOString() })
+        .eq('persona_id', Number(b.dataset.resolver))
+        .then(function(r){
+          if (r.error) return toast('No se pudo marcar: ' + r.error.message, true);
+          toast('Marcada como resuelta'); reload();
+        });
+    };
+  });
+}
+
+// ══ REFERENCIA ═════════════════════════════════════════════════════════════
+function viewRef(){
+  var h = '<div class="note blue">El <strong>cuartil</strong> mide el seniority de la persona. El <strong>tier</strong> mide la complejidad de la cuenta. ' +
+          'Alguien de cuartil 2.4 puede tomar cuentas hasta TIER 1. El <strong>peso</strong> es cuánto ocupa esa cuenta de su capacidad: ' +
+          'una cuenta compleja gasta 1.5 slots, una inicial 0.7.</div>';
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Tier, cuartil y scoring</span></div>' +
+       '<div class="twrap"><table><thead><tr><th>Concepto</th><th>Tier</th><th class="num">Cuartil mínimo</th>' +
+       '<th class="num">Scoring mínimo</th><th class="num">Peso en slots</th><th>Descripción</th></tr></thead><tbody>';
+  D.tiers.forEach(function(t){
+    h += '<tr><td class="strong">' + esc(t.concepto) + '</td>' +
+      '<td>' + tierPill(t.codigo) + '</td>' +
+      '<td class="num">' + t.cuartil_min + '</td>' +
+      '<td class="num">&gt; ' + t.scoring_min + '</td>' +
+      '<td class="num strong">' + t.peso + '</td>' +
+      '<td class="muted">' + esc(t.descripcion || '') + '</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+
+  // ocupación global por servicio
+  h += '<div class="section"><div class="section-hdr"><span class="section-title">Ocupación por servicio</span></div>' +
+       '<div class="twrap"><table><thead><tr><th>Servicio</th><th class="num">Personas</th>' +
+       '<th class="num">Capacidad</th><th class="num">Ocupado</th><th>Ocupación</th><th class="num">Libres</th></tr></thead><tbody>';
+  D.servicios.forEach(function(s){
+    var g = D.ocupacion.filter(function(p){ return p.activa && p.servicio_id === s.id; });
+    if (!g.length) return;
+    var cap = g.reduce(function(x,p){ return x + Number(p.cap_max); }, 0);
+    var ocu = g.reduce(function(x,p){ return x + Number(p.neta); }, 0);
+    var lib = g.reduce(function(x,p){ return x + Math.max(0, Number(p.vendible)); }, 0);
+    h += '<tr><td class="strong">' + esc(s.nombre) + '</td>' +
+      '<td class="num">' + g.length + '</td>' +
+      '<td class="num">' + n2(cap) + '</td>' +
+      '<td class="num">' + n2(ocu) + '</td>' +
+      '<td>' + occBar(ocu, cap) + '</td>' +
+      '<td class="num">' + n2(lib) + '</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  return h;
+}
+</script>
+</body>
+</html>
