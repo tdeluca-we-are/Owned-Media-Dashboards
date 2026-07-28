@@ -1040,7 +1040,7 @@ function viewAccesos(){
       '<select id="aLider"><option value="">— qué líder es —</option>' +
         D.lideres.map(function(l){ return '<option value="' + l.id + '">' + esc(l.nombre) + '</option>'; }).join('') +
       '</select>' +
-      '<button class="btn primary" id="aAdd">Agregar</button>' +
+      '<button class="btn-orange" id="aAdd">Agregar</button>' +
     '</div>' +
     '<div class="note" style="margin:0 16px 14px">Un <strong>líder</strong> solo puede editar la gente de su célula, ' +
     'por eso hay que decir qué líder es. <strong>Comercial</strong> ve todo en modo lectura. ' +
@@ -1065,7 +1065,7 @@ function viewAccesos(){
         '<td class="muted">' + esc(a.lider || '—') + '</td>' +
         '<td><span class="chip ' + (ESTADO_CHIP[a.estado] || 'grey') + '">' + esc(a.estado) + '</span></td>' +
         '<td class="muted">' + (a.ultimo_ingreso ? new Date(a.ultimo_ingreso).toLocaleDateString('es-AR') : '—') + '</td>' +
-        '<td><button class="btn small" data-toggle="' + a.id + '" data-activo="' + (a.activo ? 1 : 0) + '">' +
+        '<td><button class="btn-sm" data-toggle="' + a.id + '" data-activo="' + (a.activo ? 1 : 0) + '">' +
           (a.activo ? 'Desactivar' : 'Reactivar') + '</button></td>' +
       '</tr>';
     });
