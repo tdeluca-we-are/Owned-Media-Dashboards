@@ -149,6 +149,14 @@ tr.clickable:hover td{background:rgba(255,255,255,.03)}
 .note.blue{background:rgba(122,158,202,.07);border-color:rgba(122,158,202,.2);border-left-color:var(--blue)}
 .matrix td.cell{text-align:center;font-family:var(--mono);font-weight:700;font-size:13px}
 .cell-free{color:var(--green)}.cell-zero{color:var(--text3)}.cell-over{color:var(--red)}
+.matrix th{text-align:center}
+.matrix th:first-child,.matrix td:first-child{text-align:left}
+input.gcell{width:52px;font-family:var(--mono);font-size:13px;font-weight:700;text-align:center;
+  padding:4px 2px;background:transparent;color:var(--text3);border:1px solid transparent;border-radius:6px;outline:none}
+input.gcell:hover{border-color:var(--border2)}
+input.gcell:focus{border-color:var(--orange);background:var(--bg3);color:var(--text)}
+input.gcell:not([value="0"]){color:var(--green)}
+input.gcell::-webkit-outer-spin-button,input.gcell::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px 20px;font-size:13px;z-index:500;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 .toast.err{border-color:var(--red);color:#fca5a5}
@@ -301,7 +309,9 @@ function loadAll(){
     sb.from('slot_v_ocupacion').select('*'),
     sb.from('slot_v_asignaciones').select('*'),
     sb.from('slot_v_alertas').select('*'),
-    sb.from('slot_v_reconciliacion').select('*')
+    sb.from('slot_v_reconciliacion').select('*'),
+    sb.from('slot_buckets').select('*').order('orden'),
+    sb.from('slot_comercial').select('*')
   ]).then(function(r){
     var err = r.find(function(x){ return x.error; });
     if (err) { $('panes').innerHTML = '<div class="empty">Error cargando datos: ' + esc(err.error.message) + '</div>'; return; }
@@ -314,6 +324,8 @@ function loadAll(){
     D.asigs      = r[6].data;
     D.alertas    = r[7].data;
     D.recon      = r[8].data || [];
+    D.buckets    = r[9].data || [];
+    D.grid       = r[10].data || [];
     D.ocupacion.sort(function(a,b){
       return (a.servicio_orden - b.servicio_orden) || a.nombre.localeCompare(b.nombre);
     });
@@ -632,85 +644,152 @@ function loadAllThenDrawer(){
 }
 
 // ══ COMERCIAL ══════════════════════════════════════════════════════════════
-var fCom = { tier:'', servicio:'' };
+var fCom = { tier:'', servicio:'', meses:6 };
+
+var MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+function rangoMeses(n){
+  var hoy = new Date(), out = [];
+  for (var i = 0; i < n; i++) out.push(new Date(hoy.getFullYear(), hoy.getMonth() + i, 1));
+  return out;
+}
+function mesKey(d){
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
+}
+function mesLabel(d){
+  return MESES[d.getMonth()] + (d.getMonth() === 0 ? " '" + String(d.getFullYear()).slice(2) : '');
+}
+function gridKey(cel, srv, bk, mk){ return cel + '|' + srv + '|' + bk + '|' + mk; }
+function gridIndex(){
+  var idx = {};
+  D.grid.forEach(function(g){
+    idx[gridKey(g.celula_id, g.servicio_id, g.bucket, g.mes)] = g.cantidad;
+  });
+  return idx;
+}
+function puedeCargarGrilla(){ return me.rol === 'admin' || me.rol === 'lider'; }
 
 function viewComercial(){
   var h = '';
-  h += '<div class="note">Estos números salen solos de las cuentas asignadas. No hay nada que tipear: si un líder suma o saca una cuenta, acá cambia en el momento.</div>';
+  // servicio por defecto: el primero, la grilla necesita uno
+  if (!fCom.servicio && D.servicios.length) fCom.servicio = String(D.servicios[0].id);
+  var srvId = Number(fCom.servicio);
+  var srv = D.servicios.find(function(s){ return s.id === srvId; });
+  var meses = rangoMeses(fCom.meses);
+  var idx = gridIndex();
+  var editable = puedeCargarGrilla();
 
   h += '<div class="filters">' +
-    '<span style="font-size:12px;color:var(--text2)">Quiero vender</span>' +
-    '<select id="cServicio"><option value="">cualquier servicio</option>' +
-      D.servicios.map(function(s){ return '<option value="' + s.id + '"' + (String(s.id) === fCom.servicio ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'; }).join('') +
+    '<span style="font-size:12px;color:var(--text2)">Servicio</span>' +
+    '<select id="cServicio">' +
+      D.servicios.map(function(s){ return '<option value="' + s.id + '"' + (s.id === srvId ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'; }).join('') +
     '</select>' +
-    '<span style="font-size:12px;color:var(--text2)">a una cuenta</span>' +
-    '<select id="cTier"><option value="">de cualquier tier</option>' +
-      D.tiers.map(function(t){ return '<option value="' + t.codigo + '"' + (t.codigo === fCom.tier ? ' selected' : '') + '>' + (t.codigo === 'complejo' ? 'TIER complejo' : 'TIER ' + t.codigo) + ' · ' + esc(t.concepto) + '</option>'; }).join('') +
+    '<span style="font-size:12px;color:var(--text2)">Horizonte</span>' +
+    '<select id="cMeses">' +
+      [3,6,9,12].map(function(n){ return '<option value="' + n + '"' + (n === fCom.meses ? ' selected' : '') + '>' + n + ' meses</option>'; }).join('') +
     '</select>' +
   '</div>';
 
-  // candidatos: quien tiene slot libre y el cuartil suficiente para ese tier
+  var celulas = D.celulas.slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+
+  // ── totales por mes y bucket, sumando todas las células ──
+  var totPorMes = {}, totPorBucket = {};
+  meses.forEach(function(m){ totPorMes[mesKey(m)] = 0; });
+  D.buckets.forEach(function(b){
+    totPorBucket[b.codigo] = {};
+    meses.forEach(function(m){
+      var s = 0;
+      celulas.forEach(function(c){ s += (idx[gridKey(c.id, srvId, b.codigo, mesKey(m))] || 0); });
+      totPorBucket[b.codigo][mesKey(m)] = s;
+      totPorMes[mesKey(m)] += s;
+    });
+  });
+  var granTotal = Object.keys(totPorMes).reduce(function(s,k){ return s + totPorMes[k]; }, 0);
+  var esteMes = totPorMes[mesKey(meses[0])] || 0;
+
+  h += '<div class="kpi-row">' +
+    kpi('Este mes', esteMes, 'slots para vender en ' + esc(srv ? srv.nombre : ''), esteMes > 0 ? 'ok' : 'warn') +
+    kpi('Próximos ' + fCom.meses + ' meses', granTotal, 'acumulado del servicio') +
+    kpi('Células con lugar', celulas.filter(function(c){
+      return meses.some(function(m){ return D.buckets.some(function(b){ return (idx[gridKey(c.id, srvId, b.codigo, mesKey(m))] || 0) > 0; }); });
+    }).length, 'de ' + celulas.length) +
+  '</div>';
+
+  // ── grilla total ──
+  h += '<div class="section"><div class="section-hdr">' +
+       '<span class="section-title">Total ' + esc(srv ? srv.nombre : '') + '</span>' +
+       '<span class="chip grey">todas las células</span></div>' +
+       '<div class="twrap"><table class="matrix"><thead><tr><th>Tier</th>' +
+       meses.map(function(m){ return '<th style="text-align:center">' + mesLabel(m) + '</th>'; }).join('') +
+       '</tr></thead><tbody>';
+  D.buckets.forEach(function(b){
+    h += '<tr><td class="strong">' + esc(b.nombre) + '</td>' +
+      meses.map(function(m){
+        var v = totPorBucket[b.codigo][mesKey(m)];
+        return '<td class="cell ' + (v > 0 ? 'cell-free' : 'cell-zero') + '">' + v + '</td>';
+      }).join('') + '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+
+  // ── grilla editable por célula ──
+  h += '<div class="section"><div class="section-hdr">' +
+       '<span class="section-title">Por célula — ' + esc(srv ? srv.nombre : '') + '</span>' +
+       '<span class="chip ' + (editable ? 'orange' : 'grey') + '">' +
+       (editable ? 'editable' : 'solo lectura') + '</span></div><div class="twrap">' +
+       '<table class="matrix"><thead><tr><th>Célula / Tier</th>' +
+       meses.map(function(m){ return '<th style="text-align:center">' + mesLabel(m) + '</th>'; }).join('') +
+       '<th style="text-align:center">Total</th></tr></thead><tbody>';
+
+  celulas.forEach(function(c){
+    h += '<tr><td colspan="' + (meses.length + 2) + '" style="background:var(--bg3);font-weight:700;font-size:11px;' +
+         'text-transform:uppercase;letter-spacing:.06em;color:var(--text2)">' + esc(c.nombre) + '</td></tr>';
+    D.buckets.forEach(function(b){
+      var filaTotal = 0;
+      var celdas = meses.map(function(m){
+        var mk = mesKey(m);
+        var v = idx[gridKey(c.id, srvId, b.codigo, mk)] || 0;
+        filaTotal += v;
+        if (!editable){
+          return '<td class="cell ' + (v > 0 ? 'cell-free' : 'cell-zero') + '">' + v + '</td>';
+        }
+        return '<td class="cell"><input class="gcell" type="number" min="0" value="' + v + '"' +
+               ' data-cel="' + c.id + '" data-srv="' + srvId + '" data-bk="' + b.codigo + '" data-mes="' + mk + '"></td>';
+      }).join('');
+      h += '<tr><td style="padding-left:26px;color:var(--text2)">' + esc(b.nombre) + '</td>' + celdas +
+           '<td class="cell ' + (filaTotal > 0 ? 'cell-free' : 'cell-zero') + '">' + filaTotal + '</td></tr>';
+    });
+  });
+  h += '</tbody></table></div></div>';
+
+  // ── contraste con lo que dicen las cuentas cargadas ──
+  var libresReales = D.ocupacion.filter(function(p){
+    return p.activa && p.servicio_id === srvId;
+  }).reduce(function(s,p){ return s + Math.max(0, Number(p.vendible)); }, 0);
+
+  if (Math.abs(libresReales - esteMes) >= 1){
+    h += '<div class="note">Para este mes la grilla dice <strong>' + esteMes + '</strong> slots, ' +
+         'pero según las cuentas cargadas en el equipo hay <strong>' + n2(libresReales) + '</strong>. ' +
+         'La grilla se carga a mano, así que la diferencia es esperable — pero si es grande, conviene revisarla.</div>';
+  }
+
+  // ── quién puede tomarla ──
   var cand = D.ocupacion.filter(function(p){
     if (!p.activa || Number(p.vendible) <= 0) return false;
-    if (fCom.servicio && String(p.servicio_id) !== fCom.servicio) return false;
+    if (p.servicio_id !== srvId) return false;
     if (fCom.tier && !puedeTomar(p.cuartil, fCom.tier)) return false;
     return true;
   }).sort(function(a,b){ return Number(b.vendible) - Number(a.vendible); });
 
-  var totalLibres = cand.reduce(function(s,p){ return s + Number(p.vendible); }, 0);
-  var celulasCon = new Set(cand.map(function(p){ return p.celula || '—'; })).size;
-
-  h += '<div class="kpi-row">' +
-    kpi('Slots vendibles', n2(totalLibres), fCom.tier ? 'para una cuenta de ese tier' : 'en total', totalLibres > 0 ? 'ok' : 'bad') +
-    kpi('Personas con lugar', cand.length, 'pueden tomar la cuenta') +
-    kpi('Células', celulasCon, 'con capacidad') +
-  '</div>';
-
-  // matriz célula × servicio
-  var servs = D.servicios.filter(function(s){
-    return !fCom.servicio || String(s.id) === fCom.servicio;
-  });
-  var celulas = D.celulas.slice().filter(function(c){
-    return D.ocupacion.some(function(p){ return p.celula_id === c.id && p.activa; });
-  });
-
-  h += '<div class="section"><div class="section-hdr"><span class="section-title">Slots libres por célula y servicio</span></div>' +
-       '<div class="twrap"><table class="matrix"><thead><tr><th>Célula</th>' +
-       servs.map(function(s){ return '<th style="text-align:center">' + esc(s.nombre) + '</th>'; }).join('') +
-       '<th style="text-align:center">Total</th></tr></thead><tbody>';
-  celulas.forEach(function(c){
-    var fila = '', total = 0;
-    servs.forEach(function(s){
-      var gente = D.ocupacion.filter(function(p){
-        return p.activa && p.celula_id === c.id && p.servicio_id === s.id &&
-               (!fCom.tier || puedeTomar(p.cuartil, fCom.tier));
-      });
-      if (!gente.length){ fila += '<td class="cell cell-zero">·</td>'; return; }
-      var libre = gente.reduce(function(sum,p){ return sum + Math.max(0, Number(p.vendible)); }, 0);
-      var over  = gente.some(function(p){ return Number(p.vendible) < 0; });
-      total += libre;
-      var cls = libre > 0 ? 'cell-free' : (over ? 'cell-over' : 'cell-zero');
-      fila += '<td class="cell ' + cls + '">' + (libre > 0 ? n2(libre) : (over ? '!' : '0')) + '</td>';
-    });
-    h += '<tr><td class="strong">' + esc(c.nombre) + '</td>' + fila +
-         '<td class="cell ' + (total > 0 ? 'cell-free' : 'cell-zero') + '">' + n2(total) + '</td></tr>';
-  });
-  h += '</tbody></table></div></div>';
-
-  // quién puede tomarla
   h += '<div class="section"><div class="section-hdr">' +
-       '<span class="section-title">Quién puede tomarla</span>' +
-       '<span class="chip ' + (cand.length ? 'green' : 'red') + '">' + cand.length + ' candidatos</span></div>';
+       '<span class="section-title">Quién tiene lugar hoy en ' + esc(srv ? srv.nombre : '') + '</span>' +
+       '<span class="chip ' + (cand.length ? 'green' : 'red') + '">' + cand.length + '</span></div>';
   if (!cand.length){
-    h += '<div class="empty">Nadie tiene capacidad para eso hoy.' +
-         (fCom.tier ? '<br>Probá con un tier más bajo o mirá quién está sobrecargado.' : '') + '</div>';
+    h += '<div class="empty">Nadie tiene capacidad en este servicio hoy.</div>';
   } else {
-    h += '<div class="twrap"><table><thead><tr><th>Persona</th><th>Servicio</th><th>Célula</th>' +
+    h += '<div class="twrap"><table><thead><tr><th>Persona</th><th>Célula</th>' +
          '<th class="num">Cuartil</th><th>Tier máx</th><th>Ocupación</th><th>Disponible</th></tr></thead><tbody>';
     cand.forEach(function(p){
       h += '<tr' + (me.rol !== 'comercial' ? ' class="clickable" data-persona="' + p.persona_id + '"' : '') + '>' +
         '<td class="strong">' + esc(p.nombre) + '</td>' +
-        '<td class="muted">' + esc(p.servicio) + '</td>' +
         '<td class="muted">' + esc(p.celula || '—') + '</td>' +
         '<td class="num">' + (p.cuartil != null ? p.cuartil : '—') + '</td>' +
         '<td>' + tierPill(p.tier_max) + '</td>' +
@@ -726,9 +805,33 @@ function viewComercial(){
 
 function wireComercial(){
   var s = $('cServicio'); if (s) s.onchange = function(){ fCom.servicio = s.value; render(); };
-  var t = $('cTier');     if (t) t.onchange = function(){ fCom.tier = t.value; render(); };
+  var m = $('cMeses');    if (m) m.onchange = function(){ fCom.meses = Number(m.value); render(); };
   Array.prototype.forEach.call(document.querySelectorAll('tr[data-persona]'), function(tr){
     tr.onclick = function(){ openDrawer(Number(tr.dataset.persona)); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input.gcell'), function(inp){
+    inp.onchange = function(){
+      var v = Math.max(0, Number(inp.value) || 0);
+      inp.value = v;
+      sb.from('slot_comercial').upsert({
+        celula_id:   Number(inp.dataset.cel),
+        servicio_id: Number(inp.dataset.srv),
+        bucket:      inp.dataset.bk,
+        mes:         inp.dataset.mes,
+        cantidad:    v
+      }, { onConflict: 'celula_id,servicio_id,bucket,mes' }).then(function(r){
+        if (r.error) return toast('No se pudo guardar: ' + r.error.message, true);
+        // refresca solo la grilla, sin perder el foco de la celda
+        sb.from('slot_comercial').select('*').then(function(r2){
+          if (r2.data) D.grid = r2.data;
+          render();
+          var again = document.querySelector('input.gcell[data-cel="' + inp.dataset.cel +
+            '"][data-srv="' + inp.dataset.srv + '"][data-bk="' + inp.dataset.bk +
+            '"][data-mes="' + inp.dataset.mes + '"]');
+          if (again) again.focus();
+        });
+      });
+    };
   });
 }
 
