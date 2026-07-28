@@ -341,7 +341,12 @@ $('loginBtn').onclick = function(){
   if (!e || !p) { $('authErr').textContent = 'Completá email y contraseña'; return; }
   $('authErr').textContent = '';
   sb.auth.signInWithPassword({ email: e, password: p }).then(function(r){
-    if (r.error) { $('authErr').textContent = 'Email o contraseña incorrectos'; return; }
+    if (r.error) {
+      // el mensaje crudo de Supabase: "invalid credentials" no es lo mismo que
+      // "email not confirmed" o un rate limit, y con un texto genérico no se distingue
+      $('authErr').textContent = r.error.message || 'No se pudo entrar';
+      return;
+    }
     boot();
   });
 };
