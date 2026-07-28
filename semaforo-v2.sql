@@ -35,7 +35,12 @@ create table if not exists sem_comentarios (
 create index if not exists sem_comentarios_reg_idx on sem_comentarios (registro_id, creado_at);
 
 -- ── VISTAS (se redefinen para exponer la célula) ────────────────────────────
-create or replace view sem_v_detalle as
+-- Van dropeadas y no "create or replace": las columnas nuevas caen en el medio
+-- y replace solo admite agregar al final.
+drop view if exists sem_v_detalle;
+drop view if exists sem_v_marcas_mes;
+
+create view sem_v_detalle as
 with base as (
   select r.id as registro_id, r.marca_id, r.periodo, ms.servicio_id
     from sem_registros r
@@ -60,7 +65,7 @@ select b.registro_id, b.marca_id, m.nombre as marca, m.activa,
                          and d.servicio_id = b.servicio_id
  where sem_rol() is not null;
 
-create or replace view sem_v_marcas_mes as
+create view sem_v_marcas_mes as
 select r.id as registro_id, m.id as marca_id, m.nombre as marca, m.activa,
        m.celula_id, c.nombre as celula, c.kam,
        r.periodo, to_char(r.periodo, 'YYYY-MM') as periodo_txt,
