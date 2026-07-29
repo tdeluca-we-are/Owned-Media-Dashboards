@@ -287,9 +287,12 @@ textarea.q:focus{border-color:var(--orange)}
 .pick i{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
 .combo-vacio{padding:14px 13px;font-size:12px;color:var(--text3)}
 
-/* rango de meses */
+/* rango de meses: año y mes separados */
 .rango{display:inline-flex;align-items:center;gap:4px}
 .rango .mini{padding:5px 9px}
+.filters select.s-año{min-width:72px}
+.filters select.s-mes{min-width:66px;text-transform:capitalize}
+.filters select.s-año{margin-right:-4px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text3);margin-bottom:14px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
@@ -820,29 +823,38 @@ function bindCombo(abierto, onEstado){
 function sumarMes(p, n){
   return mesDe(new Date(Number(p.slice(0, 4)), Number(p.slice(5, 7)) - 1 + n, 1));
 }
-// meses ofrecidos en los filtros: desde el primer cierre cargado (o un año atrás)
-// hasta el último mes cerrado
-function mesesDisponibles(){
+// rango cubierto por los filtros: del primer cierre cargado (o un año atrás)
+// al último mes cerrado
+function limitesMeses(){
   var min = mesAnterior(12), max = mesAnterior(1);
   D.mes.forEach(function(r){
     if (r.periodo < min) min = r.periodo;
     if (r.periodo > max) max = r.periodo;
   });
-  var out = [], cur = min;
-  while (cur <= max){ out.push(cur); cur = sumarMes(cur, 1); }
-  return out;
+  return {min: min, max: max};
+}
+function acotarMes(p, lim){
+  return p < lim.min ? lim.min : (p > lim.max ? lim.max : p);
 }
 function rangoMeses(desde, hasta){
   var out = [], cur = desde;
   while (cur <= hasta && out.length < 120){ out.push(cur); cur = sumarMes(cur, 1); }
   return out.length ? out : [hasta];
 }
+// Año y mes por separado: en unos años la lista plana de meses sería inmanejable
 function selectorRango(pref, desde, hasta){
-  var ops = mesesDisponibles();
+  var lim = limitesMeses();
+  var y0 = Number(lim.min.slice(0, 4)), y1 = Number(lim.max.slice(0, 4));
   function sel(id, val){
-    return '<select id="' + id + '">' + ops.map(function(p){
-      return '<option value="' + p + '"' + (p === val ? ' selected' : '') + '>' + periodoLabel(p) + '</option>';
-    }).join('') + '</select>';
+    var añoSel = val.slice(0, 4), mesSel = Number(val.slice(5, 7));
+    var años = '';
+    for (var a = y0; a <= y1; a++)
+      años += '<option value="' + a + '"' + (String(a) === añoSel ? ' selected' : '') + '>' + a + '</option>';
+    var meses = MESES.map(function(nombre, i){
+      return '<option value="' + (i + 1) + '"' + (i + 1 === mesSel ? ' selected' : '') + '>' + nombre + '</option>';
+    }).join('');
+    return '<select id="' + id + 'Y" class="s-año">' + años + '</select>' +
+           '<select id="' + id + 'M" class="s-mes">' + meses + '</select>';
   }
   return '<label>Desde</label>' + sel(pref + 'D', desde) +
          '<label>Hasta</label>' + sel(pref + 'H', hasta) +
@@ -853,8 +865,16 @@ function selectorRango(pref, desde, hasta){
 }
 // onCambio(desde, hasta) — se encarga de que desde nunca pase a hasta
 function bindRango(pref, desde, hasta, onCambio){
-  $(pref + 'D').onchange = function(){ var d = this.value; onCambio(d, hasta < d ? d : hasta); };
-  $(pref + 'H').onchange = function(){ var h = this.value; onCambio(desde > h ? h : desde, h); };
+  var lim = limitesMeses();
+  function leer(id){
+    return acotarMes($(id + 'Y').value + '-' + String($(id + 'M').value).padStart(2, '0') + '-01', lim);
+  }
+  function alCambiarDesde(){ var d = leer(pref + 'D'); onCambio(d, hasta < d ? d : hasta); }
+  function alCambiarHasta(){ var h = leer(pref + 'H'); onCambio(desde > h ? h : desde, h); }
+  $(pref + 'DY').onchange = alCambiarDesde;
+  $(pref + 'DM').onchange = alCambiarDesde;
+  $(pref + 'HY').onchange = alCambiarHasta;
+  $(pref + 'HM').onchange = alCambiarHasta;
   Array.prototype.forEach.call(document.querySelectorAll('[data-preset]'), function(b){
     b.onclick = function(){ onCambio(sumarMes(hasta, -(Number(b.dataset.preset) - 1)), hasta); };
   });
