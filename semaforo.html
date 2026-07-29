@@ -876,7 +876,11 @@ function bindRango(pref, desde, hasta, onCambio){
   $(pref + 'HY').onchange = alCambiarHasta;
   $(pref + 'HM').onchange = alCambiarHasta;
   Array.prototype.forEach.call(document.querySelectorAll('[data-preset]'), function(b){
-    b.onclick = function(){ onCambio(sumarMes(hasta, -(Number(b.dataset.preset) - 1)), hasta); };
+    // acotado: si el atajo se va antes del primer mes disponible, el select no
+    // tendría ese año y mostraría uno distinto del que la grilla está usando
+    b.onclick = function(){
+      onCambio(acotarMes(sumarMes(hasta, -(Number(b.dataset.preset) - 1)), lim), hasta);
+    };
   });
 }
 // arranca en los últimos 12 meses cerrados
