@@ -402,12 +402,6 @@ function mesAnterior(n){
   var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (n || 0));
   return mesDe(d);
 }
-// últimos n meses terminando en el mes cerrado (el anterior al actual)
-function ultimosMeses(n){
-  var out = [];
-  for (var i = n - 1; i >= 0; i--) out.push(mesAnterior(i + 1));
-  return out;
-}
 function peor(estados){
   if (estados.indexOf('rojo') >= 0) return 'rojo';
   if (estados.indexOf('amarillo') >= 0) return 'amarillo';
@@ -578,7 +572,7 @@ var tbBusca = '', tbSoloActivas = true, tbCelula = '', tbEstado = '', tbRango = 
 function renderTablero(){
   if (!tbRango) tbRango = rangoPorDefecto();
   var meses = rangoMeses(tbRango.desde, tbRango.hasta);
-  var ultimo = meses[meses.length - 1];
+  var ultimo = mesReferencia(meses[meses.length - 1]);
   var marcas = D.marcas.filter(function(m){
     if (tbSoloActivas && !m.activa) return false;
     if (tbCelula && String(celulaDe(m.id).id) !== tbCelula) return false;
@@ -823,41 +817,57 @@ function bindCombo(abierto, onEstado){
 function sumarMes(p, n){
   return mesDe(new Date(Number(p.slice(0, 4)), Number(p.slice(5, 7)) - 1 + n, 1));
 }
-// rango cubierto por los filtros: del primer cierre cargado (o un año atrás)
-// al último mes cerrado
+// Años que ofrece el filtro. No se limita a los meses que ya tienen datos: se
+// puede parar en cualquier mes de cualquier año, aunque todavía no haya cierres.
+// El piso y el techo se corren solos con el calendario y con lo que haya cargado.
 function limitesMeses(){
-  var min = mesAnterior(12), max = mesAnterior(1);
+  var y0 = new Date().getFullYear() - 3, y1 = new Date().getFullYear() + 1;
   D.mes.forEach(function(r){
-    if (r.periodo < min) min = r.periodo;
-    if (r.periodo > max) max = r.periodo;
+    var y = Number(r.periodo.slice(0, 4));
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
   });
-  return {min: min, max: max};
+  return {min: y0 + '-01-01', max: y1 + '-12-01'};
 }
 function acotarMes(p, lim){
   return p < lim.min ? lim.min : (p > lim.max ? lim.max : p);
+}
+// Mes que toman los KPI y los chips de estado. Si el rango se estira hacia
+// adelante no tiene sentido resumir un mes que todavía no cerró.
+function mesReferencia(hasta){
+  var cerrado = mesAnterior(1);
+  return hasta > cerrado ? cerrado : hasta;
 }
 function rangoMeses(desde, hasta){
   var out = [], cur = desde;
   while (cur <= hasta && out.length < 120){ out.push(cur); cur = sumarMes(cur, 1); }
   return out.length ? out : [hasta];
 }
-// Año y mes por separado: en unos años la lista plana de meses sería inmanejable
-function selectorRango(pref, desde, hasta){
+// Un mes = año + mes en dos selects cortos. Una lista plana de meses crece un
+// ítem por mes y a los pocos años es imposible de usar.
+function selectorMes(id, val){
   var lim = limitesMeses();
-  var y0 = Number(lim.min.slice(0, 4)), y1 = Number(lim.max.slice(0, 4));
-  function sel(id, val){
-    var añoSel = val.slice(0, 4), mesSel = Number(val.slice(5, 7));
-    var años = '';
-    for (var a = y0; a <= y1; a++)
-      años += '<option value="' + a + '"' + (String(a) === añoSel ? ' selected' : '') + '>' + a + '</option>';
-    var meses = MESES.map(function(nombre, i){
-      return '<option value="' + (i + 1) + '"' + (i + 1 === mesSel ? ' selected' : '') + '>' + nombre + '</option>';
-    }).join('');
-    return '<select id="' + id + 'Y" class="s-año">' + años + '</select>' +
-           '<select id="' + id + 'M" class="s-mes">' + meses + '</select>';
-  }
-  return '<label>Desde</label>' + sel(pref + 'D', desde) +
-         '<label>Hasta</label>' + sel(pref + 'H', hasta) +
+  var añoSel = val.slice(0, 4), mesSel = Number(val.slice(5, 7));
+  var años = '';
+  for (var a = Number(lim.min.slice(0, 4)); a <= Number(lim.max.slice(0, 4)); a++)
+    años += '<option value="' + a + '"' + (String(a) === añoSel ? ' selected' : '') + '>' + a + '</option>';
+  var meses = MESES.map(function(nombre, i){
+    return '<option value="' + (i + 1) + '"' + (i + 1 === mesSel ? ' selected' : '') + '>' + nombre + '</option>';
+  }).join('');
+  return '<select id="' + id + 'Y" class="s-año">' + años + '</select>' +
+         '<select id="' + id + 'M" class="s-mes">' + meses + '</select>';
+}
+function leerMes(id){
+  return $(id + 'Y').value + '-' + String($(id + 'M').value).padStart(2, '0') + '-01';
+}
+function bindMes(id, onCambio){
+  $(id + 'Y').onchange = function(){ onCambio(leerMes(id)); };
+  $(id + 'M').onchange = function(){ onCambio(leerMes(id)); };
+}
+
+function selectorRango(pref, desde, hasta){
+  return '<label>Desde</label>' + selectorMes(pref + 'D', desde) +
+         '<label>Hasta</label>' + selectorMes(pref + 'H', hasta) +
          '<span class="rango">' + [3, 6, 12, 24].map(function(n){
            var d = sumarMes(hasta, -(n - 1));
            return '<button class="mini' + (d === desde ? ' on' : '') + '" data-preset="' + n + '">' + n + 'm</button>';
@@ -866,18 +876,11 @@ function selectorRango(pref, desde, hasta){
 // onCambio(desde, hasta) — se encarga de que desde nunca pase a hasta
 function bindRango(pref, desde, hasta, onCambio){
   var lim = limitesMeses();
-  function leer(id){
-    return acotarMes($(id + 'Y').value + '-' + String($(id + 'M').value).padStart(2, '0') + '-01', lim);
-  }
-  function alCambiarDesde(){ var d = leer(pref + 'D'); onCambio(d, hasta < d ? d : hasta); }
-  function alCambiarHasta(){ var h = leer(pref + 'H'); onCambio(desde > h ? h : desde, h); }
-  $(pref + 'DY').onchange = alCambiarDesde;
-  $(pref + 'DM').onchange = alCambiarDesde;
-  $(pref + 'HY').onchange = alCambiarHasta;
-  $(pref + 'HM').onchange = alCambiarHasta;
+  bindMes(pref + 'D', function(d){ onCambio(d, hasta < d ? d : hasta); });
+  bindMes(pref + 'H', function(h){ onCambio(desde > h ? h : desde, h); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-preset]'), function(b){
-    // acotado: si el atajo se va antes del primer mes disponible, el select no
-    // tendría ese año y mostraría uno distinto del que la grilla está usando
+    // acotado: si el atajo se va antes del primer año que ofrece el select,
+    // la pantalla mostraría un año distinto del que la grilla está usando
     b.onclick = function(){
       onCambio(acotarMes(sumarMes(hasta, -(Number(b.dataset.preset) - 1)), lim), hasta);
     };
@@ -918,18 +921,15 @@ var cgPeriodo = null;
 
 function renderCarga(){
   if (!cgPeriodo) cgPeriodo = mesAnterior(1);
-  var opciones = ultimosMeses(18).slice().reverse();
-  if (opciones.indexOf(cgPeriodo) < 0) opciones.unshift(cgPeriodo);
 
   var marcas = D.marcas.filter(function(m){ return m.activa; });
   var cargadas = marcas.filter(function(m){ return regDe(m.id, cgPeriodo); }).length;
 
   var html = '';
   html += '<div class="filters">' +
-    '<label>Mes cerrado</label><select id="cgP">' +
-      opciones.map(function(p){ return '<option value="' + p + '"' + (p === cgPeriodo ? ' selected' : '') + '>' +
-        periodoLargo(p) + '</option>'; }).join('') +
-    '</select>' +
+    '<label>Mes cerrado</label>' + selectorMes('cgP', cgPeriodo) +
+    (cgPeriodo > mesAnterior(1)
+      ? '<span class="chip amber">mes todavía sin cerrar</span>' : '') +
     '<div class="spacer"></div>' +
     '<span class="chip ' + (cargadas === marcas.length ? 'green' : 'amber') + '">' +
       cargadas + ' de ' + marcas.length + ' cargadas</span>' +
@@ -969,7 +969,7 @@ function renderCarga(){
   html += '</tbody></table></div></div>';
 
   $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
-  $('cgP').onchange = function(){ cgPeriodo = this.value; renderCarga(); };
+  bindMes('cgP', function(p){ cgPeriodo = p; renderCarga(); });
   Array.prototype.forEach.call(document.querySelectorAll('tr[data-m]'), function(tr){
     tr.onclick = function(){ abrirCierre(Number(tr.dataset.m), cgPeriodo); };
   });
@@ -996,7 +996,7 @@ function renderPorMarca(){
   if (!pmMarca && activas.length) pmMarca = String(activas[0].id);
   var m = D.marcaById[Number(pmMarca)];
   var meses = rangoMeses(pmRango.desde, pmRango.hasta);
-  var mesRef = meses[meses.length - 1];
+  var mesRef = mesReferencia(meses[meses.length - 1]);
 
   var html = '<div class="filters">' +
     comboMarcas(pmMarca, pmBusca, pmAbierto, mesRef) +
@@ -1153,7 +1153,7 @@ function renderPorServicio(){
   if (!psServicio && D.servicios.length) psServicio = String(D.servicios[0].id);
   var s = D.servicioById[Number(psServicio)];
   var meses = rangoMeses(psRango.desde, psRango.hasta);
-  var ultimo = meses[meses.length - 1];
+  var ultimo = mesReferencia(meses[meses.length - 1]);
 
   var html = '<div class="filters">' +
     '<label>Servicio</label><select id="psS">' +
@@ -1240,21 +1240,15 @@ function renderPorServicio(){
 }
 
 // ══ POR ESTADO ════════════════════════════════════════════════════════════
-var flEstado = 'amarillo', flPeriodo = '', flServicio = '', flMarca = '', flQ = '', flCelula = '';
+var flEstado = 'amarillo', flRango = null, flServicio = '', flMarca = '', flQ = '', flCelula = '';
 
 function renderEstados(){
-  if (flPeriodo === '') flPeriodo = mesAnterior(1);
-  // el mes por defecto puede no tener nada cargado todavía: igual va en la lista,
-  // si no el filtro queda aplicado sin que se vea en el select
-  var periodos = Array.from(new Set(
-      D.mes.map(function(r){ return r.periodo; })
-        .concat(D.det.map(function(d){ return d.periodo; }))
-        .concat(flPeriodo === 'todos' ? [] : [flPeriodo])
-    )).sort().reverse();
+  // mismo criterio que el resto: un rango de meses, no un mes suelto
+  if (!flRango){ var h = mesAnterior(1); flRango = {desde: h, hasta: h}; }
 
   var rows = D.det.filter(function(d){
     if (flEstado && d.estado !== flEstado) return false;
-    if (flPeriodo !== 'todos' && d.periodo !== flPeriodo) return false;
+    if (d.periodo < flRango.desde || d.periodo > flRango.hasta) return false;
     if (flServicio && d.servicio_id !== Number(flServicio)) return false;
     if (flMarca && d.marca_id !== Number(flMarca)) return false;
     if (flCelula && String(celulaDe(d.marca_id).id) !== flCelula) return false;
@@ -1277,10 +1271,7 @@ function renderEstados(){
       ESTADOS.map(function(e){ return '<option value="' + e + '"' + (flEstado === e ? ' selected' : '') + '>' +
         ELABEL[e] + '</option>'; }).join('') +
     '</select>' +
-    '<label>Mes</label><select id="flP"><option value="todos"' + (flPeriodo === 'todos' ? ' selected' : '') + '>Todos</option>' +
-      periodos.map(function(p){ return '<option value="' + p + '"' + (flPeriodo === p ? ' selected' : '') + '>' +
-        periodoLargo(p) + '</option>'; }).join('') +
-    '</select>' +
+    selectorRango('fl', flRango.desde, flRango.hasta) +
     '<label>Servicio</label><select id="flS"><option value="">Todos</option>' +
       D.servicios.map(function(s){ return '<option value="' + s.id + '"' + (flServicio == s.id ? ' selected' : '') + '>' +
         esc(s.nombre) + '</option>'; }).join('') +
@@ -1333,7 +1324,9 @@ function renderEstados(){
 
   $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
   $('flE').onchange = function(){ flEstado = this.value; renderEstados(); };
-  $('flP').onchange = function(){ flPeriodo = this.value; renderEstados(); };
+  bindRango('fl', flRango.desde, flRango.hasta, function(d, h){
+    flRango = {desde: d, hasta: h}; renderEstados();
+  });
   $('flS').onchange = function(){ flServicio = this.value; renderEstados(); };
   $('flC').onchange = function(){ flCelula = this.value; renderEstados(); };
   $('flM').onchange = function(){ flMarca = this.value; renderEstados(); };
