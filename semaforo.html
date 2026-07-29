@@ -262,23 +262,34 @@ textarea.q:focus{border-color:var(--orange)}
 .fchip.on.rojo{background:#dc2626}
 .fchip.on.sin_servicio{background:var(--bg3);color:var(--text2);border-color:var(--border)}
 
-/* buscador de marcas: con 50+ marcas el desplegable no alcanza */
-.picker{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
-  overflow:hidden;margin-bottom:18px}
-.picker-search{display:flex;gap:8px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border)}
-.picker-search input{flex:1;font-family:var(--font);font-size:13px;padding:8px 12px;background:var(--bg3);
-  color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;min-width:0}
-.picker-search input:focus{border-color:var(--orange)}
-.picker-list{max-height:210px;overflow-y:auto;padding:9px 12px}
-.picker-cel{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);
-  margin:9px 0 6px}
-.picker-cel:first-child{margin-top:0}
-.pick{font-family:var(--font);font-size:12.5px;font-weight:500;padding:5px 11px;margin:0 5px 5px 0;border-radius:20px;
-  cursor:pointer;background:transparent;color:var(--text2);border:1px solid var(--border2);
-  display:inline-flex;align-items:center;gap:7px}
-.pick:hover{color:var(--text);border-color:var(--text2)}
-.pick.on{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+/* buscador de marcas: una línea que despliega al tocarla, no una lista fija */
+.combo{position:relative;display:inline-block;min-width:260px}
+.combo-btn{width:100%;display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:13px;
+  font-weight:600;padding:7px 12px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);
+  border-radius:var(--radius);cursor:pointer;text-align:left}
+.combo-btn:hover{border-color:var(--orange)}
+.combo-btn i{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.combo-btn .cel{color:var(--text3);font-weight:400;font-size:11.5px;margin-left:auto;white-space:nowrap}
+.combo-btn .car{color:var(--text3);font-size:9px;flex-shrink:0}
+.combo-pop{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:250;width:330px;max-width:88vw;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:0 12px 34px rgba(0,0,0,.55);overflow:hidden}
+.combo.open .combo-pop{display:block}
+.combo-pop input{width:100%;font-family:var(--font);font-size:13px;padding:10px 13px;background:var(--bg3);
+  color:var(--text);border:none;border-bottom:1px solid var(--border);outline:none}
+.combo-list{max-height:270px;overflow-y:auto;padding:5px 0}
+.combo-cel{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);
+  padding:9px 13px 4px}
+.pick{width:100%;font-family:var(--font);font-size:13px;font-weight:500;padding:7px 13px;border:none;
+  cursor:pointer;background:transparent;color:var(--text2);display:flex;align-items:center;gap:9px;text-align:left}
+.pick:hover{background:var(--bg3);color:var(--text)}
+.pick.on{background:var(--orange);color:#fff;font-weight:600}
 .pick i{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.combo-vacio{padding:14px 13px;font-size:12px;color:var(--text3)}
+
+/* rango de meses */
+.rango{display:inline-flex;align-items:center;gap:4px}
+.rango .mini{padding:5px 9px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text3);margin-bottom:14px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
@@ -559,10 +570,11 @@ function pendientesDe(periodo){
 }
 
 // ══ TABLERO ═══════════════════════════════════════════════════════════════
-var tbMeses = 12, tbBusca = '', tbSoloActivas = true, tbCelula = '', tbEstado = '';
+var tbBusca = '', tbSoloActivas = true, tbCelula = '', tbEstado = '', tbRango = null;
 
 function renderTablero(){
-  var meses = ultimosMeses(tbMeses);
+  if (!tbRango) tbRango = rangoPorDefecto();
+  var meses = rangoMeses(tbRango.desde, tbRango.hasta);
   var ultimo = meses[meses.length - 1];
   var marcas = D.marcas.filter(function(m){
     if (tbSoloActivas && !m.activa) return false;
@@ -587,9 +599,7 @@ function renderTablero(){
 
   var html = '';
   html += '<div class="filters">' +
-    '<label>Meses</label><select id="tbN">' +
-      [6,12,18,24].map(function(n){ return '<option value="'+n+'"'+(n===tbMeses?' selected':'')+'>'+n+'</option>'; }).join('') +
-    '</select>' +
+    selectorRango('tb', tbRango.desde, tbRango.hasta) +
     '<label>Célula</label><select id="tbC"><option value="">Todas</option>' +
       celulasConMarcas().map(function(c){
         return '<option value="' + c.id + '"' + (tbCelula == c.id ? ' selected' : '') + '>' +
@@ -685,7 +695,9 @@ function renderTablero(){
 
   $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
 
-  $('tbN').onchange = function(){ tbMeses = Number(this.value); renderTablero(); };
+  bindRango('tb', tbRango.desde, tbRango.hasta, function(d, h){
+    tbRango = {desde: d, hasta: h}; renderTablero();
+  });
   $('tbC').onchange = function(){ tbCelula = this.value; renderTablero(); };
   $('tbQ').oninput  = function(){ tbBusca = this.value; renderTablero(); };
   $('tbA').onchange = function(){ tbSoloActivas = this.checked; renderTablero(); };
@@ -737,23 +749,33 @@ function bindChips(fn){
 }
 
 // ── buscador de marcas ─────────────────────────────────────────────────────
-// Con 50+ marcas un <select> es inmanejable: lista filtrable agrupada por célula,
-// con el color del último cierre de cada marca a la vista.
-function pickerMarcas(sel, busca, mesRef){
+// Con 50+ marcas ni un <select> ni una lista siempre abierta sirven: combo de
+// una línea que despliega un buscador al tocarlo.
+function comboMarcas(sel, busca, abierto, mesRef){
   var activas = D.marcas.filter(function(m){ return m.activa; });
-  var q = busca.toLowerCase();
+  var elegida = D.marcaById[Number(sel)];
+  var rSel = elegida ? regDe(elegida.id, mesRef) : null;
+  var cSel = elegida ? celulaDe(elegida.id) : null;
+  var q = busca.trim().toLowerCase();
   var marcas = activas.filter(function(m){
     return !q || m.nombre.toLowerCase().indexOf(q) >= 0 ||
                  celulaDe(m.id).nombre.toLowerCase().indexOf(q) >= 0;
   });
-  var html = '<div class="picker"><div class="picker-search">' +
-    '<input type="search" id="pkQ" placeholder="Buscar marca o célula…" value="' + esc(busca) + '">' +
-    '<span class="muted" style="font-size:11.5px;white-space:nowrap">' +
-      marcas.length + ' de ' + activas.length + '</span>' +
-    '</div><div class="picker-list">';
-  if (!marcas.length) html += '<div class="qsub">Ninguna marca coincide con la búsqueda</div>';
+
+  var html = '<div class="combo' + (abierto ? ' open' : '') + '" id="cbBox">' +
+    '<button class="combo-btn" id="cbBtn">' +
+      '<i style="background:' + (rSel ? colorDe(rSel.estado) : 'transparent') +
+        (rSel ? '' : ';border:1px dashed var(--text3)') + '"></i>' +
+      (elegida ? esc(elegida.nombre) : 'Elegí una marca') +
+      (cSel ? '<span class="cel">' + esc(cSel.nombre) + '</span>' : '<span class="cel"></span>') +
+      '<span class="car">&#9660;</span>' +
+    '</button>' +
+    '<div class="combo-pop">' +
+      '<input type="search" id="cbQ" placeholder="Buscar marca o célula…" value="' + esc(busca) + '">' +
+      '<div class="combo-list">';
+  if (!marcas.length) html += '<div class="combo-vacio">Ninguna marca coincide con “' + esc(busca) + '”</div>';
   agruparPorCelula(marcas).forEach(function(g){
-    html += '<div class="picker-cel">' + esc(g.celula.nombre) +
+    html += '<div class="combo-cel">' + esc(g.celula.nombre) +
       (g.celula.kam ? ' · ' + esc(g.celula.kam) : '') + '</div>';
     html += g.marcas.map(function(m){
       var r = regDe(m.id, mesRef);
@@ -762,20 +784,85 @@ function pickerMarcas(sel, busca, mesRef){
           (r ? '' : ';border:1px dashed var(--text3)') + '"></i>' + esc(m.nombre) + '</button>';
     }).join('');
   });
-  return html + '</div></div>';
+  return html + '</div></div></div>';
 }
-function bindPicker(onElegir, onBuscar){
+// onEstado(marcaId|null, busca, abierto) — null en marcaId = no cambió la elegida
+var comboCerrar = null;   // el listener de "clic afuera" vivo, si hay alguno
+
+function bindCombo(abierto, onEstado){
+  var btn = $('cbBtn'), q = $('cbQ');
+  // cada re-render reengancha: saco el listener viejo para no acumular uno por tecla
+  if (comboCerrar){ document.removeEventListener('click', comboCerrar); comboCerrar = null; }
+  if (!btn) return;
+  btn.onclick = function(ev){ ev.stopPropagation(); onEstado(null, '', !abierto); };
   Array.prototype.forEach.call(document.querySelectorAll('[data-pick]'), function(b){
-    b.onclick = function(){ onElegir(b.dataset.pick); };
+    b.onclick = function(ev){ ev.stopPropagation(); onEstado(b.dataset.pick, '', false); };
   });
-  var q = $('pkQ');
-  if (!q) return;
-  q.oninput = function(){ onBuscar(this.value); };
-  // el re-render pisa el input: si estaba escribiendo, le devuelvo el foco
-  if (q.value){
-    q.focus();
-    q.setSelectionRange(q.value.length, q.value.length);
+  if (q){
+    q.oninput = function(){ onEstado(null, this.value, true); };
+    q.onclick = function(ev){ ev.stopPropagation(); };
+    if (abierto){
+      q.focus();
+      q.setSelectionRange(q.value.length, q.value.length);
+    }
   }
+  if (abierto){
+    comboCerrar = function(){
+      document.removeEventListener('click', comboCerrar);
+      comboCerrar = null;
+      onEstado(null, '', false);
+    };
+    document.addEventListener('click', comboCerrar);
+  }
+}
+
+// ── rango de meses ─────────────────────────────────────────────────────────
+function sumarMes(p, n){
+  return mesDe(new Date(Number(p.slice(0, 4)), Number(p.slice(5, 7)) - 1 + n, 1));
+}
+// meses ofrecidos en los filtros: desde el primer cierre cargado (o un año atrás)
+// hasta el último mes cerrado
+function mesesDisponibles(){
+  var min = mesAnterior(12), max = mesAnterior(1);
+  D.mes.forEach(function(r){
+    if (r.periodo < min) min = r.periodo;
+    if (r.periodo > max) max = r.periodo;
+  });
+  var out = [], cur = min;
+  while (cur <= max){ out.push(cur); cur = sumarMes(cur, 1); }
+  return out;
+}
+function rangoMeses(desde, hasta){
+  var out = [], cur = desde;
+  while (cur <= hasta && out.length < 120){ out.push(cur); cur = sumarMes(cur, 1); }
+  return out.length ? out : [hasta];
+}
+function selectorRango(pref, desde, hasta){
+  var ops = mesesDisponibles();
+  function sel(id, val){
+    return '<select id="' + id + '">' + ops.map(function(p){
+      return '<option value="' + p + '"' + (p === val ? ' selected' : '') + '>' + periodoLabel(p) + '</option>';
+    }).join('') + '</select>';
+  }
+  return '<label>Desde</label>' + sel(pref + 'D', desde) +
+         '<label>Hasta</label>' + sel(pref + 'H', hasta) +
+         '<span class="rango">' + [3, 6, 12, 24].map(function(n){
+           var d = sumarMes(hasta, -(n - 1));
+           return '<button class="mini' + (d === desde ? ' on' : '') + '" data-preset="' + n + '">' + n + 'm</button>';
+         }).join('') + '</span>';
+}
+// onCambio(desde, hasta) — se encarga de que desde nunca pase a hasta
+function bindRango(pref, desde, hasta, onCambio){
+  $(pref + 'D').onchange = function(){ var d = this.value; onCambio(d, hasta < d ? d : hasta); };
+  $(pref + 'H').onchange = function(){ var h = this.value; onCambio(desde > h ? h : desde, h); };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-preset]'), function(b){
+    b.onclick = function(){ onCambio(sumarMes(hasta, -(Number(b.dataset.preset) - 1)), hasta); };
+  });
+}
+// arranca en los últimos 12 meses cerrados
+function rangoPorDefecto(){
+  var h = mesAnterior(1);
+  return {desde: sumarMes(h, -11), hasta: h};
 }
 
 // agrupa marcas por célula; las que no tienen quedan siempre al final
@@ -877,31 +964,43 @@ function devCell(v){
 }
 
 // ══ POR MARCA ═════════════════════════════════════════════════════════════
-var pmMarca = '', pmMeses = 12, pmBusca = '', pmEstado = '';
+var pmMarca = '', pmBusca = '', pmEstado = '', pmRango = null, pmAbierto = false;
 
 function renderPorMarca(){
+  if (!pmRango) pmRango = rangoPorDefecto();
   var activas = D.marcas.filter(function(m){ return m.activa; });
   if (!pmMarca && activas.length) pmMarca = String(activas[0].id);
   var m = D.marcaById[Number(pmMarca)];
-  var meses = ultimosMeses(pmMeses);
+  var meses = rangoMeses(pmRango.desde, pmRango.hasta);
   var mesRef = meses[meses.length - 1];
 
   var html = '<div class="filters">' +
-    '<label>Meses</label><select id="pmN">' +
-      [6,12,18,24].map(function(n){ return '<option value="'+n+'"'+(n===pmMeses?' selected':'')+'>'+n+'</option>'; }).join('') +
-    '</select></div>';
-  html += pickerMarcas(pmMarca, pmBusca, mesRef);
+    comboMarcas(pmMarca, pmBusca, pmAbierto, mesRef) +
+    selectorRango('pm', pmRango.desde, pmRango.hasta) +
+  '</div>';
+
+  function enganchar(){
+    bindCombo(pmAbierto, function(id, busca, abierto){
+      if (id) pmMarca = id;
+      pmBusca = busca; pmAbierto = abierto;
+      renderPorMarca();
+    });
+    bindRango('pm', pmRango.desde, pmRango.hasta, function(d, h){
+      pmRango = {desde: d, hasta: h}; renderPorMarca();
+    });
+  }
 
   if (!m){
     $('panes').innerHTML = '<div class="pane active">' + html + '<div class="empty">No hay marcas cargadas</div></div>';
-    bindPicker(function(id){ pmMarca = id; renderPorMarca(); }, function(v){ pmBusca = v; renderPorMarca(); });
+    enganchar();
     return;
   }
 
   var c = celulaDe(m.id);
   var srvs = serviciosDe(m.id);
-  // el último mes que tenga cierre, no el último del calendario
-  var cierres = D.mes.filter(function(r){ return r.marca_id === m.id; })
+  // los cierres dentro del rango elegido, del más nuevo al más viejo
+  var cierres = D.mes.filter(function(r){
+                       return r.marca_id === m.id && meses.indexOf(r.periodo) >= 0; })
                      .sort(function(a,b){ return a.periodo < b.periodo ? 1 : -1; });
   var ult = cierres[0];
 
@@ -978,7 +1077,8 @@ function renderPorMarca(){
   // el relato mes a mes: qué pasó y qué se hizo
   html += '<div class="section"><div class="section-hdr"><span class="section-title">Historia mes a mes</span></div>' +
     '<div style="padding:16px 20px">';
-  if (!cierres.length) html += '<div class="empty">Todavía no hay ningún cierre cargado para esta marca</div>';
+  if (!cierres.length) html += '<div class="empty">Ningún cierre cargado entre ' +
+    periodoLargo(pmRango.desde) + ' y ' + periodoLargo(pmRango.hasta) + '</div>';
   cierres.forEach(function(r){
     var nc = D.coment.filter(function(k){ return k.registro_id === r.registro_id; }).length;
     html += '<div class="qbox" style="border-left-color:' + colorDe(r.estado) + '">' +
@@ -1002,9 +1102,7 @@ function renderPorMarca(){
   html += '</div></div>';
 
   $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
-  $('pmN').onchange = function(){ pmMeses = Number(this.value); renderPorMarca(); };
-  bindPicker(function(id){ pmMarca = id; renderPorMarca(); },
-             function(v){ pmBusca = v; renderPorMarca(); });
+  enganchar();
   bindChips(function(e){ pmEstado = e; renderPorMarca(); });
   bindCeldas();
   Array.prototype.forEach.call(document.querySelectorAll('[data-abrir]'), function(b){
@@ -1024,12 +1122,13 @@ function chipDe(estado){
 }
 
 // ══ POR SERVICIO ══════════════════════════════════════════════════════════
-var psServicio = '', psMeses = 12, psSoloConServicio = true, psEstado = '';
+var psServicio = '', psSoloConServicio = true, psEstado = '', psRango = null;
 
 function renderPorServicio(){
+  if (!psRango) psRango = rangoPorDefecto();
   if (!psServicio && D.servicios.length) psServicio = String(D.servicios[0].id);
   var s = D.servicioById[Number(psServicio)];
-  var meses = ultimosMeses(psMeses);
+  var meses = rangoMeses(psRango.desde, psRango.hasta);
   var ultimo = meses[meses.length - 1];
 
   var html = '<div class="filters">' +
@@ -1037,9 +1136,7 @@ function renderPorServicio(){
       D.servicios.map(function(x){ return '<option value="' + x.id + '"' + (psServicio == x.id ? ' selected' : '') +
         '>' + esc(x.nombre) + '</option>'; }).join('') +
     '</select>' +
-    '<label>Meses</label><select id="psN">' +
-      [6,12,18,24].map(function(n){ return '<option value="'+n+'"'+(n===psMeses?' selected':'')+'>'+n+'</option>'; }).join('') +
-    '</select>' +
+    selectorRango('ps', psRango.desde, psRango.hasta) +
     '<label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text2)">' +
       '<input type="checkbox" id="psC"' + (psSoloConServicio ? ' checked' : '') + '> solo marcas con el servicio</label>' +
   '</div>';
@@ -1110,7 +1207,9 @@ function renderPorServicio(){
 
   $('panes').innerHTML = '<div class="pane active">' + html + '</div>';
   $('psS').onchange = function(){ psServicio = this.value; renderPorServicio(); };
-  $('psN').onchange = function(){ psMeses = Number(this.value); renderPorServicio(); };
+  bindRango('ps', psRango.desde, psRango.hasta, function(d, h){
+    psRango = {desde: d, hasta: h}; renderPorServicio();
+  });
   $('psC').onchange = function(){ psSoloConServicio = this.checked; renderPorServicio(); };
   bindChips(function(e){ psEstado = e; renderPorServicio(); });
   bindCeldas();
