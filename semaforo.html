@@ -819,9 +819,12 @@ function sumarMes(p, n){
 }
 // Años que ofrece el filtro. No se limita a los meses que ya tienen datos: se
 // puede parar en cualquier mes de cualquier año, aunque todavía no haya cierres.
-// El piso y el techo se corren solos con el calendario y con lo que haya cargado.
+// La ventana es relativa al día de hoy y se recalcula en cada render, así que
+// nunca hay que venir a correrle el techo a mano: en 2030 va a llegar a 2034.
+// Además se estira sola si hay cierres cargados fuera de esa ventana.
+var AÑOS_ATRAS = 3, AÑOS_ADELANTE = 4;
 function limitesMeses(){
-  var y0 = new Date().getFullYear() - 3, y1 = new Date().getFullYear() + 1;
+  var y0 = new Date().getFullYear() - AÑOS_ATRAS, y1 = new Date().getFullYear() + AÑOS_ADELANTE;
   D.mes.forEach(function(r){
     var y = Number(r.periodo.slice(0, 4));
     if (y < y0) y0 = y;
