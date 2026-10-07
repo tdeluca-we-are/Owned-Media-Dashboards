@@ -115,6 +115,13 @@ create table if not exists cal_fechas (
 );
 create index if not exists cal_fechas_fecha_idx on cal_fechas (fecha);
 
+-- Tipo de acción (07/10/2026): bancaria, always on, comercial o microevento.
+-- Las fechas generales (Navidad, Día de la Madre…) quedan sin categoría.
+alter table cal_fechas add column if not exists categoria text;
+alter table cal_fechas drop constraint if exists cal_fechas_categoria_check;
+alter table cal_fechas add constraint cal_fechas_categoria_check
+  check (categoria is null or categoria in ('bancaria','always_on','comercial','microevento'));
+
 -- Fechas generales de arranque (solo si la tabla está vacía).
 -- Las de fecha móvil van calculadas para 2026 y 2027; CyberMonday y Hot Sale
 -- de Argentina cambian cada año: cargarlas cuando la CACE las anuncie.

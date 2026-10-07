@@ -218,6 +218,14 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .cal-day.edit:hover .cal-plus{opacity:1}
 .cal-key{font-size:9.5px;font-weight:700;background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.28);border-radius:4px;padding:2px 5px;line-height:1.25}
 .cal-key.marca{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
+/* tipos de acción: bancaria · comercial · microevento · always on */
+.cal-key.cat-bancaria{background:rgba(122,158,202,.14);color:#9dbbe0;border-color:rgba(122,158,202,.38)}
+.cal-key.cat-comercial{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
+.cal-key.cat-microevento{background:rgba(192,132,252,.13);color:#d8b4fe;border-color:rgba(192,132,252,.35)}
+.cal-key.cat-always_on{background:rgba(34,197,94,.1);color:#6ee7a0;border-color:rgba(34,197,94,.28)}
+.cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.cat-dot.cat-bancaria{background:#7a9eca}.cat-dot.cat-comercial{background:#f04e23}.cat-dot.cat-microevento{background:#c084fc}.cat-dot.cat-always_on{background:#22c55e}
+.legend-cat{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin:8px 2px 0}
 .ev{font-size:11px;line-height:1.3;background:var(--bg3);border-left:3px solid var(--text3);border-radius:5px;padding:4px 6px;cursor:pointer;word-break:break-word}
 .ev:hover{outline:1px solid rgba(255,255,255,.35)}
 .ev.email{border-left-color:var(--ch-email)}.ev.push{border-left-color:var(--ch-push)}.ev.wpp{border-left-color:var(--ch-wpp)}
@@ -305,6 +313,7 @@ textarea.paste:focus{border-color:var(--orange)}
 .ac-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
 .ac-row .ac-f{width:142px;padding:7px 9px;font-family:var(--mono);font-size:11.5px}
 .ac-row .ac-nom{flex:1;min-width:170px;padding:7px 10px}
+.ac-row .ac-cat{width:128px;padding:7px 8px;font-size:12px}
 
 /* drawer */
 .drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none}
@@ -402,7 +411,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.6';
+const VERSION_APP = '2026-10-07.7';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -613,7 +622,7 @@ function fechasDelMes(marcaId, periodo){
       hasta = ymd(h.getFullYear(), h.getMonth() + 1, h.getDate());
     }
     if (hasta < ini || desde > fin) return;
-    out.push({id: f.id, nombre: f.nombre, desde: desde, hasta: hasta, marca: !!f.marca_id, notas: f.notas});
+    out.push({id: f.id, nombre: f.nombre, desde: desde, hasta: hasta, marca: !!f.marca_id, notas: f.notas, cat: f.categoria || null});
   });
   return out;
 }
@@ -725,7 +734,7 @@ function renderCalendario(){
   h += '<div class="filters"><div class="acciones">';
   if (ed){
     h += '<button class="btn-orange" onclick="abrirEnvio(null)">+ Envío</button>' +
-         '<button class="btn-sm" onclick="abrirAcciones()">Cargar acciones comerciales</button>' +
+         '<button class="btn-sm" onclick="abrirAcciones()">Cargar acciones</button>' +
          '<button class="btn-sm" onclick="abrirPegar()">Pegar desde planilla</button>' +
          '<button class="btn-sm" onclick="abrirCopia()">Copiar de otro mes</button>' +
          '<button class="btn-sm" onclick="abrirCierre()">Cerrar el mes</button>';
@@ -769,13 +778,15 @@ function gridMes(m, p, envs, ed){
       (ed ? ' onclick="clickDia(event,\'' + f + '\')"' : '') + '>' +
       '<div class="cal-top"><span class="cal-num">' + dia + '</span>' + (ed ? '<span class="cal-plus" title="Envío con todos los campos">+</span>' : '') + '</div>';
     keys.forEach(function(k){
-      if (f >= k.desde && f <= k.hasta) h += '<div class="cal-key' + (k.marca ? ' marca' : '') + '" title="' + esc(k.notas || '') + '">★ ' + esc(k.nombre) + '</div>';
+      if (f >= k.desde && f <= k.hasta) h += '<div class="cal-key' + (k.marca ? ' marca' : '') + (k.cat ? ' cat-' + k.cat : '') + '" title="' + esc(k.notas || '') + '">★ ' + esc(k.nombre) + '</div>';
     });
     (porDia[f] || []).forEach(function(e){ h += chipEnvio(e, ed); });
     if (quick && quick.fecha === f) h += cajaRapida(m);
     h += '</div>';
   }
   h += '</div></div></div>';
+  var catsMes = CATS.filter(function(c){ return keys.some(function(k){ return k.cat === c; }); });
+  if (catsMes.length) h += '<div class="legend-cat">' + catsMes.map(function(c){ return '<span><i class="cat-dot cat-' + c + '"></i>' + CATPL[c] + '</span>'; }).join('') + '</div>';
   if (ed) h += '<div class="hint"><b>Carga rápida:</b> tocá un día, escribí el tema y Enter (podés seguir cargando en el mismo día). ' +
     '<b>Tab</b> cambia el canal, o escribí <code>w: tema</code> / <code>p: tema</code> / <code>e: tema</code> y <code>10:30 tema</code> para la hora. ' +
     'El <b>+</b> abre el formulario completo. Arrastrá un envío para moverlo de día.</div>';
@@ -1553,67 +1564,110 @@ function parseAcciones(txt, periodo){
 function diasEntre(a, b){ return Math.round((parseF(b) - parseF(a)) / 86400000); }
 function sumarDias(f, n){ var d = parseF(f); d.setDate(d.getDate() + n); return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
 
+// ── tipos de acción ────────────────────────────────────────────────────────
+const CATS   = ['bancaria','comercial','microevento','always_on'];   // orden en que se nombran al unificar
+const CATL   = {bancaria:'Bancaria', always_on:'Always on', comercial:'Comercial', microevento:'Microevento'};
+const CATPL  = {bancaria:'Bancarias', always_on:'Always on', comercial:'Comerciales', microevento:'Microeventos'};
+const CATTIPO = {bancaria:'Acción bancaria', always_on:'Always on', comercial:'Promo', microevento:'Microevento'};
+// sugerencia por palabras: el usuario la corrige si no acierta
+function adivinarCategoria(txt){
+  var t = normTxt(txt);
+  if (/\b(banco|bancari|cuotas?|csi|tarjeta|visa|master|amex|naranja|cabal|galicia|santander|bbva|macro|icbc|hsbc|patagonia|supervielle|ciudad|provincia|nacion|credicoop|reintegro|cashback|modo|mercado ?pago|cuenta dni|go ?cuotas)/.test(t)) return 'bancaria';
+  if (/\b(flash|hot ?hour|happy ?hour|\d+ ?(h|hs|horas)\b|solo (por )?hoy|por hoy|micro|relampago|fin de semana|finde)/.test(t)) return 'microevento';
+  if (/\b(always|todo el mes|siempre|permanente|vigente todo)/.test(t)) return 'always_on';
+  return 'comercial';
+}
+function parseAccionesCat(txt, periodo){
+  var a = parseAcciones(txt, periodo);
+  a.forEach(function(x){ x.cat = adivinarCategoria(x.nombre + ' ' + x.notas); });
+  return a;
+}
+function selectCat(valor, onchange, cls){
+  return '<select class="m-in ' + (cls || '') + '" onchange="' + onchange + '">' +
+    CATS.map(function(c){ return '<option value="' + c + '"' + (c === valor ? ' selected' : '') + '>' + CATL[c] + '</option>'; }).join('') + '</select>';
+}
+
 // receta: qué envíos se arman por cada acción (se recuerda por marca)
 function recetaDefault(cs){
   var fin = cs.indexOf('wpp') >= 0 ? 'wpp' : cs.indexOf('push') >= 0 ? 'push' : cs[0];
   var ini = {}; cs.forEach(function(k){ ini[k] = k === 'email'; });
   if (cs.indexOf('email') < 0) ini[cs[0]] = true;
-  return {ini: ini, mitad: false, mitadCanal: cs.indexOf('push') >= 0 ? 'push' : cs[0], ultimo: true, ultimoCanal: fin};
+  return {ini: ini, mitad: false, mitadCanal: cs.indexOf('push') >= 0 ? 'push' : cs[0], ultimo: true, ultimoCanal: fin,
+    cats: {bancaria: true, always_on: false, comercial: true, microevento: true}, unificar: true, bancos: true};
 }
+// piezas sueltas: cada acción aporta sus envíos (inicio / recordatorio / último día)
 function enviosDeAccion(a, rec, cs){
   var out = [], fin = a.hasta || a.desde, dur = diasEntre(a.desde, fin);
-  cs.forEach(function(k){ if (rec.ini[k]) out.push({fecha: a.desde, canal: k, titulo: a.nombre}); });
-  if (rec.mitad && dur >= 3) out.push({fecha: sumarDias(a.desde, Math.floor(dur / 2)), canal: rec.mitadCanal, titulo: a.nombre + ' — recordatorio'});
-  if (rec.ultimo && dur >= 1) out.push({fecha: fin, canal: rec.ultimoCanal, titulo: a.nombre + ' — último día'});
+  var pieza = function(fecha, canal, kind){ return {fecha: fecha, canal: canal, kind: kind, nombre: a.nombre, cat: a.cat || 'comercial'}; };
+  cs.forEach(function(k){ if (rec.ini[k]) out.push(pieza(a.desde, k, 'inicio')); });
+  if (rec.mitad && dur >= 3) out.push(pieza(sumarDias(a.desde, Math.floor(dur / 2)), rec.mitadCanal, 'recordatorio'));
+  if (rec.ultimo && dur >= 1) out.push(pieza(fin, rec.ultimoCanal, 'ultimo'));
   return out;
 }
+// "A + B — último día" si todas las piezas son del mismo momento; si no, cada una con su etiqueta
+function tituloUnificado(items){
+  var propias = items.filter(function(it){ return it.kind !== 'vigente'; });
+  var kinds = propias.map(function(it){ return it.kind; }).filter(function(k, i, a){ return a.indexOf(k) === i; });
+  // con bancarias vigentes no va sufijo general: "— último día" parecería que termina el banco también
+  var hayVigentes = items.some(function(it){ return it.kind === 'vigente'; });
+  var igual = kinds.length <= 1 && !hayVigentes, kind = kinds[0];
+  var nombres = items.map(function(it){
+    if (igual || it.kind === 'vigente' || it.kind === 'inicio') return it.nombre;
+    return it.kind === 'ultimo' ? 'Último día ' + it.nombre : it.nombre + ' (recordatorio)';
+  });
+  var suf = igual && kind === 'ultimo' ? ' — último día' : igual && kind === 'recordatorio' ? ' — recordatorio' : '';
+  return nombres.join(' + ') + suf;
+}
+const MARCA_ACCIONES = 'Armado desde acciones comerciales';
+
 function abrirAcciones(){
   var m = sel.marca, cs = canalesDe(m);
-  var rec = lsGet('cal_receta_' + m) || recetaDefault(cs);
+  var rec = Object.assign(recetaDefault(cs), lsGet('cal_receta_' + m) || {});
   cs.forEach(function(k){ if (rec.ini[k] == null) rec.ini[k] = false; });
   if (cs.indexOf(rec.mitadCanal) < 0) rec.mitadCanal = cs[0];
   if (cs.indexOf(rec.ultimoCanal) < 0) rec.ultimoCanal = cs[0];
-  frm = {tipo: 'acciones', txt: '', acciones: [], rec: rec, manual: [{desde: sel.periodo, hasta: '', nombre: ''}]};
+  frm = {tipo: 'acciones', txt: '', acciones: [], rec: rec, manual: [{desde: sel.periodo, hasta: '', nombre: '', cat: 'comercial'}]};
   var b = '<div class="note blue">Cargá <b>todas las acciones del mes juntas</b>: escribilas acá abajo (Enter agrega otra) o subí / pegá el archivo del cliente con <b>una acción por línea</b>. ' +
     'Entiende <b>10/11 al 15/11</b>, <b>del 10 al 15/11</b>, <b>10-15 de noviembre</b>, <b>lunes 10 de noviembre</b>…; las líneas sin fecha se suman como descripción de la acción de arriba.</div>' +
     '<div class="dsec">Escribilas acá</div><div id="acManual"></div>' +
     '<div class="dsec">…o desde el archivo del cliente</div>' +
     '<div class="fg"><label>Archivo (Excel o CSV)</label><input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="leerArchivoAcciones(this.files[0])"></div>' +
-    '<div class="fg"><label>…o pegá el texto (una acción por línea)</label><textarea class="paste" id="acTxt" style="white-space:pre-wrap" placeholder="10/11 al 15/11 · Cyber Monday: 20% off en toda la tienda&#10;del 20 al 22/11 Envío gratis&#10;27/11 Black Friday" oninput="frm.txt=this.value;frm.acciones=parseAcciones(this.value,sel.periodo);previewAcciones()"></textarea></div>' +
+    '<div class="fg"><label>…o pegá el texto (una acción por línea)</label><textarea class="paste" id="acTxt" style="white-space:pre-wrap" placeholder="10/11 al 15/11 · Cyber Monday: 20% off en toda la tienda&#10;del 3 al 9/11 9 cuotas sin interés con Banco Galicia&#10;27/11 Black Friday" oninput="frm.txt=this.value;frm.acciones=parseAccionesCat(this.value,sel.periodo);previewAcciones()"></textarea></div>' +
     '<div id="acPrev"></div>';
-  abrirDrawer('Cargar acciones comerciales', D.marcaById[m].nombre, b,
+  abrirDrawer('Cargar acciones', D.marcaById[m].nombre, b,
     '<button class="btn-orange" id="acBtn" disabled onclick="importarAcciones()">Cargar</button>');
   dibujarManual();
   previewAcciones();
   setTimeout(function(){ var t = document.querySelector('#acManual .ac-nom'); if (t) t.focus(); }, 50);
 }
-// filas para escribir acciones a mano: desde · hasta · nombre
+// filas para escribir acciones a mano: desde · hasta · nombre · tipo
 function dibujarManual(){
   $('acManual').innerHTML = frm.manual.map(function(r, i){
     return '<div class="ac-row">' +
       '<input type="date" class="m-in ac-f" title="Desde" value="' + esc(r.desde) + '" oninput="frm.manual[' + i + '].desde=this.value;previewAcciones()">' +
       '<span class="muted">→</span>' +
       '<input type="date" class="m-in ac-f" title="Hasta (opcional)" value="' + esc(r.hasta) + '" oninput="frm.manual[' + i + '].hasta=this.value;previewAcciones()">' +
-      '<input class="m-in ac-nom" placeholder="Nombre de la acción (ej: Cyber 20% off)" value="' + esc(r.nombre) + '" autocomplete="off"' +
+      '<input class="m-in ac-nom" placeholder="Nombre de la acción (ej: 50% off en seleccionados)" value="' + esc(r.nombre) + '" autocomplete="off"' +
       ' oninput="frm.manual[' + i + '].nombre=this.value;previewAcciones()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();otraAccion()}">' +
+      selectCat(r.cat, 'frm.manual[' + i + '].cat=this.value;previewAcciones()', 'ac-cat') +
       '<button class="mini danger" title="Quitar" onclick="quitarManual(' + i + ')">×</button></div>';
   }).join('') + '<button class="btn-sm" onclick="otraAccion()">+ Otra acción</button>';
 }
 function otraAccion(){
   var ult = frm.manual[frm.manual.length - 1] || {};
-  frm.manual.push({desde: ult.hasta || ult.desde || sel.periodo, hasta: '', nombre: ''});
+  frm.manual.push({desde: ult.hasta || ult.desde || sel.periodo, hasta: '', nombre: '', cat: ult.cat || 'comercial'});
   dibujarManual();
   var ins = document.querySelectorAll('#acManual .ac-nom');
   if (ins.length) ins[ins.length - 1].focus();
 }
 function quitarManual(i){
   frm.manual.splice(i, 1);
-  if (!frm.manual.length) frm.manual.push({desde: sel.periodo, hasta: '', nombre: ''});
+  if (!frm.manual.length) frm.manual.push({desde: sel.periodo, hasta: '', nombre: '', cat: 'comercial'});
   dibujarManual(); previewAcciones();
 }
 function manualesValidas(){
   return frm.manual.filter(function(r){ return r.desde && String(r.nombre).trim(); }).map(function(r){
-    return {desde: r.desde, hasta: r.hasta && r.hasta > r.desde ? r.hasta : null, nombre: r.nombre.trim(), notas: '', incluir: true};
+    return {desde: r.desde, hasta: r.hasta && r.hasta > r.desde ? r.hasta : null, nombre: r.nombre.trim(), notas: '', incluir: true, cat: r.cat || 'comercial'};
   });
 }
 // Excel: se carga la librería solo cuando hace falta
@@ -1631,7 +1685,7 @@ function leerArchivoAcciones(file){
   var esExcel = /\.xlsx?$/i.test(file.name);
   var listo = function(txt){
     frm.txt = txt; $('acTxt').value = txt;
-    frm.acciones = parseAcciones(txt, sel.periodo); previewAcciones();
+    frm.acciones = parseAccionesCat(txt, sel.periodo); previewAcciones();
     toast(frm.acciones.length + ' acción(es) encontradas en ' + file.name);
   };
   if (!esExcel){
@@ -1657,13 +1711,58 @@ function leerArchivoAcciones(file){
   }).catch(function(e){ toast(e.message + '. Copiá y pegá el contenido.', true); });
 }
 function accionesElegidas(){ return manualesValidas().concat(frm.acciones.filter(function(a){ return a.incluir && a.nombre; })); }
+
+// Arma los envíos finales: junta las piezas del mismo día y canal en uno solo,
+// les suma las bancarias vigentes ese día y, si ya hay un envío armado desde
+// acciones en ese día/canal, propone sumarle el nombre en vez de crear otro.
 function enviosPropuestos(){
-  var m = sel.marca, cs = canalesDe(m), out = [];
-  var existe = function(e){ return (D.env[m] || []).some(function(x){ return x.fecha === e.fecha && x.canal === e.canal && x.titulo === e.titulo; }); };
-  accionesElegidas().forEach(function(a){
-    enviosDeAccion(a, frm.rec, cs).forEach(function(e){ if (!existe(e)) out.push(e); });
+  var m = sel.marca, cs = canalesDe(m), rec = frm.rec, acc = accionesElegidas();
+  var piezas = [];
+  acc.forEach(function(a){
+    if (rec.cats[a.cat || 'comercial'] === false) return;
+    piezas = piezas.concat(enviosDeAccion(a, rec, cs));
   });
-  return out;
+  var grupos = {}, orden = [];
+  piezas.forEach(function(p){
+    var k = rec.unificar ? p.fecha + '|' + p.canal : p.fecha + '|' + p.canal + '|' + p.nombre + '|' + p.kind;
+    if (!grupos[k]){ grupos[k] = []; orden.push(k); }
+    if (!grupos[k].some(function(x){ return x.nombre === p.nombre; })) grupos[k].push(p);
+  });
+  // bancarias vigentes: las que se están cargando + las que ya estaban en la marca
+  var bancos = acc.filter(function(a){ return a.cat === 'bancaria'; }).map(function(a){ return {nombre: a.nombre, desde: a.desde, hasta: a.hasta || a.desde}; })
+    .concat(D.fechas.filter(function(f){ return f.marca_id === m && f.categoria === 'bancaria'; })
+      .map(function(f){ return {nombre: f.nombre, desde: f.fecha, hasta: f.hasta || f.fecha}; }));
+  var envsMarca = D.env[m] || [];
+  var out = [];
+  orden.forEach(function(k){
+    var items = grupos[k].slice(), fecha = items[0].fecha, canal = items[0].canal;
+    if (rec.bancos){
+      bancos.forEach(function(bk){
+        if (fecha >= bk.desde && fecha <= bk.hasta && !items.some(function(x){ return x.nombre === bk.nombre; }))
+          items.push({nombre: bk.nombre, kind: 'vigente', cat: 'bancaria'});
+      });
+    }
+    // si el día solo tiene bancarias "vigentes" sin pieza propia, no hay envío
+    if (!items.some(function(x){ return x.kind !== 'vigente'; })) return;
+    items.sort(function(a, b){ return CATS.indexOf(a.cat) - CATS.indexOf(b.cat); });
+    var titulo = tituloUnificado(items);
+    var principal = items.filter(function(x){ return x.kind !== 'vigente'; })[0];
+    var prop = {fecha: fecha, canal: canal, titulo: titulo, tipo: CATTIPO[principal.cat] || 'Promo',
+      piezas: items.length, nombres: items.map(function(x){ return x.nombre; })};
+    if (envsMarca.some(function(x){ return x.fecha === fecha && x.canal === canal && x.titulo === titulo; })) return;
+    // ¿ya hay uno armado desde acciones ese día y canal? se le suman los nombres que falten
+    var previo = envsMarca.find(function(x){
+      return x.fecha === fecha && x.canal === canal && x.notas === MARCA_ACCIONES && (x.estado === 'planificado' || x.estado === 'idea');
+    });
+    if (previo){
+      var faltan = prop.nombres.filter(function(n){ return previo.titulo.indexOf(n) < 0; });
+      if (!faltan.length) return;
+      prop.update = previo.id;
+      prop.titulo = previo.titulo + ' + ' + faltan.join(' + ');
+    }
+    out.push(prop);
+  });
+  return out.sort(function(a, b){ return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : CANALES.indexOf(a.canal) - CANALES.indexOf(b.canal); });
 }
 function previewAcciones(){
   var m = sel.marca, cs = canalesDe(m), a = frm.acciones, rec = frm.rec;
@@ -1676,6 +1775,8 @@ function previewAcciones(){
   var selCanal = function(campo){
     return '<select class="inl" onchange="frm.rec.' + campo + '=this.value;guardarReceta()">' + opciones(cs, rec[campo], CLABEL) + '</select>';
   };
+  var chk = function(on, accion, txt){ return '<label class="chk"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="' + accion + ';guardarReceta()"> ' + txt + '</label>'; };
+
   var h = aviso + (a.length ? '<div class="dsec">Encontradas en el archivo / texto (' + a.filter(function(x){ return x.incluir && x.nombre; }).length + ' de ' + a.length + ')</div>' : '') +
     a.map(function(x, i){
       var rango = dowDe(x.desde) + ' ' + fechaCorta(x.desde) + (x.hasta ? ' → ' + dowDe(x.hasta) + ' ' + fechaCorta(x.hasta) : '');
@@ -1684,21 +1785,42 @@ function previewAcciones(){
         '<div style="flex:1;min-width:0"><div class="f" style="margin-bottom:4px">' + rango +
         (periodoDe(x.desde) !== sel.periodo ? ' · <span style="color:var(--amber)">' + periodoLargo(periodoDe(x.desde)) + '</span>' : '') +
         (D.fechas.some(function(f){ return f.marca_id === m && f.fecha === x.desde && f.nombre === x.nombre; }) ? ' · <span class="chip grey">ya cargada</span>' : '') + '</div>' +
-        '<input class="m-in" style="padding:6px 10px" value="' + esc(x.nombre) + '" placeholder="Nombre de la acción" onchange="frm.acciones[' + i + '].nombre=this.value.trim();previewAcciones()">' +
+        '<div class="ac-row" style="margin:0"><input class="m-in ac-nom" style="padding:6px 10px" value="' + esc(x.nombre) + '" placeholder="Nombre de la acción" onchange="frm.acciones[' + i + '].nombre=this.value.trim();previewAcciones()">' +
+        selectCat(x.cat, 'frm.acciones[' + i + '].cat=this.value;previewAcciones()', 'ac-cat') + '</div>' +
         (x.notas ? '<div class="muted" style="font-size:11.5px;margin-top:5px;white-space:pre-wrap">' + esc(x.notas) + '</div>' : '') + '</div></div>';
-    }).join('') +
-    '<div class="dsec">Envíos que se arman por cada acción</div>' +
+    }).join('');
+
+  // resumen por tipo
+  var porCat = {};
+  elegidas.forEach(function(x){ porCat[x.cat || 'comercial'] = (porCat[x.cat || 'comercial'] || 0) + 1; });
+  h += '<div class="dsec">Envíos que se arman</div>' +
     '<div class="side-card" style="margin-bottom:8px">' +
-    '<div class="side-lab" style="margin-top:0">El día que arranca</div><div>' + cs.map(function(k){
-      return '<label class="chk"><input type="checkbox"' + (rec.ini[k] ? ' checked' : '') + ' onchange="frm.rec.ini.' + k + '=this.checked;guardarReceta()"> ' + CLABEL[k] + '</label>';
+    '<div class="side-lab" style="margin-top:0">Para qué tipos de acción</div><div>' + CATS.map(function(c){
+      return chk(rec.cats[c] !== false, 'frm.rec.cats.' + c + '=this.checked', '<i class="cat-dot cat-' + c + '"></i>' + CATPL[c] + (porCat[c] ? ' <span class="muted">(' + porCat[c] + ')</span>' : ''));
+    }).join('') + '</div>' +
+    '<div class="side-lab">El día que arranca</div><div>' + cs.map(function(k){
+      return chk(rec.ini[k], 'frm.rec.ini.' + k + '=this.checked', CLABEL[k]);
     }).join('') + '</div>' +
     '<div class="side-lab">Recordatorio a mitad (acciones de 4 días o más)</div>' +
-    '<label class="chk"><input type="checkbox"' + (rec.mitad ? ' checked' : '') + ' onchange="frm.rec.mitad=this.checked;guardarReceta()"> Sí, por</label>' + selCanal('mitadCanal') +
+    chk(rec.mitad, 'frm.rec.mitad=this.checked', 'Sí, por') + selCanal('mitadCanal') +
     '<div class="side-lab">Último día (acciones de 2 días o más)</div>' +
-    '<label class="chk"><input type="checkbox"' + (rec.ultimo ? ' checked' : '') + ' onchange="frm.rec.ultimo=this.checked;guardarReceta()"> Sí, por</label>' + selCanal('ultimoCanal') +
-    '</div><div class="muted" style="font-size:11.5px;line-height:1.5">' +
-    (envs.length ? 'Se van a crear <b>' + envs.length + ' envíos</b> como <b>Planificado</b>, para que después ajustes asunto y segmento. ' : 'No se crea ningún envío: solo las acciones como fechas clave. ') +
-    'Las acciones aparecen en el calendario con ★ en los días que duran. Si un envío igual ya existe, no se duplica.</div>';
+    chk(rec.ultimo, 'frm.rec.ultimo=this.checked', 'Sí, por') + selCanal('ultimoCanal') +
+    '<div class="side-lab">Cuando se pisan</div>' +
+    '<div>' + chk(rec.unificar, 'frm.rec.unificar=this.checked', 'Unificar en un solo envío las acciones del mismo día y canal') + '</div>' +
+    '<div style="margin-top:4px">' + chk(rec.bancos, 'frm.rec.bancos=this.checked', 'Sumar a cada envío las acciones bancarias vigentes ese día') + '</div>' +
+    '</div>';
+
+  if (envs.length){
+    h += '<div class="dsec">Envíos que se van a crear (' + envs.length + ')</div>' +
+      envs.map(function(e){
+        return '<div class="pick-row"><span class="f">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + '</span><i class="dot ' + e.canal + '"></i>' +
+          '<span class="t">' + esc(e.titulo) + '</span>' +
+          (e.update ? '<span class="chip blue">se suma a uno existente</span>' : e.piezas > 1 ? '<span class="chip orange">unifica ' + e.piezas + '</span>' : '') + '</div>';
+      }).join('');
+  }
+  h += '<div class="muted" style="font-size:11.5px;line-height:1.5;margin-top:8px">' +
+    (envs.length ? 'Quedan como <b>Planificado</b> para que después ajustes asunto y segmento. ' : 'No se crea ningún envío: solo las acciones en el calendario. ') +
+    'Las acciones aparecen en el calendario con ★ y el color de su tipo. Lo que ya existe no se duplica.</div>';
   $('acPrev').innerHTML = h;
 }
 function guardarReceta(){ lsSet('cal_receta_' + sel.marca, frm.rec); previewAcciones(); }
@@ -1706,23 +1828,35 @@ function importarAcciones(){
   var m = sel.marca, elegidas = accionesElegidas(), envs = enviosPropuestos();
   var yaFecha = function(a){ return D.fechas.some(function(f){ return f.marca_id === m && f.fecha === a.desde && f.nombre === a.nombre; }); };
   var fechas = elegidas.filter(function(a){ return !yaFecha(a); }).map(function(a){
-    return {marca_id: m, fecha: a.desde, hasta: a.hasta, nombre: a.nombre, anual: false, notas: a.notas || null};
+    return {marca_id: m, fecha: a.desde, hasta: a.hasta, nombre: a.nombre, anual: false, notas: a.notas || null, categoria: a.cat || 'comercial'};
   });
-  var filas = envs.map(function(e){
-    return {marca_id: m, fecha: e.fecha, canal: e.canal, titulo: e.titulo, tipo: 'Promo', estado: 'planificado',
-      notas: 'Armado desde acciones comerciales', creado_por: nombreUsuario()};
+  var ahora = new Date().toISOString();
+  var nuevos = envs.filter(function(e){ return !e.update; }).map(function(e){
+    return {marca_id: m, fecha: e.fecha, canal: e.canal, titulo: e.titulo, tipo: e.tipo, estado: 'planificado',
+      notas: MARCA_ACCIONES, creado_por: nombreUsuario()};
   });
+  var sumas = envs.filter(function(e){ return e.update; });
   $('acBtn').disabled = true;
   var p1 = fechas.length ? sb.from('cal_fechas').insert(fechas).select() : Promise.resolve({data: []});
   p1.then(function(r){
-    if (r.error) throw r.error;
+    if (r.error){
+      if (/categoria/i.test(r.error.message)) throw new Error('Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase');
+      throw r.error;
+    }
     r.data.forEach(function(f){ D.fechas.push(f); });
-    return filas.length ? sb.from('cal_envios').insert(filas).select() : {data: []};
+    return nuevos.length ? sb.from('cal_envios').insert(nuevos).select() : {data: []};
   }).then(function(r){
     if (r.error) throw r.error;
     r.data.forEach(reemplazarLocal);
+    return Promise.all(sumas.map(function(e){
+      return sb.from('cal_envios').update({titulo: e.titulo, actualizado_at: ahora}).eq('id', e.update).select().single().then(function(u){
+        if (u.error) throw u.error;
+        reemplazarLocal(u.data);
+      });
+    })).then(function(){ return r.data.length; });
+  }).then(function(n){
     cerrarDrawer(); render();
-    toast(elegidas.length + ' acción(es) y ' + r.data.length + ' envío(s) cargados');
+    toast(elegidas.length + ' acción(es) y ' + (n + sumas.length) + ' envío(s) cargados');
   }).catch(function(e){ $('acBtn').disabled = false; toast(e.message || String(e), true); });
 }
 
@@ -2030,7 +2164,7 @@ function renderFechas(){
       var hasta = f.hasta ? (f.anual ? f.prox.slice(0, 4) + f.hasta.slice(4) : f.hasta) : null;
       return '<tr' + (ed ? ' class="clickable" onclick="abrirFecha(' + f.id + ')"' : '') + '>' +
         '<td class="lst-fecha">' + dowDe(f.prox) + ' ' + fechaLarga(f.prox) + (hasta ? ' → ' + fechaCorta(hasta) : '') + '</td>' +
-        '<td class="strong">' + esc(f.nombre) + '</td>' +
+        '<td class="strong">' + (f.categoria ? '<i class="cat-dot cat-' + f.categoria + '" title="' + CATL[f.categoria] + '"></i>' : '') + esc(f.nombre) + (f.categoria ? ' <span class="muted" style="font-weight:400;font-size:11px">· ' + CATL[f.categoria] + '</span>' : '') + '</td>' +
         '<td>' + (marca ? '<span class="chip orange">' + esc(marca.nombre) + '</span>' : '<span class="chip amber">General</span>') + '</td>' +
         '<td class="muted">' + (f.anual ? 'Todos los años' : '—') + '</td>' +
         '<td><div class="wrap-cell">' + esc(f.notas || '') + '</div></td></tr>';
@@ -2049,6 +2183,7 @@ function abrirFecha(id){
     '<div class="fg-row"><div class="fg"><label>Desde</label><input type="date" id="kDesde" value="' + esc(f ? f.fecha : '') + '"></div>' +
     '<div class="fg"><label>Hasta (opcional)</label><input type="date" id="kHasta" value="' + esc(f && f.hasta ? f.hasta : '') + '"></div></div>' +
     '<div class="fg"><label>Alcance</label><select id="kMarca">' + opciones + '</select></div>' +
+    '<div class="fg"><label>Tipo de acción</label><select id="kCat"><option value="">— (fecha general / sin tipo)</option>' + CATS.map(function(c){ return '<option value="' + c + '"' + (f && f.categoria === c ? ' selected' : '') + '>' + CATL[c] + '</option>'; }).join('') + '</select></div>' +
     '<label class="chk" style="margin-bottom:14px"><input type="checkbox" id="kAnual"' + (f && f.anual ? ' checked' : '') + '> Se repite todos los años el mismo día</label>' +
     '<div class="fg"><label>Notas</label><textarea id="kNotas">' + esc(f && f.notas ? f.notas : '') + '</textarea></div>';
   frm = {tipo: 'fecha', id: id};
@@ -2057,7 +2192,10 @@ function abrirFecha(id){
 }
 function guardarFecha(){
   var row = {nombre: $('kNom').value.trim(), fecha: $('kDesde').value, hasta: $('kHasta').value || null,
-    marca_id: $('kMarca').value ? +$('kMarca').value : null, anual: $('kAnual').checked, notas: $('kNotas').value.trim() || null};
+    marca_id: $('kMarca').value ? +$('kMarca').value : null, anual: $('kAnual').checked, notas: $('kNotas').value.trim() || null, categoria: $('kCat').value || null};
+  // sin tipo no se manda la columna: así funciona aunque la base todavía no tenga 'categoria'
+  var orig = frm.id ? D.fechas.find(function(x){ return x.id === frm.id; }) : null;
+  if (!row.categoria && !(orig && orig.categoria)) delete row.categoria;
   if (!row.nombre || !row.fecha) return toast('Faltan el nombre o la fecha', true);
   if (row.hasta && row.hasta < row.fecha) return toast('“Hasta” no puede ser anterior a “Desde”', true);
   var id = frm.id;
