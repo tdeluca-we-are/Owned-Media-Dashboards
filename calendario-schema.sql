@@ -13,22 +13,32 @@
 -- ── USUARIOS ────────────────────────────────────────────────────────────────
 -- Mismo criterio que slots y semáforo: se autoriza el mail y la cuenta se
 -- vincula sola en el primer login. Accesos propios porque quien arma
--- calendarios (analistas de Owned) no es la misma gente que carga el semáforo.
+-- calendarios (equipo de Owned) no es la misma gente que carga el semáforo.
+--   admin  : ve y edita todo
+--   editor : ve y edita solo las marcas que tiene asignadas
+--   lector : ve (sin editar) solo los calendarios de las marcas asignadas
 create table if not exists cal_usuarios (
   id             serial primary key,
   email          text not null,
   nombre         text,
   rol            text not null default 'lector'
-                 check (rol in ('admin','analista','lector')),
+                 check (rol in ('admin','editor','lector')),
   activo         boolean not null default true,
   user_id        uuid,
   ultimo_ingreso timestamptz
 );
+-- El rol 'analista' pasó a llamarse 'editor' (07/10/2026). Si la tabla ya existía
+-- con el check viejo, esto lo actualiza sin perder a nadie.
+alter table cal_usuarios drop constraint if exists cal_usuarios_rol_check;
+update cal_usuarios set rol = 'editor' where rol = 'analista';
+alter table cal_usuarios add constraint cal_usuarios_rol_check
+  check (rol in ('admin','editor','lector'));
+
 create unique index if not exists cal_usuarios_email_idx on cal_usuarios (lower(email));
 create unique index if not exists cal_usuarios_uid_idx   on cal_usuarios (user_id)
   where user_id is not null;
 
--- Qué marcas puede editar cada analista. Los admin editan todas.
+-- Qué marcas ve cada editor o lector. Los admin ven todas.
 create table if not exists cal_usuario_marcas (
   usuario_id int not null references cal_usuarios(id) on delete cascade,
   marca_id   int not null references sem_marcas(id)   on delete cascade,
@@ -149,10 +159,19 @@ create or replace function cal_uid() returns int
    limit 1
 $$;
 
+-- Ver una marca: admin, o editor/lector que la tenga asignada.
+create or replace function cal_puede_ver(m int) returns boolean
+  language sql stable security definer set search_path = public as $$
+  select cal_rol() = 'admin'
+      or (cal_rol() is not null and exists (
+            select 1 from cal_usuario_marcas um
+             where um.usuario_id = cal_uid() and um.marca_id = m))
+$$;
+
 create or replace function cal_puede_editar(m int) returns boolean
   language sql stable security definer set search_path = public as $$
   select cal_rol() = 'admin'
-      or (cal_rol() = 'analista' and exists (
+      or (cal_rol() = 'editor' and exists (
             select 1 from cal_usuario_marcas um
              where um.usuario_id = cal_uid() and um.marca_id = m))
 $$;
@@ -173,7 +192,7 @@ begin
 end $$;
 
 grant execute on function cal_email(), cal_rol(), cal_uid(),
-                          cal_puede_editar(int), cal_vincular() to authenticated;
+                          cal_puede_ver(int), cal_puede_editar(int), cal_vincular() to authenticated;
 
 -- ── RLS ─────────────────────────────────────────────────────────────────────
 alter table cal_usuarios       enable row level security;
@@ -183,14 +202,14 @@ alter table cal_meses          enable row level security;
 alter table cal_envios         enable row level security;
 alter table cal_fechas         enable row level security;
 
--- Lo que es de una marca: lee cualquier habilitado, escribe admin o su analista.
+-- Lo que es de una marca: lo ve el admin o quien la tiene asignada; edita admin o su editor.
 do $$
 declare t text;
 begin
   foreach t in array array['cal_marca_config','cal_meses','cal_envios'] loop
     execute format('drop policy if exists %I on %I', t || '_read', t);
     execute format('create policy %I on %I for select to authenticated
-                    using (cal_rol() is not null)', t || '_read', t);
+                    using (cal_puede_ver(marca_id))', t || '_read', t);
     execute format('drop policy if exists %I on %I', t || '_write', t);
     execute format('create policy %I on %I for all to authenticated
                     using (cal_puede_editar(marca_id)) with check (cal_puede_editar(marca_id))',
@@ -201,7 +220,7 @@ end $$;
 -- Fechas: las generales solo las toca el admin; las de marca, quien edita la marca.
 drop policy if exists cal_fechas_read on cal_fechas;
 create policy cal_fechas_read on cal_fechas for select to authenticated
-  using (cal_rol() is not null);
+  using (case when marca_id is null then cal_rol() is not null else cal_puede_ver(marca_id) end);
 
 drop policy if exists cal_fechas_write on cal_fechas;
 create policy cal_fechas_write on cal_fechas for all to authenticated
@@ -219,7 +238,7 @@ create policy cal_usuarios_admin on cal_usuarios for all to authenticated
 
 drop policy if exists cal_um_read on cal_usuario_marcas;
 create policy cal_um_read on cal_usuario_marcas for select to authenticated
-  using (cal_rol() is not null);
+  using (cal_rol() = 'admin' or usuario_id = cal_uid());
 
 drop policy if exists cal_um_admin on cal_usuario_marcas;
 create policy cal_um_admin on cal_usuario_marcas for all to authenticated
@@ -230,7 +249,7 @@ create policy cal_um_admin on cal_usuario_marcas for all to authenticated
 -- (Las políticas se suman con OR; no cambia nada para el semáforo.)
 drop policy if exists sem_marcas_cal_read on sem_marcas;
 create policy sem_marcas_cal_read on sem_marcas for select to authenticated
-  using (cal_rol() is not null);
+  using (cal_puede_ver(id));
 
 drop policy if exists sem_celulas_cal_read on sem_celulas;
 create policy sem_celulas_cal_read on sem_celulas for select to authenticated

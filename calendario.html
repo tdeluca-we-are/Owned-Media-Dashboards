@@ -91,7 +91,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:default}
 .user-pill{font-size:12px;color:var(--text2);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
 .role-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em}
 .role-admin{background:rgba(240,78,35,0.15);color:#f04e23;border:1px solid rgba(240,78,35,0.3)}
-.role-analista{background:rgba(61,79,107,0.3);color:#7a9eca;border:1px solid rgba(61,79,107,0.5)}
+.role-editor{background:rgba(61,79,107,0.3);color:#7a9eca;border:1px solid rgba(61,79,107,0.5)}
 .role-lector{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border2)}
 .btn-sm{font-family:var(--font);font-size:12px;padding:6px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;white-space:nowrap}
 .btn-sm:hover{color:var(--orange);border-color:var(--orange)}
@@ -398,7 +398,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.3';
+const VERSION_APP = '2026-10-07.4';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -427,6 +427,7 @@ var ultimoCanal = null;
 var selIds = {};      // envíos tildados en la lista (acciones en lote)
 var nuevaFila = null; // fecha/canal que arrastra la fila de alta de la lista
 const CABREV = {email:'Email', push:'Push', wpp:'WPP'};
+const ROL_LABEL = {admin:'Admin', editor:'Editor', lector:'Lector'};
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function $(id){ return document.getElementById(id); }
@@ -460,7 +461,7 @@ function canalesDe(marcaId){
 function puedeEditar(marcaId){
   if (!me) return false;
   if (me.rol === 'admin') return true;
-  return me.rol === 'analista' && D.misMarcas.indexOf(marcaId) >= 0;
+  return me.rol === 'editor' && D.misMarcas.indexOf(marcaId) >= 0;
 }
 function lsGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
 function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
@@ -517,7 +518,7 @@ function boot(){
     $('authScreen').style.display = 'none';
     $('app').classList.add('visible');
     $('userPill').textContent = nombreUsuario();
-    $('roleBadge').textContent = me.rol;
+    $('roleBadge').textContent = ROL_LABEL[me.rol] || me.rol;
     $('roleBadge').className = 'role-badge role-' + me.rol;
     $('version').textContent = 'versión ' + VERSION_APP;
     cargar();
@@ -546,9 +547,9 @@ function cargar(){
     // el calendario que se arma suele ser el del mes que viene; arranca ahí
     sel.periodo = addMes(hoy, 1);
     sel.vista   = guardada.vista === 'lista' ? 'lista' : 'cal';
-    var activas = D.marcas.filter(function(m){ return m.activa; });
-    var pref = D.misMarcas.length ? D.misMarcas : activas.map(function(m){ return m.id; });
-    sel.marca = D.marcaById[guardada.marca] ? guardada.marca : (pref[0] || null);
+    var vis = marcasVisibles().map(function(m){ return m.id; });
+    var pref = me.rol === 'admin' && D.misMarcas.length ? D.misMarcas : vis;
+    sel.marca = vis.indexOf(guardada.marca) >= 0 ? guardada.marca : (pref[0] || null);
     render();
   }).catch(function(e){
     $('panes').innerHTML = '<div class="empty">No se pudieron cargar los datos.<br><span class="muted">' +
@@ -615,9 +616,26 @@ function fechasDelMes(marcaId, periodo){
 function invalidarResumen(){ R = {}; }
 
 // ── shell ──────────────────────────────────────────────────────────────────
+// admin: todo · editor: calendario, historial y fechas de sus marcas · lector: solo el calendario
+function tabsDelRol(){
+  if (me.rol === 'admin') return [['calendario','Calendario'], ['resumen','Resumen del equipo'], ['historial','Historial de la marca'], ['fechas','Fechas clave'], ['accesos','Accesos']];
+  if (me.rol === 'editor') return [['calendario','Calendario'], ['historial','Historial de la marca'], ['fechas','Fechas clave']];
+  return [['calendario','Calendario']];
+}
+// las marcas que la persona puede ver (la base ya filtra; esto lo replica en pantalla)
+function marcasVisibles(){
+  return D.marcas.filter(function(m){
+    return (m.activa || m.id === sel.marca) && (me.rol === 'admin' || D.misMarcas.indexOf(m.id) >= 0);
+  });
+}
 function render(){
-  var defs = [['calendario','Calendario'], ['resumen','Resumen del equipo'], ['historial','Historial de la marca'], ['fechas','Fechas clave']];
-  if (me.rol === 'admin') defs.push(['accesos','Accesos']);
+  var defs = tabsDelRol();
+  if (!defs.some(function(d){ return d[0] === tab; })) tab = 'calendario';
+  if (me.rol !== 'admin' && !marcasVisibles().length){
+    $('tabs').innerHTML = '';
+    $('panes').innerHTML = '<div class="empty">Todavía no tenés marcas asignadas en el calendario.<br>Pedile a un admin que te asigne las tuyas en <b>Accesos</b>.</div>';
+    return;
+  }
   $('tabs').innerHTML = defs.map(function(d){
     return '<button class="tab' + (tab === d[0] ? ' active' : '') + '" data-t="' + d[0] + '">' + d[1] + '</button>';
   }).join('');
@@ -639,15 +657,16 @@ function render(){
 function resetEdicion(){ quick = null; selIds = {}; nuevaFila = null; }
 
 function selectorMarca(){
-  var activas = D.marcas.filter(function(m){ return m.activa || m.id === sel.marca; });
+  var activas = marcasVisibles();
   var html = '<select class="sel-marca" onchange="cambiarMarca(+this.value)">';
-  if (D.misMarcas.length){
+  // al admin le separa sus marcas arriba; editor y lector solo ven las suyas
+  if (me.rol === 'admin' && D.misMarcas.length){
     html += '<optgroup label="Mis marcas">' + activas.filter(function(m){ return D.misMarcas.indexOf(m.id) >= 0; })
       .map(optMarca).join('') + '</optgroup>';
   }
   var grupos = {};
   activas.forEach(function(m){
-    if (D.misMarcas.indexOf(m.id) >= 0) return;
+    if (me.rol === 'admin' && D.misMarcas.indexOf(m.id) >= 0) return;
     var k = m.celula_id && D.celulaById[m.celula_id] ? D.celulaById[m.celula_id].nombre : 'Sin célula';
     (grupos[k] = grupos[k] || []).push(m);
   });
@@ -1724,12 +1743,13 @@ function proyeccionFecha(f, desde){
 }
 function renderFechas(){
   var hoy = hoyStr();
-  var lista = D.fechas.map(function(f){ return Object.assign({}, f, {prox: proyeccionFecha(f, hoy)}); });
+  var lista = D.fechas.filter(function(f){ return !f.marca_id || me.rol === 'admin' || D.misMarcas.indexOf(f.marca_id) >= 0; })
+    .map(function(f){ return Object.assign({}, f, {prox: proyeccionFecha(f, hoy)}); });
   if (filtroFechas === 'proximas') lista = lista.filter(function(f){ return (f.hasta && !f.anual ? f.hasta : f.prox) >= hoy; });
   else if (filtroFechas === 'generales') lista = lista.filter(function(f){ return !f.marca_id; });
   else if (filtroFechas === 'marca') lista = lista.filter(function(f){ return f.marca_id === sel.marca; });
   lista.sort(function(a, b){ return a.prox < b.prox ? -1 : a.prox > b.prox ? 1 : 0; });
-  var puedeAlgo = me.rol === 'admin' || (me.rol === 'analista' && D.misMarcas.length);
+  var puedeAlgo = me.rol === 'admin' || (me.rol === 'editor' && D.misMarcas.length);
 
   var h = '<div class="filters"><span class="seg">' +
     [['proximas','Próximas'],['generales','Generales'],['marca','De la marca'],['todas','Todas']].map(function(o){
@@ -1797,15 +1817,15 @@ function borrarFecha(){
 function renderAccesos(){
   var h = '<div class="note">El mail tiene que ser el mismo con el que la persona entra a Supabase (@we-are.com.ar). ' +
     'La cuenta se crea en Supabase → Authentication → Users; acá solo se autoriza y se le asignan marcas. ' +
-    'Los <b>admin</b> editan todo, los <b>analistas</b> solo sus marcas, los <b>lectores</b> miran.</div>' +
+    '<b>Admin</b>: ve y edita todo. <b>Editor</b>: ve y edita solo el calendario, historial y fechas clave de las marcas que le asignes. <b>Lector</b>: ve, sin editar, solo el calendario de las marcas que le asignes.</div>' +
     '<div class="section"><div class="section-hdr"><span class="section-title">Usuarios del calendario</span></div><div class="twrap"><table><thead><tr>' +
-    '<th>Nombre</th><th>Email</th><th>Rol</th><th>Activo</th><th>Marcas que edita</th><th>Último ingreso</th></tr></thead><tbody>' +
+    '<th>Nombre</th><th>Email</th><th>Rol</th><th>Activo</th><th>Marcas asignadas</th><th>Último ingreso</th></tr></thead><tbody>' +
     D.usuarios.map(function(u){
       var suyas = D.um.filter(function(x){ return x.usuario_id === u.id; }).map(function(x){ return x.marca_id; });
       var libres = D.marcas.filter(function(m){ return m.activa && suyas.indexOf(m.id) < 0; });
       return '<tr><td class="strong">' + esc(u.nombre || '') + '</td><td class="muted">' + esc(u.email) + '</td>' +
-        '<td><select class="inl" onchange="updUsuario(' + u.id + ',{rol:this.value})">' + ['admin','analista','lector'].map(function(r){
-          return '<option' + (u.rol === r ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></td>' +
+        '<td><select class="inl" onchange="updUsuario(' + u.id + ',{rol:this.value})">' + ['admin','editor','lector'].map(function(r){
+          return '<option value="' + r + '"' + (u.rol === r ? ' selected' : '') + '>' + ROL_LABEL[r] + '</option>'; }).join('') + '</select></td>' +
         '<td><input type="checkbox"' + (u.activo ? ' checked' : '') + (u.id === me.id ? ' disabled' : '') + ' onchange="updUsuario(' + u.id + ',{activo:this.checked})"></td>' +
         '<td>' + (u.rol === 'admin' ? '<span class="muted">Todas</span>' :
           '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">' + suyas.map(function(id){
@@ -1816,7 +1836,7 @@ function renderAccesos(){
         '<td class="muted" style="font-size:11.5px">' + (u.ultimo_ingreso ? fechaLarga(u.ultimo_ingreso.slice(0, 10)) : 'nunca') + '</td></tr>';
     }).join('') + '</tbody></table></div>' +
     '<div class="addrow"><input id="nuNom" placeholder="Nombre"><input id="nuMail" placeholder="email@we-are.com.ar">' +
-    '<select id="nuRol"><option>analista</option><option>lector</option><option>admin</option></select>' +
+    '<select id="nuRol"><option value="editor">Editor</option><option value="lector">Lector</option><option value="admin">Admin</option></select>' +
     '<button class="btn-orange" onclick="altaUsuario()">Agregar</button></div></div>';
   $('panes').innerHTML = h;
 }
