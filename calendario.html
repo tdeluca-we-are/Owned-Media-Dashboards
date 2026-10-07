@@ -231,6 +231,11 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 /* en tablas el outline de la fila no se dibuja: se pinta cada celda */
 .ltab tr.drop td{background:rgba(240,78,35,.16);border-top:2px solid var(--orange);border-bottom:2px solid var(--orange)}
 .ltab tr.drop td:first-child{box-shadow:inset 3px 0 0 var(--orange)}
+/* reordenar: línea donde va a caer la fila (arriba o abajo de la que está el mouse) */
+.ltab tr.drop-antes td,.ltab tr.drop-despues td{background:transparent;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)}
+.ltab tr.drop-antes td:first-child,.ltab tr.drop-despues td:first-child{box-shadow:none}
+.ltab tr.drop-antes td{box-shadow:inset 0 3px 0 var(--orange) !important}
+.ltab tr.drop-despues td{box-shadow:inset 0 -3px 0 var(--orange) !important}
 .drag-src{opacity:.35}
 .drag-pill{position:fixed;z-index:600;pointer-events:none;display:none;background:var(--orange);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;box-shadow:0 8px 22px rgba(0,0,0,.45);white-space:nowrap}
 .drag-pill.mute{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
@@ -431,7 +436,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.10';
+const VERSION_APP = '2026-10-07.11';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -611,7 +616,11 @@ function cargarMarca(marcaId){
   return D.cargando[marcaId];
 }
 function ordenEnv(a, b){
-  return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : String(a.hora || '99').localeCompare(String(b.hora || '99'));
+  if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
+  // dentro del día manda el orden que se armó arrastrando; después la hora
+  var oa = a.orden == null ? 9999 : a.orden, ob = b.orden == null ? 9999 : b.orden;
+  if (oa !== ob) return oa - ob;
+  return String(a.hora || '99').localeCompare(String(b.hora || '99')) || a.id - b.id;
 }
 function envDeMes(marcaId, periodo){
   return (D.env[marcaId] || []).filter(function(e){ return !e.bandeja && periodoDe(e.fecha) === periodo; }).sort(ordenEnv);
@@ -884,7 +893,7 @@ function resaltar(id){
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   el.scrollIntoView({block: 'center', behavior: 'smooth'});
 }
-function limpiarDrop(){ Array.prototype.forEach.call(document.querySelectorAll('.drop'), function(x){ x.classList.remove('drop'); }); }
+function limpiarDrop(){ Array.prototype.forEach.call(document.querySelectorAll('.drop'), function(x){ x.classList.remove('drop', 'drop-antes', 'drop-despues'); delete x.dataset.pos; }); }
 // etiqueta que sigue al mouse mientras se arrastra: dice qué va a pasar al soltar
 function pillDrag(){
   var p = $('dragPill');
@@ -921,24 +930,67 @@ document.addEventListener('dragover', function(ev){
   var t = ev.target.closest && ev.target.closest('[data-drop]');
   if (!t){ limpiarDrop(); p.className = 'drag-pill mute'; p.textContent = 'Soltalo sobre otro envío, un día o la bandeja'; return; }
   ev.preventDefault();
-  if (!t.classList.contains('drop')){ limpiarDrop(); t.classList.add('drop'); }
   var e = buscarEnvio(arrastrando), d = t.dataset.drop;
+  // fila de la lista: va antes o después según la mitad de la fila donde está el mouse
+  if (t.matches('.ltab tr[data-id]')){
+    var r = t.getBoundingClientRect();
+    var pos = ev.clientY < r.top + r.height / 2 ? 'antes' : 'despues';
+    if (!t.classList.contains('drop') || t.dataset.pos !== pos){
+      limpiarDrop(); t.classList.add('drop', 'drop-' + pos); t.dataset.pos = pos;
+    }
+    var ref = buscarEnvio(+t.dataset.id);
+    if (+t.dataset.id === arrastrando){ p.className = 'drag-pill mute'; p.textContent = 'Es el mismo envío'; return; }
+    var lugar = (pos === 'antes' ? 'antes de “' : 'después de “') + (ref ? ref.titulo.slice(0, 28) + (ref.titulo.length > 28 ? '…' : '') : '') + '”';
+    var flecha = !e || e.bandeja || d === e.fecha ? '↕' : d < e.fecha ? '↑' : '↓';
+    p.className = 'drag-pill';
+    p.textContent = flecha + ' ' + dowDe(d) + ' ' + fechaCorta(d) + ' · ' + lugar;
+    return;
+  }
+  if (!t.classList.contains('drop')){ limpiarDrop(); t.classList.add('drop'); }
   if (d === 'bandeja'){ p.className = 'drag-pill'; p.textContent = e && e.bandeja ? 'Ya está en la bandeja' : 'A la bandeja (sin día)'; return; }
   if (e && e.fecha === d && !e.bandeja){ p.className = 'drag-pill mute'; p.textContent = 'Ya está en ese día'; return; }
-  var flecha = !e || e.bandeja ? '→' : d < e.fecha ? '↑' : '↓';
-  var verbo = !e || e.bandeja ? 'Agendar el' : d < e.fecha ? 'Subir al' : 'Bajar al';
-  if (!t.closest('.ltab')){ flecha = '→'; verbo = e && e.bandeja ? 'Agendar el' : 'Mover al'; }
   p.className = 'drag-pill';
-  p.textContent = flecha + ' ' + verbo + ' ' + dowDe(d) + ' ' + fechaCorta(d);
+  p.textContent = '→ ' + (e && e.bandeja ? 'Agendar el ' : 'Mover al ') + dowDe(d) + ' ' + fechaCorta(d);
 });
 document.addEventListener('drop', function(ev){
   var t = ev.target.closest && ev.target.closest('[data-drop]');
   if (!t || !arrastrando) return;
   ev.preventDefault();
-  var id = arrastrando;
+  var id = arrastrando, pos = t.dataset.pos, refId = t.matches('.ltab tr[data-id]') ? +t.dataset.id : null;
   finDrag();
-  moverEnvio(id, t.dataset.drop);
+  if (refId) reordenar(id, refId, pos); else moverEnvio(id, t.dataset.drop);
 });
+// Deja el envío justo antes/después de otro: toma su día y se renumera el orden de ese día
+function reordenar(id, refId, pos){
+  var e = buscarEnvio(id), ref = buscarEnvio(refId);
+  if (!e || !ref || id === refId || !puedeEditar(e.marca_id)) return;
+  var fecha = ref.fecha;
+  var dia = envDeMes(e.marca_id, periodoDe(fecha)).filter(function(x){ return x.fecha === fecha && x.id !== id; });
+  var i = dia.findIndex(function(x){ return x.id === refId; });
+  dia.splice(pos === 'despues' ? i + 1 : i, 0, e);
+  var ahora = new Date().toISOString();
+  var cambios = [];
+  dia.forEach(function(x, k){
+    var o = {};
+    if (x.orden !== k + 1) o.orden = k + 1;
+    if (x.id === id){
+      if (x.fecha !== fecha) o.fecha = fecha;
+      if (x.bandeja) o.bandeja = false;
+    }
+    if (Object.keys(o).length){ o.actualizado_at = ahora; cambios.push({id: x.id, o: o}); }
+  });
+  if (!cambios.length) return;
+  var cambioDia = e.fecha !== fecha || e.bandeja;
+  Promise.all(cambios.map(function(c){
+    return sb.from('cal_envios').update(c.o).eq('id', c.id).select().single().then(function(r){
+      if (r.error) throw r.error;
+      reemplazarLocal(r.data);
+    });
+  })).then(function(){
+    render(); resaltar(id);
+    toast(cambioDia ? 'Movido al ' + dowDe(fecha) + ' ' + fechaCorta(fecha) : 'Orden actualizado');
+  }).catch(function(err){ render(); toast(errBandeja(err), true); });
+}
 function moverEnvio(id, destino){
   var e = buscarEnvio(id);
   if (!e || !puedeEditar(e.marca_id)) return;
@@ -960,7 +1012,7 @@ function moverEnvio(id, destino){
   });
 }
 function errBandeja(err){
-  return /bandeja/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
+  return /bandeja|orden/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
 }
 // envíos sin día del mes
 function bandejaDeMes(marcaId, periodo){
