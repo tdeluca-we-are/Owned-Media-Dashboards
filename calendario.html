@@ -228,6 +228,12 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .legend-cat{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin:8px 2px 0}
 /* arrastrar: destinos, bandeja y tira de días de la lista */
 [data-drop].drop{outline:2px dashed var(--orange);outline-offset:-3px;background:rgba(240,78,35,.07)}
+/* en tablas el outline de la fila no se dibuja: se pinta cada celda */
+.ltab tr.drop td{background:rgba(240,78,35,.16);border-top:2px solid var(--orange);border-bottom:2px solid var(--orange)}
+.ltab tr.drop td:first-child{box-shadow:inset 3px 0 0 var(--orange)}
+.drag-src{opacity:.35}
+.drag-pill{position:fixed;z-index:600;pointer-events:none;display:none;background:var(--orange);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;box-shadow:0 8px 22px rgba(0,0,0,.45);white-space:nowrap}
+.drag-pill.mute{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
 @keyframes flash{0%{background:rgba(240,78,35,.35);box-shadow:0 0 0 2px var(--orange)}100%{background:transparent;box-shadow:0 0 0 0 transparent}}
 .ev.flash{animation:flash 1.8s ease-out}
 tr.flash td{animation:flash 1.8s ease-out}
@@ -425,7 +431,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.9';
+const VERSION_APP = '2026-10-07.10';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -879,27 +885,58 @@ function resaltar(id){
   el.scrollIntoView({block: 'center', behavior: 'smooth'});
 }
 function limpiarDrop(){ Array.prototype.forEach.call(document.querySelectorAll('.drop'), function(x){ x.classList.remove('drop'); }); }
+// etiqueta que sigue al mouse mientras se arrastra: dice qué va a pasar al soltar
+function pillDrag(){
+  var p = $('dragPill');
+  if (!p){ p = document.createElement('div'); p.id = 'dragPill'; p.className = 'drag-pill'; document.body.appendChild(p); }
+  return p;
+}
+function finDrag(){
+  arrastrando = null; limpiarDrop();
+  var p = $('dragPill'); if (p) p.style.display = 'none';
+  Array.prototype.forEach.call(document.querySelectorAll('.drag-src'), function(x){ x.classList.remove('drag-src'); });
+}
 document.addEventListener('dragstart', function(ev){
   var el = ev.target.closest && ev.target.closest('[data-drag]');
   if (!el) return;
   arrastrando = +el.dataset.drag;
   ev.dataTransfer.effectAllowed = 'move';
   try { ev.dataTransfer.setData('text/plain', el.dataset.drag); } catch(e){}
+  // desde la manija de la lista se lleva la fila entera, no solo los puntitos
+  var fila = el.closest('tr');
+  var origen = fila || el;
+  if (fila && ev.dataTransfer.setDragImage) ev.dataTransfer.setDragImage(fila, 40, fila.offsetHeight / 2);
+  setTimeout(function(){ origen.classList.add('drag-src'); }, 0);
 });
-document.addEventListener('dragend', function(){ arrastrando = null; limpiarDrop(); });
+document.addEventListener('dragend', finDrag);
 document.addEventListener('dragover', function(ev){
   if (!arrastrando) return;
+  // cerca del borde la página se desplaza sola
+  if (ev.clientY < 70) window.scrollBy(0, -18);
+  else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 18);
+  var p = pillDrag();
+  p.style.display = 'block';
+  p.style.left = (ev.clientX + 16) + 'px';
+  p.style.top = (ev.clientY + 14) + 'px';
   var t = ev.target.closest && ev.target.closest('[data-drop]');
-  if (!t) return;
+  if (!t){ limpiarDrop(); p.className = 'drag-pill mute'; p.textContent = 'Soltalo sobre otro envío, un día o la bandeja'; return; }
   ev.preventDefault();
   if (!t.classList.contains('drop')){ limpiarDrop(); t.classList.add('drop'); }
+  var e = buscarEnvio(arrastrando), d = t.dataset.drop;
+  if (d === 'bandeja'){ p.className = 'drag-pill'; p.textContent = e && e.bandeja ? 'Ya está en la bandeja' : 'A la bandeja (sin día)'; return; }
+  if (e && e.fecha === d && !e.bandeja){ p.className = 'drag-pill mute'; p.textContent = 'Ya está en ese día'; return; }
+  var flecha = !e || e.bandeja ? '→' : d < e.fecha ? '↑' : '↓';
+  var verbo = !e || e.bandeja ? 'Agendar el' : d < e.fecha ? 'Subir al' : 'Bajar al';
+  if (!t.closest('.ltab')){ flecha = '→'; verbo = e && e.bandeja ? 'Agendar el' : 'Mover al'; }
+  p.className = 'drag-pill';
+  p.textContent = flecha + ' ' + verbo + ' ' + dowDe(d) + ' ' + fechaCorta(d);
 });
 document.addEventListener('drop', function(ev){
   var t = ev.target.closest && ev.target.closest('[data-drop]');
   if (!t || !arrastrando) return;
   ev.preventDefault();
   var id = arrastrando;
-  arrastrando = null; limpiarDrop();
+  finDrag();
   moverEnvio(id, t.dataset.drop);
 });
 function moverEnvio(id, destino){
