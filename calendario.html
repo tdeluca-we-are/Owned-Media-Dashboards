@@ -206,8 +206,59 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;margin-right:12px}
 .chk input{accent-color:var(--orange)}
 
+/* carga rápida dentro del día */
+.qa{background:var(--bg);border:1px solid var(--orange);border-radius:7px;padding:5px;display:flex;flex-direction:column;gap:4px;cursor:default}
+.qa input{width:100%;font-family:var(--font);font-size:11.5px;padding:5px 6px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:5px;outline:none}
+.qa input:focus{border-color:var(--orange)}
+.qa-ch{display:flex;gap:3px}
+.qa-ch button{flex:1;font-family:var(--font);font-size:9.5px;font-weight:700;padding:3px 0;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
+.qa-ch button.on.email{background:var(--ch-email);border-color:var(--ch-email);color:#fff}
+.qa-ch button.on.push{background:var(--ch-push);border-color:var(--ch-push);color:#0b1929}
+.qa-ch button.on.wpp{background:var(--ch-wpp);border-color:var(--ch-wpp);color:#06210f}
+.qa-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:10px}
+.qa-foot a{color:var(--text3);cursor:pointer;text-decoration:underline}
+.qa-foot a:hover{color:var(--orange)}
+.hint{font-size:11.5px;color:var(--text3);margin:8px 2px 0;line-height:1.5}
+.hint b{color:var(--text2);font-weight:600}
+.hint code{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:0 4px;color:var(--text2)}
+
 /* lista */
 .lst-fecha{font-family:var(--mono);font-size:12px;white-space:nowrap}
+/* lista editable, tipo planilla */
+.etab td{padding:3px 4px}
+.etab td.sel,.etab th.sel{padding:3px 10px;width:30px}
+.etab input[type=checkbox]{accent-color:var(--orange);cursor:pointer}
+.cell{width:100%;font-family:var(--font);font-size:12.5px;padding:6px 7px;background:transparent;color:var(--text);border:1px solid transparent;border-radius:6px;outline:none;min-width:0}
+.cell:hover{border-color:var(--border2)}
+.cell:focus{border-color:var(--orange);background:var(--bg3)}
+select.cell{cursor:pointer}
+select.cell option{background:var(--bg2);color:var(--text)}
+.cell.date{font-family:var(--mono);font-size:11.5px;width:128px}
+.cell.time{font-family:var(--mono);font-size:11.5px;width:86px}
+.cell.w-tema{min-width:180px;font-weight:600}
+.cell.w-asunto{min-width:220px}
+.cell.w-sm{min-width:110px}
+select.cell{min-width:112px}
+.cal-layout.full{grid-template-columns:minmax(0,1fr)}
+.cal-layout.full > div:last-child{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.cal-layout.full .side-card{margin-bottom:0}
+select.cell.ch-email{border-left:3px solid var(--ch-email)}
+select.cell.ch-push{border-left:3px solid var(--ch-push)}
+select.cell.ch-wpp{border-left:3px solid var(--ch-wpp)}
+select.cell.st-enviado{color:#22c55e}select.cell.st-cancelado{color:#ef4444}
+select.cell.st-aprobado{color:#f59e0b}select.cell.st-idea{color:var(--text2)}
+tr.newrow td{background:rgba(240,78,35,.05);border-top:1px dashed rgba(240,78,35,.35)}
+tr.newrow .cell{border-color:var(--border2)}
+tr.chk-on td{background:rgba(240,78,35,.07)}
+.batch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:rgba(240,78,35,.1);border-bottom:1px solid rgba(240,78,35,.3);font-size:12.5px}
+.batch select,.batch input{font-family:var(--font);font-size:12px;padding:5px 8px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px;outline:none}
+/* pegar desde planilla */
+textarea.paste{width:100%;min-height:150px;font-family:var(--mono);font-size:11.5px;line-height:1.5;padding:10px 12px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;resize:vertical;white-space:pre;overflow-x:auto}
+textarea.paste:focus{border-color:var(--orange)}
+.ptab{font-size:11.5px;margin-top:12px}
+.ptab td,.ptab th{padding:6px 8px}
+.ptab tr.err td{color:#ffb4b4}
+.ptab .ok{color:var(--green);font-weight:700}
 
 /* drawer */
 .drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none}
@@ -303,7 +354,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.1';
+const VERSION_APP = '2026-10-07.2';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -327,6 +378,11 @@ var sel  = {marca: null, periodo: null, vista: 'cal'};
 var filtroCanal = {email:true, push:true, wpp:true};
 var form = null;      // borrador del drawer abierto
 var arrastrando = null;
+var quick = null;     // carga rápida abierta en un día: {fecha, canal, texto}
+var ultimoCanal = null;
+var selIds = {};      // envíos tildados en la lista (acciones en lote)
+var nuevaFila = null; // fecha/canal que arrastra la fila de alta de la lista
+const CABREV = {email:'Email', push:'Push', wpp:'WPP'};
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function $(id){ return document.getElementById(id); }
@@ -522,14 +578,21 @@ function render(){
     return '<button class="tab' + (tab === d[0] ? ' active' : '') + '" data-t="' + d[0] + '">' + d[1] + '</button>';
   }).join('');
   Array.prototype.forEach.call($('tabs').children, function(b){
-    b.onclick = function(){ tab = b.dataset.t; render(); };
+    b.onclick = function(){ tab = b.dataset.t; resetEdicion(); render(); };
   });
+  // si se estaba escribiendo en una celda, volver a ella después de redibujar
+  var act = document.activeElement, ak = act && act.dataset ? act.dataset.k : null;
   if (tab === 'calendario')     renderCalendario();
   else if (tab === 'resumen')   renderResumen();
   else if (tab === 'historial') renderHistorial();
   else if (tab === 'fechas')    renderFechas();
   else if (tab === 'accesos')   renderAccesos();
+  if (ak && !$('drawer').classList.contains('open')){
+    var el = document.querySelector('[data-k="' + ak + '"]');
+    if (el && el !== document.activeElement) el.focus();
+  }
 }
+function resetEdicion(){ quick = null; selIds = {}; nuevaFila = null; }
 
 function selectorMarca(){
   var activas = D.marcas.filter(function(m){ return m.activa || m.id === sel.marca; });
@@ -558,10 +621,10 @@ function navMes(){
     '<button onclick="moverMes(1)" title="Mes siguiente">›</button>' +
     '<button class="hoy" onclick="irHoy()">Este mes</button></span>';
 }
-function cambiarMarca(id){ sel.marca = id; guardarSel(); render(); }
-function moverMes(n){ sel.periodo = addMes(sel.periodo, n); render(); }
-function irHoy(){ sel.periodo = periodoDe(hoyStr()); render(); }
-function irA(marcaId, periodo){ sel.marca = marcaId; sel.periodo = periodo; tab = 'calendario'; guardarSel(); render(); window.scrollTo(0, 0); }
+function cambiarMarca(id){ sel.marca = id; resetEdicion(); guardarSel(); render(); }
+function moverMes(n){ sel.periodo = addMes(sel.periodo, n); resetEdicion(); render(); }
+function irHoy(){ sel.periodo = periodoDe(hoyStr()); resetEdicion(); render(); }
+function irA(marcaId, periodo){ sel.marca = marcaId; sel.periodo = periodo; tab = 'calendario'; resetEdicion(); guardarSel(); render(); window.scrollTo(0, 0); }
 
 // ══ CALENDARIO ══════════════════════════════════════════════════════════════
 function renderCalendario(){
@@ -595,6 +658,7 @@ function renderCalendario(){
   h += '<div class="filters"><div class="acciones">';
   if (ed){
     h += '<button class="btn-orange" onclick="abrirEnvio(null)">+ Envío</button>' +
+         '<button class="btn-sm" onclick="abrirPegar()">Pegar desde planilla</button>' +
          '<button class="btn-sm" onclick="abrirCopia()">Copiar de otro mes</button>' +
          '<button class="btn-sm" onclick="abrirCierre()">Cerrar el mes</button>';
   }
@@ -604,13 +668,17 @@ function renderCalendario(){
     '<button class="btn-sm" onclick="descargarCSV()">Descargar CSV</button></div></div>';
 
   var vis = envs.filter(function(e){ return filtroCanal[e.canal]; });
-  h += '<div class="cal-layout"><div>' +
+  h += '<div class="cal-layout' + (sel.vista === 'lista' && ed ? ' full' : '') + '"><div>' +
     (sel.vista === 'cal' ? gridMes(m, p, vis, ed) : listaMes(vis, ed)) +
     '</div><div>' + panelLateral(m, p, reg, ed, canales) + '</div></div>';
   $('panes').innerHTML = h;
   if (ed && sel.vista === 'cal') engancharDrag();
+  if (quick && sel.vista === 'cal'){
+    var qi = $('qaInput');
+    if (qi){ qi.value = quick.texto || ''; qi.focus(); }
+  }
 }
-function setVista(v){ sel.vista = v; guardarSel(); render(); }
+function setVista(v){ sel.vista = v; resetEdicion(); guardarSel(); render(); }
 function toggleCanal(k){ filtroCanal[k] = !filtroCanal[k]; render(); }
 
 function gridMes(m, p, envs, ed){
@@ -631,14 +699,61 @@ function gridMes(m, p, envs, ed){
     var we = (i % 7) >= 5;
     h += '<div class="cal-day' + (we ? ' we' : '') + (f === hoy ? ' today' : '') + (ed ? ' edit' : '') + '" data-f="' + f + '"' +
       (ed ? ' onclick="clickDia(event,\'' + f + '\')"' : '') + '>' +
-      '<div class="cal-top"><span class="cal-num">' + dia + '</span>' + (ed ? '<span class="cal-plus">+</span>' : '') + '</div>';
+      '<div class="cal-top"><span class="cal-num">' + dia + '</span>' + (ed ? '<span class="cal-plus" title="Envío con todos los campos">+</span>' : '') + '</div>';
     keys.forEach(function(k){
       if (f >= k.desde && f <= k.hasta) h += '<div class="cal-key' + (k.marca ? ' marca' : '') + '" title="' + esc(k.notas || '') + '">★ ' + esc(k.nombre) + '</div>';
     });
     (porDia[f] || []).forEach(function(e){ h += chipEnvio(e, ed); });
+    if (quick && quick.fecha === f) h += cajaRapida(m);
     h += '</div>';
   }
-  return h + '</div></div></div>';
+  h += '</div></div></div>';
+  if (ed) h += '<div class="hint"><b>Carga rápida:</b> tocá un día, escribí el tema y Enter (podés seguir cargando en el mismo día). ' +
+    '<b>Tab</b> cambia el canal, o escribí <code>w: tema</code> / <code>p: tema</code> / <code>e: tema</code> y <code>10:30 tema</code> para la hora. ' +
+    'El <b>+</b> abre el formulario completo. Arrastrá un envío para moverlo de día.</div>';
+  return h;
+}
+function cajaRapida(m){
+  return '<div class="qa"><div class="qa-ch">' + canalesDe(m).map(function(k){
+      return '<button class="' + k + (quick.canal === k ? ' on' : '') + '" onclick="qaCanal(\'' + k + '\')">' + CABREV[k] + '</button>';
+    }).join('') + '</div>' +
+    '<input id="qaInput" data-k="qa" placeholder="Tema + Enter" autocomplete="off" onkeydown="qaKey(event)">' +
+    '<div class="qa-foot"><a onclick="qaMas()">más campos</a><a onclick="qaCerrar()">listo</a></div></div>';
+}
+function qaTexto(){ var i = $('qaInput'); return i ? i.value : ''; }
+function qaCanal(k){ quick.texto = qaTexto(); quick.canal = k; ultimoCanal = k; render(); }
+function qaCerrar(){ quick = null; render(); }
+function qaMas(){
+  var t = qaTexto(), f = quick.fecha, c = quick.canal;
+  quick = null; render();
+  abrirEnvio(null, f); form.titulo = t; form.canal = c; dibujarEnvio();
+}
+function qaKey(ev){
+  if (ev.key === 'Escape'){ ev.preventDefault(); qaCerrar(); return; }
+  if (ev.key === 'Tab' && !ev.shiftKey){
+    ev.preventDefault();
+    var cs = canalesDe(sel.marca);
+    qaCanal(cs[(cs.indexOf(quick.canal) + 1) % cs.length]);
+    return;
+  }
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  var txt = ev.target.value.trim(), canal = quick.canal, hora = null, mm;
+  mm = txt.match(/^(e|em|mail|email|p|push|w|wa|wsp|wpp|whatsapp)\s*[:\-]\s*/i);
+  if (mm){ canal = parseCanal(mm[1]); txt = txt.slice(mm[0].length); }
+  mm = txt.match(/^(\d{1,2})[:.](\d{2})\s+/);
+  if (mm){ hora = mm[1].padStart(2, '0') + ':' + mm[2]; txt = txt.slice(mm[0].length); }
+  if (!txt || quick.guardando) return;
+  quick.guardando = true;
+  sb.from('cal_envios').insert({marca_id: sel.marca, fecha: quick.fecha, hora: hora, canal: canal, titulo: txt,
+    estado: 'planificado', creado_por: nombreUsuario()}).select().single().then(function(r){
+    if (!quick) return;
+    quick.guardando = false;
+    if (r.error) return toast(r.error.message, true);
+    reemplazarLocal(r.data);
+    quick.texto = '';
+    render();
+  });
 }
 function chipEnvio(e, ed){
   return '<div class="ev ' + e.canal + ' st-' + e.estado + '"' + (ed ? ' draggable="true"' : '') + ' data-id="' + e.id + '"' +
@@ -647,7 +762,14 @@ function chipEnvio(e, ed){
     (e.estado === 'enviado' ? '<span class="ok">✓</span>' : e.estado === 'aprobado' ? '<span>✔</span>' : e.estado === 'idea' ? '<span>idea</span>' : '') + '</div>' +
     '<div class="ev-t">' + esc(e.titulo) + '</div></div>';
 }
-function clickDia(ev, f){ if (ev.target.closest('.ev')) return; abrirEnvio(null, f); }
+function clickDia(ev, f){
+  if (ev.target.closest('.ev') || ev.target.closest('.qa')) return;
+  if (ev.target.closest('.cal-plus')) return abrirEnvio(null, f);
+  if (quick && quick.fecha === f) return;
+  var cs = canalesDe(sel.marca);
+  quick = {fecha: f, canal: cs.indexOf(ultimoCanal) >= 0 ? ultimoCanal : cs[0], texto: ''};
+  render();
+}
 
 function engancharDrag(){
   Array.prototype.forEach.call(document.querySelectorAll('.ev[draggable]'), function(el){
@@ -671,7 +793,130 @@ function engancharDrag(){
   });
 }
 
+// ── lista editable: cada celda se guarda sola al salir ─────────────────────
+function opciones(lista, actual, etiquetas){
+  return lista.map(function(v){ return '<option value="' + v + '"' + (v === actual ? ' selected' : '') + '>' + etiquetas[v] + '</option>'; }).join('');
+}
 function listaMes(envs, ed){
+  if (!ed) return listaLectura(envs, ed);
+  var m = sel.marca, cs = canalesDe(m), usados = D.env[m] || [];
+  var tipos = TIPOS.concat(usados.map(function(e){ return e.tipo; })).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
+  var segs = usados.map(function(e){ return e.segmento; }).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
+  var nSel = envs.filter(function(e){ return selIds[e.id]; }).length;
+  if (!nuevaFila){
+    var ult = envs.length ? envs[envs.length - 1].fecha : (periodoDe(hoyStr()) === sel.periodo ? hoyStr() : sel.periodo);
+    nuevaFila = {fecha: ult, canal: cs.indexOf(ultimoCanal) >= 0 ? ultimoCanal : cs[0]};
+  }
+  var h = '<div class="section">';
+  if (nSel) h += barraLote(nSel, cs);
+  h += '<div class="twrap"><table class="etab"><thead><tr>' +
+    '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + ' onchange="selTodos(this.checked)"></th>' +
+    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tema</th><th>Asunto / copy</th><th>Tipo</th><th>Segmento</th><th>Estado</th><th></th></tr></thead><tbody>' +
+    envs.map(function(e){ return filaEditable(e, cs); }).join('') + filaNueva(cs) +
+    '</tbody></table></div>' +
+    '<datalist id="lTiposL">' + tipos.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
+    '<datalist id="lSegsL">' + segs.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist></div>' +
+    '<div class="hint" style="margin-top:-8px">Se edita como una planilla: los cambios se guardan solos al salir de cada celda. ' +
+    'En la fila naranja escribís un envío nuevo y Enter. Tildá varios para cambiarles el estado, el canal o la fecha juntos.</div>';
+  return h;
+}
+function filaEditable(e, cs){
+  var id = e.id, k = function(c){ return ' data-k="' + id + '-' + c + '"'; };
+  var on = function(c){ return ' onchange="editCampo(' + id + ',\'' + c + '\',this.value)"'; };
+  var csE = cs.indexOf(e.canal) >= 0 ? cs : cs.concat([e.canal]);
+  return '<tr class="' + (selIds[id] ? 'chk-on' : '') + '">' +
+    '<td class="sel"><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
+    '<td><input type="date" class="cell date" value="' + e.fecha + '"' + k('fecha') + on('fecha') + '></td>' +
+    '<td><input type="time" class="cell time" value="' + esc(e.hora || '') + '"' + k('hora') + on('hora') + '></td>' +
+    '<td><select class="cell ch-' + e.canal + '"' + k('canal') + on('canal') + '>' + opciones(csE, e.canal, CLABEL) + '</select></td>' +
+    '<td><input class="cell w-tema" value="' + esc(e.titulo) + '"' + k('titulo') + on('titulo') + '></td>' +
+    '<td><input class="cell w-asunto" value="' + esc(e.asunto || '') + '"' + k('asunto') + on('asunto') + '></td>' +
+    '<td><input class="cell w-sm" list="lTiposL" value="' + esc(e.tipo || '') + '"' + k('tipo') + on('tipo') + '></td>' +
+    '<td><input class="cell w-sm" list="lSegsL" value="' + esc(e.segmento || '') + '"' + k('segmento') + on('segmento') + '></td>' +
+    '<td><select class="cell st-' + e.estado + '"' + k('estado') + on('estado') + '>' + opciones(EST_ENV, e.estado, ELABEL) + '</select></td>' +
+    '<td><button class="mini" title="Abrir con todos los campos" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
+}
+function filaNueva(cs){
+  var nf = nuevaFila;
+  return '<tr class="newrow" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
+    '<td class="sel muted">+</td>' +
+    '<td><input type="date" class="cell date" id="nFecha" data-k="n-fecha" value="' + nf.fecha + '"></td>' +
+    '<td><input type="time" class="cell time" id="nHora" data-k="n-hora"></td>' +
+    '<td><select class="cell ch-' + nf.canal + '" id="nCanal" data-k="n-canal" onchange="this.className=\'cell ch-\'+this.value">' + opciones(cs, nf.canal, CLABEL) + '</select></td>' +
+    '<td><input class="cell w-tema" id="nTitulo" data-k="n-titulo" placeholder="Nuevo envío: tema + Enter"></td>' +
+    '<td><input class="cell w-asunto" id="nAsunto" data-k="n-asunto" placeholder="Asunto / copy"></td>' +
+    '<td><input class="cell w-sm" id="nTipo" data-k="n-tipo" list="lTiposL"></td>' +
+    '<td><input class="cell w-sm" id="nSeg" data-k="n-seg" list="lSegsL"></td>' +
+    '<td><select class="cell" id="nEstado" data-k="n-estado">' + opciones(EST_ENV, 'planificado', ELABEL) + '</select></td>' +
+    '<td><button class="mini" onclick="agregarFila()">Agregar</button></td></tr>';
+}
+function agregarFila(){
+  var row = {marca_id: sel.marca, fecha: $('nFecha').value, hora: $('nHora').value || null, canal: $('nCanal').value,
+    titulo: $('nTitulo').value.trim(), asunto: $('nAsunto').value.trim() || null, tipo: $('nTipo').value.trim() || null,
+    segmento: $('nSeg').value.trim() || null, estado: $('nEstado').value, creado_por: nombreUsuario()};
+  if (!row.fecha) return toast('Falta la fecha', true);
+  if (!row.titulo){ $('nTitulo').focus(); return toast('Falta el tema', true); }
+  sb.from('cal_envios').insert(row).select().single().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    reemplazarLocal(r.data);
+    nuevaFila = {fecha: row.fecha, canal: row.canal};
+    ultimoCanal = row.canal;
+    render();
+    var t = $('nTitulo'); if (t) t.focus();
+    if (periodoDe(row.fecha) !== sel.periodo) toast('Guardado en ' + periodoLargo(periodoDe(row.fecha)));
+  });
+}
+function editCampo(id, campo, val){
+  var e = buscarEnvio(id);
+  if (!e) return;
+  val = String(val || '').trim();
+  if ((e[campo] || '') === val) return;
+  if (campo === 'titulo' && !val){ toast('El tema no puede quedar vacío', true); render(); return; }
+  if (campo === 'fecha' && !val){ render(); return; }
+  var o = {actualizado_at: new Date().toISOString()};
+  o[campo] = val || null;
+  sb.from('cal_envios').update(o).eq('id', id).select().single().then(function(r){
+    if (r.error){ toast(r.error.message, true); render(); return; }
+    reemplazarLocal(r.data);
+    if (campo === 'fecha' || campo === 'canal' || campo === 'estado') render();
+    if (campo === 'fecha' && periodoDe(val) !== sel.periodo) toast('Movido a ' + periodoLargo(periodoDe(val)));
+  });
+}
+
+// ── acciones en lote ───────────────────────────────────────────────────────
+function idsSel(){ return envsExport().filter(function(e){ return selIds[e.id]; }).map(function(e){ return e.id; }); }
+function toggleSel(id, on){ selIds[id] = on; render(); }
+function selTodos(on){ selIds = {}; if (on) envsExport().forEach(function(e){ selIds[e.id] = true; }); render(); }
+function barraLote(n, cs){
+  return '<div class="batch"><b>' + n + ' seleccionado(s)</b>' +
+    '<select onchange="if(this.value)lote({estado:this.value})"><option value="">Cambiar estado…</option>' + opciones(EST_ENV, null, ELABEL) + '</select>' +
+    '<select onchange="if(this.value)lote({canal:this.value})"><option value="">Cambiar canal…</option>' + opciones(cs, null, CLABEL) + '</select>' +
+    '<span class="muted">Mover al</span><input type="date" onchange="if(this.value)lote({fecha:this.value})">' +
+    '<span class="spacer"></span><button class="btn-danger" onclick="borrarLote()">Eliminar</button>' +
+    '<button class="btn-sm" onclick="selIds={};render()">Deseleccionar</button></div>';
+}
+function lote(campos){
+  var ids = idsSel();
+  if (!ids.length) return;
+  sb.from('cal_envios').update(Object.assign({actualizado_at: new Date().toISOString()}, campos)).in('id', ids).select().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    r.data.forEach(reemplazarLocal);
+    if (campos.fecha) selIds = {};
+    render();
+    toast(r.data.length + ' envío(s) actualizados' + (campos.fecha && periodoDe(campos.fecha) !== sel.periodo ? ' (pasaron a ' + periodoLargo(periodoDe(campos.fecha)) + ')' : ''));
+  });
+}
+function borrarLote(){
+  var ids = idsSel();
+  if (!ids.length || !confirm('¿Eliminar ' + ids.length + ' envío(s)?\nSi se cancelaron, mejor marcalos como Cancelado así quedan en el historial.')) return;
+  sb.from('cal_envios').delete().in('id', ids).then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    D.env[sel.marca] = D.env[sel.marca].filter(function(x){ return ids.indexOf(x.id) < 0; });
+    selIds = {}; invalidarResumen(); render(); toast(ids.length + ' envío(s) eliminados');
+  });
+}
+
+function listaLectura(envs, ed){
   if (!envs.length) return '<div class="section"><div class="empty">No hay envíos cargados para este mes' +
     (ed ? '.<br>Usá <b>+ Envío</b> o <b>Copiar de otro mes</b> para arrancar.' : '.') + '</div></div>';
   return '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>' +
@@ -962,6 +1207,149 @@ function ejecutarCopia(){
     if (r.error) return toast(r.error.message, true);
     r.data.forEach(reemplazarLocal);
     cerrarDrawer(); render(); toast(r.data.length + ' envío(s) copiados');
+  });
+}
+
+// ── pegar filas desde Sheets / Excel ───────────────────────────────────────
+function normTxt(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
+function parseCanal(s){
+  var n = normTxt(s);
+  if (!n) return null;
+  if (/^(w|wa|wsp|wpp|whats|zap)/.test(n)) return 'wpp';
+  if (/^(p|push|notif)/.test(n)) return 'push';
+  if (/^(e|mail|correo|news|mkt)/.test(n)) return 'email';
+  return 'x';
+}
+function parseEstado(s){
+  var n = normTxt(s);
+  if (!n) return 'planificado';
+  var k = EST_ENV.find(function(x){ return n.indexOf(x.slice(0, 4)) === 0; });
+  return k || 'planificado';
+}
+function parseHora(s){
+  var m = String(s || '').trim().match(/^(\d{1,2})[:.](\d{2})/);
+  return m && +m[1] < 24 ? m[1].padStart(2, '0') + ':' + m[2] : null;
+}
+function parseFechaTxt(s, periodo){
+  var t = normTxt(s).replace(/^[a-z]+\.?\s+/, ''), y = +periodo.slice(0, 4), mo = +periodo.slice(5, 7), d, m;
+  if (!t) return null;
+  if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/))){
+    d = +m[1]; mo = +m[2];
+    if (m[3]) y = m[3].length === 2 ? 2000 + +m[3] : +m[3];
+  }
+  else if ((m = t.match(/^(\d{1,2})$/))) d = +m[1];
+  else return null;
+  var dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  return ymd(y, mo, d);
+}
+// separa celdas respetando comillas (Sheets las usa cuando una celda tiene saltos de línea)
+function parseTabla(txt){
+  var primera = txt.split(/\r?\n/)[0] || '';
+  var sep = primera.indexOf('\t') >= 0 ? '\t' : primera.indexOf(';') >= 0 ? ';' : ',';
+  var rows = [], row = [], cur = '', q = false;
+  for (var i = 0; i < txt.length; i++){
+    var c = txt[i];
+    if (q){
+      if (c === '"'){ if (txt[i + 1] === '"'){ cur += '"'; i++; } else q = false; }
+      else cur += c;
+      continue;
+    }
+    if (c === '"' && cur === ''){ q = true; continue; }
+    if (c === sep){ row.push(cur); cur = ''; continue; }
+    if (c === '\n' || c === '\r'){
+      if (c === '\r' && txt[i + 1] === '\n') i++;
+      row.push(cur); rows.push(row); row = []; cur = '';
+      continue;
+    }
+    cur += c;
+  }
+  if (cur !== '' || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(function(r){ return r.some(function(x){ return x.trim(); }); });
+}
+const COLS_PEGAR = {fecha:['fecha','date'], dia:['dia'], hora:['hora','horario'], canal:['canal','medio','channel'],
+  tipo:['tipo','categoria'], titulo:['tema','titulo','campana','nombre','envio'], asunto:['asunto','copy','subject','mensaje','texto'],
+  segmento:['segmento','audiencia','publico','base'], estado:['estado','status'], notas:['notas','nota','comentarios','observaciones','obs']};
+function mapaCabecera(row){
+  // una fila con una fecha válida es un dato, no títulos
+  if (row.some(function(c){ return parseFechaTxt(c, '2000-01-01'); })) return null;
+  var map = {}, hits = 0;
+  row.forEach(function(c, i){
+    var full = normTxt(c);
+    if (full.length > 25) return;
+    var n = full.split(/[\s\/]+/)[0];
+    Object.keys(COLS_PEGAR).forEach(function(k){
+      if (map[k] == null && COLS_PEGAR[k].indexOf(n) >= 0){ map[k] = i; hits++; }
+    });
+  });
+  if (map.fecha == null && map.dia != null) map.fecha = map.dia;
+  return hits >= 2 ? map : null;
+}
+function parsePegado(txt, periodo, marcaId){
+  var rows = parseTabla(txt || '');
+  if (!rows.length) return [];
+  var map = mapaCabecera(rows[0]);
+  if (map) rows = rows.slice(1); else map = {fecha: 0, canal: 1, titulo: 2, asunto: 3, segmento: 4};
+  var defCanal = canalesDe(marcaId)[0];
+  return rows.map(function(r){
+    var g = function(k){ return map[k] != null ? String(r[map[k]] || '').trim() : ''; };
+    var c = g('canal');
+    var o = {fecha: parseFechaTxt(g('fecha'), periodo), hora: parseHora(g('hora')), canal: c ? parseCanal(c) : defCanal,
+      tipo: g('tipo') || null, titulo: g('titulo'), asunto: g('asunto') || null, segmento: g('segmento') || null,
+      notas: g('notas') || null, estado: parseEstado(g('estado')), err: null, aviso: null};
+    if (!o.fecha) o.err = 'Fecha no válida' + (g('fecha') ? ': “' + g('fecha') + '”' : '');
+    else if (!o.titulo) o.err = 'Falta el tema';
+    else if (o.canal === 'x') o.err = 'Canal no reconocido: “' + c + '”';
+    else {
+      var av = [];
+      if (!c) av.push('canal por defecto');
+      if (periodoDe(o.fecha) !== periodo) av.push('cae en ' + periodoLargo(periodoDe(o.fecha)));
+      o.aviso = av.join(' · ') || null;
+    }
+    return o;
+  });
+}
+function abrirPegar(){
+  form = {tipo: 'pegar', txt: '', filas: []};
+  var b = '<div class="note blue">Seleccioná las filas en Sheets o Excel, copialas y pegalas acá (Ctrl+V).<br>' +
+    'Si la primera fila tiene títulos (<b>Fecha, Canal, Tema, Asunto, Segmento, Tipo, Hora, Estado, Notas</b>) se usan para ubicar cada columna, en cualquier orden. ' +
+    'Si no, el orden es <b>Fecha · Canal · Tema · Asunto · Segmento</b>.<br>' +
+    'Fecha: <b>15/10</b>, <b>15/10/2026</b> o solo <b>15</b> (= día de ' + periodoLargo(sel.periodo).toLowerCase() + '). Canal: email / push / whatsapp (o e / p / w). ' +
+    'También acepta lo que sale de “Copiar para Sheets”.</div>' +
+    '<textarea class="paste" id="pTxt" placeholder="15/10&#9;Email&#9;Promo Día de la Madre&#9;20% off en toda la tienda&#9;Base completa" oninput="form.txt=this.value;previewPegar()"></textarea>' +
+    '<div id="pPrev"></div>';
+  abrirDrawer('Pegar desde planilla', D.marcaById[sel.marca].nombre, b,
+    '<button class="btn-orange" id="pBtn" disabled onclick="importarPegado()">Crear envíos</button>');
+  setTimeout(function(){ var t = $('pTxt'); if (t) t.focus(); }, 50);
+}
+function previewPegar(){
+  var filas = form.filas = parsePegado(form.txt, sel.periodo, sel.marca);
+  var ok = filas.filter(function(f){ return !f.err; }).length;
+  $('pBtn').disabled = !ok;
+  $('pBtn').textContent = ok ? 'Crear ' + ok + ' envío(s)' : 'Crear envíos';
+  if (!filas.length){ $('pPrev').innerHTML = ''; return; }
+  $('pPrev').innerHTML = '<div class="dsec">Vista previa · ' + ok + ' de ' + filas.length + ' filas se pueden cargar</div>' +
+    '<div class="twrap"><table class="ptab"><thead><tr><th></th><th>Fecha</th><th>Canal</th><th>Tema</th><th>Asunto</th></tr></thead><tbody>' +
+    filas.map(function(f){
+      if (f.err) return '<tr class="err"><td>✕</td><td colspan="4">' + esc(f.err) + (f.titulo ? ' · ' + esc(f.titulo) : '') + '</td></tr>';
+      return '<tr><td class="ok">✓</td><td class="lst-fecha">' + dowDe(f.fecha) + ' ' + fechaCorta(f.fecha) + (f.hora ? ' ' + f.hora : '') + '</td>' +
+        '<td><i class="dot ' + f.canal + '"></i> ' + CLABEL[f.canal] + '</td>' +
+        '<td class="strong">' + esc(f.titulo) + (f.aviso ? '<br><span class="muted" style="font-weight:400">' + esc(f.aviso) + '</span>' : '') + '</td>' +
+        '<td class="muted">' + esc(f.asunto || '') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+function importarPegado(){
+  var rows = form.filas.filter(function(f){ return !f.err; }).map(function(f){
+    return {marca_id: sel.marca, fecha: f.fecha, hora: f.hora, canal: f.canal, tipo: f.tipo, titulo: f.titulo,
+      asunto: f.asunto, segmento: f.segmento, notas: f.notas, estado: f.estado, creado_por: nombreUsuario()};
+  });
+  if (!rows.length) return;
+  $('pBtn').disabled = true;
+  sb.from('cal_envios').insert(rows).select().then(function(r){
+    if (r.error){ $('pBtn').disabled = false; return toast(r.error.message, true); }
+    r.data.forEach(reemplazarLocal);
+    cerrarDrawer(); render(); toast(r.data.length + ' envío(s) creados');
   });
 }
 
