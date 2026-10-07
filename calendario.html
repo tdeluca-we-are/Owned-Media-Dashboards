@@ -20,7 +20,49 @@
   --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
   --radius:10px;--radius-lg:14px;--radius-xl:20px;
 }
+:root{color-scheme:dark}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+/* casillas con los colores de la app (no las blancas del navegador) */
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;border:1.5px solid rgba(255,255,255,.28);border-radius:4px;background:var(--bg3);cursor:pointer;display:inline-grid;place-content:center;vertical-align:middle;flex-shrink:0;transition:background .12s,border-color .12s}
+input[type=checkbox]:hover{border-color:var(--orange)}
+input[type=checkbox]:checked{background:var(--orange);border-color:var(--orange)}
+input[type=checkbox]:checked::before{content:'';width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:translateY(-1px) rotate(-45deg)}
+input[type=checkbox]:focus-visible{outline:2px solid rgba(240,78,35,.5);outline-offset:2px}
+input[type=checkbox]:disabled{opacity:.4;cursor:default}
+
+/* tarjeta de envío (alta / edición) */
+.modal-bg{position:fixed;inset:0;background:rgba(5,12,22,.62);backdrop-filter:blur(3px);z-index:400;display:none;align-items:flex-start;justify-content:center;padding:9vh 16px 24px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{width:min(540px,100%);background:var(--bg2);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.55);animation:pop .16s ease-out}
+@keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.m-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 0}
+.m-marca{font-size:10.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.m-body{padding:10px 18px 4px}
+.m-tema{width:100%;font-family:var(--font);font-size:19px;font-weight:700;letter-spacing:-.01em;background:transparent;border:none;outline:none;color:var(--text);padding:8px 0 10px;border-bottom:1px solid var(--border2)}
+.m-tema:focus{border-bottom-color:var(--orange)}
+.m-tema::placeholder{color:var(--text3)}
+.m-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 2px}
+.m-pill{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:3px 6px 3px 12px;font-size:10.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.m-pill:focus-within{border-color:var(--orange)}
+.m-pill input{background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 2px}
+.m-area{width:100%;font-family:var(--font);font-size:13px;line-height:1.5;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:10px 12px;color:var(--text);outline:none;resize:vertical;min-height:62px;margin-top:12px}
+.m-area:focus{border-color:var(--orange)}
+.m-area::placeholder,.m-in::placeholder{color:var(--text3)}
+.m-lab{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px}
+.m-more{background:none;border:none;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;padding:12px 0 2px;display:inline-flex;gap:6px;align-items:center}
+.m-more:hover{color:var(--orange)}
+.m-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-in{width:100%;font-family:var(--font);font-size:13px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);outline:none}
+.m-in:focus{border-color:var(--orange)}
+.m-foot{display:flex;align-items:center;gap:8px;padding:14px 18px;border-top:1px solid var(--border2);margin-top:14px;flex-wrap:wrap}
+.m-link{background:none;border:none;font-family:var(--font);font-size:12px;color:var(--text3);cursor:pointer;padding:4px 2px}
+.m-link:hover{color:var(--orange)}
+.m-link.del:hover{color:var(--red)}
+.m-kbd{font-size:10.5px;color:var(--text3)}
+.m-x{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1;padding:0 2px}
+.m-x:hover{color:var(--orange)}
+.seg.pills button{font-size:11.5px;padding:6px 14px;border-radius:20px}
+@media (max-width:520px){.m-grid{grid-template-columns:1fr}}
 
 /* auth */
 .auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -224,32 +266,32 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 
 /* lista */
 .lst-fecha{font-family:var(--mono);font-size:12px;white-space:nowrap}
-/* lista editable, tipo planilla */
-.etab td{padding:3px 4px}
-.etab td.sel,.etab th.sel{padding:3px 10px;width:30px}
-.etab input[type=checkbox]{accent-color:var(--orange);cursor:pointer}
-.cell{width:100%;font-family:var(--font);font-size:12.5px;padding:6px 7px;background:transparent;color:var(--text);border:1px solid transparent;border-radius:6px;outline:none;min-width:0}
-.cell:hover{border-color:var(--border2)}
-.cell:focus{border-color:var(--orange);background:var(--bg3)}
-select.cell{cursor:pointer}
-select.cell option{background:var(--bg2);color:var(--text)}
-.cell.date{font-family:var(--mono);font-size:11.5px;width:128px}
-.cell.time{font-family:var(--mono);font-size:11.5px;width:86px}
-.cell.w-tema{min-width:180px;font-weight:600}
-.cell.w-asunto{min-width:220px}
-.cell.w-sm{min-width:110px}
-select.cell{min-width:112px}
-.cal-layout.full{grid-template-columns:minmax(0,1fr)}
-.cal-layout.full > div:last-child{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
-.cal-layout.full .side-card{margin-bottom:0}
-select.cell.ch-email{border-left:3px solid var(--ch-email)}
-select.cell.ch-push{border-left:3px solid var(--ch-push)}
-select.cell.ch-wpp{border-left:3px solid var(--ch-wpp)}
-select.cell.st-enviado{color:#22c55e}select.cell.st-cancelado{color:#ef4444}
-select.cell.st-aprobado{color:#f59e0b}select.cell.st-idea{color:var(--text2)}
-tr.newrow td{background:rgba(240,78,35,.05);border-top:1px dashed rgba(240,78,35,.35)}
-tr.newrow .cell{border-color:var(--border2)}
+/* lista: se ve como tabla limpia; la celda se vuelve campo al tocarla */
+.ltab th.sel,.ltab td.sel{width:34px;padding-right:0}
+.ltab td.ed{cursor:text;border-radius:6px}
+.ltab td.ed:hover{background:rgba(255,255,255,.04)}
+.cell-in{width:100%;min-width:90px;font-family:var(--font);font-size:12.5px;padding:5px 8px;background:var(--bg3);color:var(--text);border:1px solid var(--orange);border-radius:6px;outline:none}
+.cell-in[type=date],.cell-in[type=time]{font-family:var(--mono);font-size:11.5px}
 tr.chk-on td{background:rgba(240,78,35,.07)}
+/* chips que son selects: cambian canal/estado sin salir de la tabla */
+.chip-sel{appearance:none;-webkit-appearance:none;font-family:var(--font);font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:20px;cursor:pointer;outline:none;border:1px solid}
+.chip-sel option{background:var(--bg2);color:var(--text)}
+.chip-sel:focus{box-shadow:0 0 0 2px rgba(240,78,35,.35)}
+.chip-sel.c-email{background:rgba(240,78,35,.12);color:#ff7a55;border-color:rgba(240,78,35,.35)}
+.chip-sel.c-push{background:rgba(122,158,202,.13);color:#9dbbe0;border-color:rgba(122,158,202,.35)}
+.chip-sel.c-wpp{background:rgba(34,197,94,.12);color:#4ade80;border-color:rgba(34,197,94,.32)}
+.chip-sel.s-idea{background:rgba(255,255,255,.05);color:var(--text2);border-color:var(--border2)}
+.chip-sel.s-planificado{background:rgba(122,158,202,.13);color:#7a9eca;border-color:rgba(122,158,202,.28)}
+.chip-sel.s-aprobado{background:rgba(245,158,11,.13);color:#f59e0b;border-color:rgba(245,158,11,.28)}
+.chip-sel.s-enviado{background:rgba(34,197,94,.13);color:#22c55e;border-color:rgba(34,197,94,.28)}
+.chip-sel.s-cancelado{background:rgba(239,68,68,.13);color:#ef4444;border-color:rgba(239,68,68,.28)}
+/* alta rápida al pie de la lista */
+.addline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.addline input,.addline select{font-family:var(--font);font-size:12.5px;padding:7px 10px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none}
+.addline input:focus,.addline select:focus{border-color:var(--orange)}
+.addline input[type=date]{font-family:var(--mono);font-size:11.5px}
+.addline .tema{flex:1;min-width:200px}
+tr.addtr td{background:rgba(255,255,255,.015);border-top:1px solid var(--border2)}
 .batch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:rgba(240,78,35,.1);border-bottom:1px solid rgba(240,78,35,.3);font-size:12.5px}
 .batch select,.batch input{font-family:var(--font);font-size:12px;padding:5px 8px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px;outline:none}
 /* pegar desde planilla */
@@ -351,10 +393,12 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
   <div class="drawer-foot" id="dFoot"></div>
 </div>
 
+<div class="modal-bg" id="mBg"><div class="modal" id="modal"></div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.2';
+const VERSION_APP = '2026-10-07.3';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -376,7 +420,7 @@ var R    = {};        // resumen por período (todas las marcas)
 var tab  = 'calendario';
 var sel  = {marca: null, periodo: null, vista: 'cal'};
 var filtroCanal = {email:true, push:true, wpp:true};
-var form = null;      // borrador del drawer abierto
+var frm = null;      // borrador del drawer abierto
 var arrastrando = null;
 var quick = null;     // carga rápida abierta en un día: {fecha, canal, texto}
 var ultimoCanal = null;
@@ -668,7 +712,7 @@ function renderCalendario(){
     '<button class="btn-sm" onclick="descargarCSV()">Descargar CSV</button></div></div>';
 
   var vis = envs.filter(function(e){ return filtroCanal[e.canal]; });
-  h += '<div class="cal-layout' + (sel.vista === 'lista' && ed ? ' full' : '') + '"><div>' +
+  h += '<div class="cal-layout"><div>' +
     (sel.vista === 'cal' ? gridMes(m, p, vis, ed) : listaMes(vis, ed)) +
     '</div><div>' + panelLateral(m, p, reg, ed, canales) + '</div></div>';
   $('panes').innerHTML = h;
@@ -726,7 +770,7 @@ function qaCerrar(){ quick = null; render(); }
 function qaMas(){
   var t = qaTexto(), f = quick.fecha, c = quick.canal;
   quick = null; render();
-  abrirEnvio(null, f); form.titulo = t; form.canal = c; dibujarEnvio();
+  abrirEnvio(null, f); frm.titulo = t; frm.canal = c; dibujarEnvio(true);
 }
 function qaKey(ev){
   if (ev.key === 'Escape'){ ev.preventDefault(); qaCerrar(); return; }
@@ -809,51 +853,64 @@ function listaMes(envs, ed){
   }
   var h = '<div class="section">';
   if (nSel) h += barraLote(nSel, cs);
-  h += '<div class="twrap"><table class="etab"><thead><tr>' +
-    '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + ' onchange="selTodos(this.checked)"></th>' +
-    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tema</th><th>Asunto / copy</th><th>Tipo</th><th>Segmento</th><th>Estado</th><th></th></tr></thead><tbody>' +
-    envs.map(function(e){ return filaEditable(e, cs); }).join('') + filaNueva(cs) +
-    '</tbody></table></div>' +
+  h += '<div class="twrap"><table class="ltab"><thead><tr>' +
+    '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + (envs.length ? '' : ' disabled') + ' onchange="selTodos(this.checked)"></th>' +
+    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>';
+  if (!envs.length) h += '<tr><td colspan="9"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
+  envs.forEach(function(e){
+    var id = e.id, ce = function(campo, cls, html){
+      return '<td class="ed ' + cls + '" onclick="editarCelda(this,' + id + ',\'' + campo + '\')">' + html + '</td>';
+    };
+    var csE = cs.indexOf(e.canal) >= 0 ? cs : cs.concat([e.canal]);
+    h += '<tr class="' + (selIds[id] ? 'chk-on' : '') + '">' +
+      '<td class="sel"><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
+      ce('fecha', 'lst-fecha', dowDe(e.fecha) + ' ' + fechaCorta(e.fecha)) +
+      ce('hora', 'lst-fecha muted', esc(e.hora || '')) +
+      '<td><select class="chip-sel c-' + e.canal + '" onchange="editCampo(' + id + ',\'canal\',this.value)">' + opciones(csE, e.canal, CLABEL) + '</select></td>' +
+      ce('tipo', 'muted', esc(e.tipo || '')) +
+      ce('titulo', 'strong', esc(e.titulo)) +
+      ce('asunto', '', '<div class="wrap-cell">' + esc(e.asunto || '') + '</div>') +
+      ce('segmento', 'muted', esc(e.segmento || '')) +
+      '<td style="white-space:nowrap"><select class="chip-sel s-' + e.estado + '" onchange="editCampo(' + id + ',\'estado\',this.value)">' + opciones(EST_ENV, e.estado, ELABEL) + '</select>' +
+      ' <button class="mini" title="Abrir el envío completo" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
+  });
+  h += '<tr class="addtr"><td class="sel muted">+</td><td colspan="8"><div class="addline" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
+    '<input type="date" id="nFecha" value="' + nuevaFila.fecha + '">' +
+    '<select id="nCanal">' + opciones(cs, nuevaFila.canal, CLABEL) + '</select>' +
+    '<input class="tema" id="nTitulo" data-k="n-titulo" placeholder="Nuevo envío: escribí el tema y Enter" autocomplete="off">' +
+    '<button class="btn-sm" onclick="agregarFila()">Agregar</button></div></td></tr>';
+  h += '</tbody></table></div>' +
     '<datalist id="lTiposL">' + tipos.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
     '<datalist id="lSegsL">' + segs.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist></div>' +
-    '<div class="hint" style="margin-top:-8px">Se edita como una planilla: los cambios se guardan solos al salir de cada celda. ' +
-    'En la fila naranja escribís un envío nuevo y Enter. Tildá varios para cambiarles el estado, el canal o la fecha juntos.</div>';
+    '<div class="hint" style="margin-top:-8px">Tocá cualquier celda para editarla (Enter guarda, Esc cancela). Canal y estado se cambian desde su chip. ' +
+    'Tildá varios para cambiarlos juntos.</div>';
   return h;
 }
-function filaEditable(e, cs){
-  var id = e.id, k = function(c){ return ' data-k="' + id + '-' + c + '"'; };
-  var on = function(c){ return ' onchange="editCampo(' + id + ',\'' + c + '\',this.value)"'; };
-  var csE = cs.indexOf(e.canal) >= 0 ? cs : cs.concat([e.canal]);
-  return '<tr class="' + (selIds[id] ? 'chk-on' : '') + '">' +
-    '<td class="sel"><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
-    '<td><input type="date" class="cell date" value="' + e.fecha + '"' + k('fecha') + on('fecha') + '></td>' +
-    '<td><input type="time" class="cell time" value="' + esc(e.hora || '') + '"' + k('hora') + on('hora') + '></td>' +
-    '<td><select class="cell ch-' + e.canal + '"' + k('canal') + on('canal') + '>' + opciones(csE, e.canal, CLABEL) + '</select></td>' +
-    '<td><input class="cell w-tema" value="' + esc(e.titulo) + '"' + k('titulo') + on('titulo') + '></td>' +
-    '<td><input class="cell w-asunto" value="' + esc(e.asunto || '') + '"' + k('asunto') + on('asunto') + '></td>' +
-    '<td><input class="cell w-sm" list="lTiposL" value="' + esc(e.tipo || '') + '"' + k('tipo') + on('tipo') + '></td>' +
-    '<td><input class="cell w-sm" list="lSegsL" value="' + esc(e.segmento || '') + '"' + k('segmento') + on('segmento') + '></td>' +
-    '<td><select class="cell st-' + e.estado + '"' + k('estado') + on('estado') + '>' + opciones(EST_ENV, e.estado, ELABEL) + '</select></td>' +
-    '<td><button class="mini" title="Abrir con todos los campos" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
-}
-function filaNueva(cs){
-  var nf = nuevaFila;
-  return '<tr class="newrow" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
-    '<td class="sel muted">+</td>' +
-    '<td><input type="date" class="cell date" id="nFecha" data-k="n-fecha" value="' + nf.fecha + '"></td>' +
-    '<td><input type="time" class="cell time" id="nHora" data-k="n-hora"></td>' +
-    '<td><select class="cell ch-' + nf.canal + '" id="nCanal" data-k="n-canal" onchange="this.className=\'cell ch-\'+this.value">' + opciones(cs, nf.canal, CLABEL) + '</select></td>' +
-    '<td><input class="cell w-tema" id="nTitulo" data-k="n-titulo" placeholder="Nuevo envío: tema + Enter"></td>' +
-    '<td><input class="cell w-asunto" id="nAsunto" data-k="n-asunto" placeholder="Asunto / copy"></td>' +
-    '<td><input class="cell w-sm" id="nTipo" data-k="n-tipo" list="lTiposL"></td>' +
-    '<td><input class="cell w-sm" id="nSeg" data-k="n-seg" list="lSegsL"></td>' +
-    '<td><select class="cell" id="nEstado" data-k="n-estado">' + opciones(EST_ENV, 'planificado', ELABEL) + '</select></td>' +
-    '<td><button class="mini" onclick="agregarFila()">Agregar</button></td></tr>';
+function editarCelda(td, id, campo){
+  if (td.querySelector('input')) return;
+  var e = buscarEnvio(id);
+  if (!e) return;
+  var val = e[campo] || '';
+  var type = campo === 'fecha' ? 'date' : campo === 'hora' ? 'time' : 'text';
+  var list = campo === 'tipo' ? ' list="lTiposL"' : campo === 'segmento' ? ' list="lSegsL"' : '';
+  td.innerHTML = '<input class="cell-in" type="' + type + '"' + list + ' value="' + esc(val) + '">';
+  var inp = td.firstChild, hecho = false;
+  inp.focus();
+  if (type === 'text') inp.select();
+  inp.onkeydown = function(ev){
+    if (ev.key === 'Enter'){ ev.preventDefault(); inp.blur(); }
+    else if (ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); hecho = true; render(); }
+  };
+  inp.onblur = function(){
+    if (hecho) return;
+    hecho = true;
+    if (inp.value.trim() === String(val)) { render(); return; }
+    editCampo(id, campo, inp.value);
+  };
 }
 function agregarFila(){
-  var row = {marca_id: sel.marca, fecha: $('nFecha').value, hora: $('nHora').value || null, canal: $('nCanal').value,
-    titulo: $('nTitulo').value.trim(), asunto: $('nAsunto').value.trim() || null, tipo: $('nTipo').value.trim() || null,
-    segmento: $('nSeg').value.trim() || null, estado: $('nEstado').value, creado_por: nombreUsuario()};
+  var row = {marca_id: sel.marca, fecha: $('nFecha').value, canal: $('nCanal').value,
+    titulo: $('nTitulo').value.trim(), estado: 'planificado', creado_por: nombreUsuario()};
   if (!row.fecha) return toast('Falta la fecha', true);
   if (!row.titulo){ $('nTitulo').focus(); return toast('Falta el tema', true); }
   sb.from('cal_envios').insert(row).select().single().then(function(r){
@@ -870,7 +927,7 @@ function editCampo(id, campo, val){
   var e = buscarEnvio(id);
   if (!e) return;
   val = String(val || '').trim();
-  if ((e[campo] || '') === val) return;
+  if ((e[campo] || '') === val){ render(); return; }
   if (campo === 'titulo' && !val){ toast('El tema no puede quedar vacío', true); render(); return; }
   if (campo === 'fecha' && !val){ render(); return; }
   var o = {actualizado_at: new Date().toISOString()};
@@ -878,7 +935,7 @@ function editCampo(id, campo, val){
   sb.from('cal_envios').update(o).eq('id', id).select().single().then(function(r){
     if (r.error){ toast(r.error.message, true); render(); return; }
     reemplazarLocal(r.data);
-    if (campo === 'fecha' || campo === 'canal' || campo === 'estado') render();
+    render();
     if (campo === 'fecha' && periodoDe(val) !== sel.periodo) toast('Movido a ' + periodoLargo(periodoDe(val)));
   });
 }
@@ -1048,10 +1105,14 @@ function abrirDrawer(titulo, meta, body, foot){
   $('dFoot').style.display = foot ? 'flex' : 'none';
   $('drawer').classList.add('open'); $('drawerBg').classList.add('open');
 }
-function cerrarDrawer(){ $('drawer').classList.remove('open'); $('drawerBg').classList.remove('open'); form = null; }
+function cerrarDrawer(){ $('drawer').classList.remove('open'); $('drawerBg').classList.remove('open'); frm = null; }
 $('dClose').onclick = cerrarDrawer;
 $('drawerBg').onclick = cerrarDrawer;
-document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && $('drawer').classList.contains('open')) cerrarDrawer(); });
+document.addEventListener('keydown', function(ev){
+  if (ev.key !== 'Escape') return;
+  if ($('mBg').classList.contains('open')) cerrarModal();
+  else if ($('drawer').classList.contains('open')) cerrarDrawer();
+});
 
 // ── envío: alta / edición ──────────────────────────────────────────────────
 function buscarEnvio(id){
@@ -1070,78 +1131,105 @@ function abrirEnvio(id, fecha){
   var e = id ? buscarEnvio(id) : null;
   var hoy = hoyStr();
   var def = periodoDe(hoy) === sel.periodo ? hoy : sel.periodo;
-  form = e ? Object.assign({}, e) : {id: null, marca_id: m, fecha: fecha || def, hora: '', canal: canalesDe(m)[0],
+  var cs = canalesDe(m);
+  frm = e ? Object.assign({}, e) : {id: null, marca_id: m, fecha: fecha || def, hora: '',
+    canal: cs.indexOf(ultimoCanal) >= 0 ? ultimoCanal : cs[0],
     tipo: '', titulo: '', asunto: '', segmento: '', notas: '', estado: 'planificado'};
-  dibujarEnvio();
+  // los detalles arrancan abiertos solo si el envío ya tiene alguno cargado
+  frm.mas = !!(e && (e.tipo || e.segmento || e.notas));
+  frm.dup = false;
+  dibujarEnvio(true);
 }
-function dibujarEnvio(){
-  var f = form, ed = puedeEditar(f.marca_id), dis = ed ? '' : ' disabled';
+// tarjeta liviana: canal, tema, fecha/hora y asunto a la vista; el resto plegado
+function dibujarEnvio(enfocar){
+  var f = frm, ed = puedeEditar(f.marca_id), dis = ed ? '' : ' disabled';
   var usados = D.env[f.marca_id] || [];
   var tipos = TIPOS.concat(usados.map(function(e){ return e.tipo; })).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
   var segs = usados.map(function(e){ return e.segmento; }).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
   var canalesM = canalesDe(f.marca_id);
   if (canalesM.indexOf(f.canal) < 0) canalesM = canalesM.concat([f.canal]);
-
-  var b = '<div class="fg"><label>Canal</label><span class="seg">' + canalesM.map(function(k){
-      return '<button class="' + k + (f.canal === k ? ' on' : '') + '"' + dis + ' onclick="leerEnvio();form.canal=\'' + k + '\';dibujarEnvio()">' + CLABEL[k] + '</button>';
-    }).join('') + '</span></div>' +
-    '<div class="fg-row"><div class="fg"><label>Fecha</label><input type="date" id="fFecha" value="' + esc(f.fecha) + '"' + dis + '></div>' +
-    '<div class="fg"><label>Hora (opcional)</label><input type="time" id="fHora" value="' + esc(f.hora || '') + '"' + dis + '></div></div>' +
-    '<div class="fg"><label>Tema / nombre de la campaña</label><input id="fTitulo" value="' + esc(f.titulo) + '" placeholder="Ej: Lanzamiento colección verano"' + dis + '></div>' +
-    '<div class="fg-row"><div class="fg"><label>Tipo</label><input id="fTipo" list="lTipos" value="' + esc(f.tipo || '') + '"' + dis + '></div>' +
-    '<div class="fg"><label>Segmento</label><input id="fSeg" list="lSegs" value="' + esc(f.segmento || '') + '" placeholder="Base completa, compradores 90d…"' + dis + '></div></div>' +
-    '<datalist id="lTipos">' + tipos.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
-    '<datalist id="lSegs">' + segs.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
-    '<div class="fg"><label>' + (f.canal === 'email' ? 'Asunto / preheader' : 'Copy') + '</label><textarea id="fAsunto"' + dis + '>' + esc(f.asunto || '') + '</textarea></div>' +
-    '<div class="fg"><label>Estado</label><span class="seg">' + EST_ENV.map(function(s){
-      return '<button class="' + s + (f.estado === s ? ' on' : '') + '"' + dis + ' onclick="leerEnvio();form.estado=\'' + s + '\';dibujarEnvio()">' + ELABEL[s] + '</button>';
-    }).join('') + '</span></div>' +
-    '<div class="fg"><label>Notas internas (no salen en la vista cliente)</label><textarea id="fNotas"' + dis + '>' + esc(f.notas || '') + '</textarea></div>';
-  if (f.id) b += '<div class="muted" style="font-size:11px">Cargado por ' + esc(f.creado_por || '—') + (f.copiado_de ? ' · copiado de otro mes' : '') + '</div>';
-
-  var foot = ed ? '<button class="btn-orange" onclick="guardarEnvio()">Guardar</button>' +
-    (f.id ? '<button class="btn-sm" onclick="duplicarEnvio()">Duplicar</button><span class="spacer"></span><button class="btn-danger" onclick="borrarEnvio()">Eliminar</button>' : '') : '';
   var marca = D.marcaById[f.marca_id];
-  abrirDrawer(f.id ? 'Editar envío' : 'Nuevo envío', marca ? marca.nombre : '', b, foot);
+  var titulo = f.dup ? 'Duplicar envío' : f.id ? 'Editar envío' : 'Nuevo envío';
+
+  var segEstado = '<span class="seg">' + EST_ENV.map(function(s){
+    return '<button class="' + s + (f.estado === s ? ' on' : '') + '"' + dis + ' onclick="leerEnvio();frm.estado=\'' + s + '\';dibujarEnvio()">' + ELABEL[s] + '</button>';
+  }).join('') + '</span>';
+
+  var h = '<div class="m-top"><span class="m-marca">' + esc(titulo) + ' · ' + esc(marca ? marca.nombre : '') + '</span>' +
+    '<button class="m-x" onclick="cerrarModal()" title="Cerrar (Esc)">&times;</button></div>' +
+    '<div class="m-body"><span class="seg pills">' + canalesM.map(function(k){
+      return '<button class="' + k + (f.canal === k ? ' on' : '') + '"' + dis + ' onclick="leerEnvio();frm.canal=\'' + k + '\';ultimoCanal=\'' + k + '\';dibujarEnvio()">' + CLABEL[k] + '</button>';
+    }).join('') + '</span>' +
+    '<input class="m-tema" id="fTitulo" value="' + esc(f.titulo) + '" placeholder="¿Qué se envía? Ej: Promo Día de la Madre" autocomplete="off"' + dis +
+    ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();guardarEnvio()}">' +
+    '<div class="m-row"><label class="m-pill">Fecha<input type="date" id="fFecha" value="' + esc(f.fecha) + '"' + dis + '></label>' +
+    '<label class="m-pill">Hora<input type="time" id="fHora" value="' + esc(f.hora || '') + '"' + dis + '></label></div>' +
+    '<textarea class="m-area" id="fAsunto" rows="2" placeholder="' + (f.canal === 'email' ? 'Asunto / preheader' : 'Copy del mensaje') + ' (opcional)"' + dis +
+    ' onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){event.preventDefault();guardarEnvio()}">' + esc(f.asunto || '') + '</textarea>' +
+    (f.id ? '<div class="m-lab">Estado</div>' + segEstado : '') +
+    '<button class="m-more" onclick="leerEnvio();frm.mas=!frm.mas;dibujarEnvio()">' + (f.mas ? '− Ocultar detalles' : '+ Tipo, segmento' + (f.id ? '' : ', estado') + ' y notas') + '</button>';
+  if (f.mas){
+    h += '<div class="m-grid" style="margin-top:10px">' +
+      '<input class="m-in" id="fTipo" list="lTipos" value="' + esc(f.tipo || '') + '" placeholder="Tipo (promo, newsletter…)"' + dis + '>' +
+      '<input class="m-in" id="fSeg" list="lSegs" value="' + esc(f.segmento || '') + '" placeholder="Segmento"' + dis + '></div>' +
+      '<datalist id="lTipos">' + tipos.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
+      '<datalist id="lSegs">' + segs.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
+      (f.id ? '' : '<div class="m-lab">Estado</div>' + segEstado) +
+      '<textarea class="m-area" id="fNotas" rows="2" placeholder="Notas internas (no salen en la vista cliente)"' + dis + '>' + esc(f.notas || '') + '</textarea>';
+  }
+  if (f.id && !f.dup) h += '<div class="m-kbd" style="margin-top:10px">Cargado por ' + esc(f.creado_por || '—') + (f.copiado_de ? ' · copiado de otro mes' : '') + '</div>';
+  h += '</div><div class="m-foot">';
+  if (ed && f.id && !f.dup) h += '<button class="m-link" onclick="duplicarEnvio()">Duplicar</button><button class="m-link del" onclick="borrarEnvio()">Eliminar</button>';
+  h += '<span class="spacer"></span>' + (ed ? '<span class="m-kbd">Enter para guardar</span>' : '') +
+    '<button class="btn-sm" onclick="cerrarModal()">' + (ed ? 'Cancelar' : 'Cerrar') + '</button>' +
+    (ed ? '<button class="btn-orange" onclick="guardarEnvio()">Guardar</button>' : '') + '</div>';
+  $('modal').innerHTML = h;
+  $('mBg').classList.add('open');
+  if (enfocar && ed && !f.id){ var t = $('fTitulo'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
 }
+function cerrarModal(){ $('mBg').classList.remove('open'); frm = null; }
+$('mBg').onclick = function(ev){ if (ev.target === $('mBg')) cerrarModal(); };
 function leerEnvio(){
-  if (!form || !$('fFecha')) return;
-  form.fecha = $('fFecha').value; form.hora = $('fHora').value; form.titulo = $('fTitulo').value;
-  form.tipo = $('fTipo').value; form.segmento = $('fSeg').value; form.asunto = $('fAsunto').value; form.notas = $('fNotas').value;
+  if (!frm || !$('fTitulo')) return;
+  var v = function(id, k){ var el = $(id); if (el) frm[k] = el.value; };
+  v('fFecha', 'fecha'); v('fHora', 'hora'); v('fTitulo', 'titulo'); v('fAsunto', 'asunto');
+  v('fTipo', 'tipo'); v('fSeg', 'segmento'); v('fNotas', 'notas');
 }
 function guardarEnvio(){
   leerEnvio();
-  var f = form;
+  var f = frm;
+  if (!f || !puedeEditar(f.marca_id)) return;
   if (!f.fecha) return toast('Falta la fecha', true);
-  if (!f.titulo.trim()) return toast('Falta el tema del envío', true);
-  var row = {marca_id: f.marca_id, fecha: f.fecha, hora: f.hora || null, canal: f.canal, tipo: f.tipo.trim() || null,
-    titulo: f.titulo.trim(), asunto: f.asunto.trim() || null, segmento: f.segmento.trim() || null,
-    notas: f.notas.trim() || null, estado: f.estado, actualizado_at: new Date().toISOString()};
+  if (!String(f.titulo).trim()){ $('fTitulo').focus(); return toast('Falta el tema del envío', true); }
+  var t = function(x){ return String(x || '').trim() || null; };
+  var row = {marca_id: f.marca_id, fecha: f.fecha, hora: f.hora || null, canal: f.canal, tipo: t(f.tipo),
+    titulo: f.titulo.trim(), asunto: t(f.asunto), segmento: t(f.segmento), notas: t(f.notas),
+    estado: f.estado, actualizado_at: new Date().toISOString()};
   var q = f.id
     ? sb.from('cal_envios').update(row).eq('id', f.id)
     : sb.from('cal_envios').insert(Object.assign(row, {creado_por: nombreUsuario(), copiado_de: f.copiado_de || null}));
   q.select().single().then(function(r){
     if (r.error) return toast(r.error.message, true);
     reemplazarLocal(r.data);
+    ultimoCanal = r.data.canal;
     var otroMes = periodoDe(r.data.fecha) !== sel.periodo;
-    cerrarDrawer(); render();
+    cerrarModal(); render();
     toast(otroMes ? 'Guardado en ' + periodoLargo(periodoDe(r.data.fecha)) : 'Guardado');
   });
 }
 function duplicarEnvio(){
   leerEnvio();
-  form = Object.assign({}, form, {id: null, estado: 'planificado', copiado_de: null, creado_por: null});
-  dibujarEnvio();
-  $('dName').textContent = 'Duplicar envío';
+  frm = Object.assign({}, frm, {id: null, estado: 'planificado', copiado_de: null, creado_por: null, dup: true});
+  dibujarEnvio(true);
   toast('Cambiá la fecha o el canal y guardá');
 }
 function borrarEnvio(){
   if (!confirm('¿Eliminar este envío?\nSi se canceló, mejor marcalo como Cancelado así queda en el historial.')) return;
-  var f = form;
+  var f = frm;
   sb.from('cal_envios').delete().eq('id', f.id).then(function(r){
     if (r.error) return toast(r.error.message, true);
     D.env[f.marca_id] = D.env[f.marca_id].filter(function(x){ return x.id !== f.id; });
-    invalidarResumen(); cerrarDrawer(); render(); toast('Eliminado');
+    invalidarResumen(); cerrarModal(); render(); toast('Eliminado');
   });
 }
 
@@ -1168,26 +1256,26 @@ function abrirCopia(origen){
   }
   if (!opciones.length) return toast('Esta marca no tiene envíos cargados en los meses anteriores', true);
   if (!origen || opciones.indexOf(origen) < 0) origen = opciones[0];
-  form = {tipo: 'copia', origen: origen, opciones: opciones, modo: 'semana', no: {}};
-  envDeMes(m, origen).forEach(function(e){ if (e.estado === 'cancelado') form.no[e.id] = true; });
+  frm = {tipo: 'copia', origen: origen, opciones: opciones, modo: 'semana', no: {}};
+  envDeMes(m, origen).forEach(function(e){ if (e.estado === 'cancelado') frm.no[e.id] = true; });
   dibujarCopia();
 }
 function dibujarCopia(){
-  var f = form, m = sel.marca, envs = envDeMes(m, f.origen);
+  var f = frm, m = sel.marca, envs = envDeMes(m, f.origen);
   var yaHay = envDeMes(m, sel.periodo).length;
   var n = envs.filter(function(e){ return !f.no[e.id]; }).length;
   var b = (yaHay ? '<div class="note">Este mes ya tiene ' + yaHay + ' envío(s). Los copiados se suman, no reemplazan.</div>' : '') +
-    '<div class="fg"><label>Copiar desde</label><select onchange="form.origen=this.value;form.no={};dibujarCopia()">' +
+    '<div class="fg"><label>Copiar desde</label><select onchange="frm.origen=this.value;frm.no={};dibujarCopia()">' +
     f.opciones.map(function(p){ return '<option value="' + p + '"' + (p === f.origen ? ' selected' : '') + '>' + periodoLargo(p) + ' (' + envDeMes(m, p).length + ' envíos)</option>'; }).join('') +
     '</select></div>' +
     '<div class="fg"><label>Cómo ubicar las fechas</label><span class="seg">' +
-    '<button class="' + (f.modo === 'semana' ? 'on' : '') + '" onclick="form.modo=\'semana\';dibujarCopia()">Mismo día de la semana</button>' +
-    '<button class="' + (f.modo === 'numero' ? 'on' : '') + '" onclick="form.modo=\'numero\';dibujarCopia()">Mismo número de día</button></span></div>' +
+    '<button class="' + (f.modo === 'semana' ? 'on' : '') + '" onclick="frm.modo=\'semana\';dibujarCopia()">Mismo día de la semana</button>' +
+    '<button class="' + (f.modo === 'numero' ? 'on' : '') + '" onclick="frm.modo=\'numero\';dibujarCopia()">Mismo número de día</button></span></div>' +
     '<div class="dsec">Envíos (' + n + ' de ' + envs.length + ' seleccionados)</div>' +
     envs.map(function(e){
       var nf = fechaEquivalente(e.fecha, sel.periodo, f.modo);
       return '<label class="pick-row' + (f.no[e.id] ? ' off' : '') + '"><input type="checkbox"' + (f.no[e.id] ? '' : ' checked') +
-        ' onchange="form.no[' + e.id + ']=!this.checked;dibujarCopia()">' +
+        ' onchange="frm.no[' + e.id + ']=!this.checked;dibujarCopia()">' +
         '<span class="f">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + ' → ' + dowDe(nf) + ' ' + fechaCorta(nf) + '</span>' +
         '<i class="dot ' + e.canal + '"></i><span class="t">' + esc(e.titulo) + '</span>' + chipEstado(e.estado) + '</label>';
     }).join('') +
@@ -1196,7 +1284,7 @@ function dibujarCopia(){
     '<button class="btn-orange"' + (n ? '' : ' disabled') + ' onclick="ejecutarCopia()">Copiar ' + n + ' envío(s)</button>');
 }
 function ejecutarCopia(){
-  var f = form, m = sel.marca;
+  var f = frm, m = sel.marca;
   var rows = envDeMes(m, f.origen).filter(function(e){ return !f.no[e.id]; }).map(function(e){
     return {marca_id: m, fecha: fechaEquivalente(e.fecha, sel.periodo, f.modo), hora: e.hora, canal: e.canal, tipo: e.tipo,
       titulo: e.titulo, asunto: e.asunto, segmento: e.segmento, notas: e.notas, estado: 'planificado',
@@ -1311,20 +1399,20 @@ function parsePegado(txt, periodo, marcaId){
   });
 }
 function abrirPegar(){
-  form = {tipo: 'pegar', txt: '', filas: []};
+  frm = {tipo: 'pegar', txt: '', filas: []};
   var b = '<div class="note blue">Seleccioná las filas en Sheets o Excel, copialas y pegalas acá (Ctrl+V).<br>' +
     'Si la primera fila tiene títulos (<b>Fecha, Canal, Tema, Asunto, Segmento, Tipo, Hora, Estado, Notas</b>) se usan para ubicar cada columna, en cualquier orden. ' +
     'Si no, el orden es <b>Fecha · Canal · Tema · Asunto · Segmento</b>.<br>' +
     'Fecha: <b>15/10</b>, <b>15/10/2026</b> o solo <b>15</b> (= día de ' + periodoLargo(sel.periodo).toLowerCase() + '). Canal: email / push / whatsapp (o e / p / w). ' +
     'También acepta lo que sale de “Copiar para Sheets”.</div>' +
-    '<textarea class="paste" id="pTxt" placeholder="15/10&#9;Email&#9;Promo Día de la Madre&#9;20% off en toda la tienda&#9;Base completa" oninput="form.txt=this.value;previewPegar()"></textarea>' +
+    '<textarea class="paste" id="pTxt" placeholder="15/10&#9;Email&#9;Promo Día de la Madre&#9;20% off en toda la tienda&#9;Base completa" oninput="frm.txt=this.value;previewPegar()"></textarea>' +
     '<div id="pPrev"></div>';
   abrirDrawer('Pegar desde planilla', D.marcaById[sel.marca].nombre, b,
     '<button class="btn-orange" id="pBtn" disabled onclick="importarPegado()">Crear envíos</button>');
   setTimeout(function(){ var t = $('pTxt'); if (t) t.focus(); }, 50);
 }
 function previewPegar(){
-  var filas = form.filas = parsePegado(form.txt, sel.periodo, sel.marca);
+  var filas = frm.filas = parsePegado(frm.txt, sel.periodo, sel.marca);
   var ok = filas.filter(function(f){ return !f.err; }).length;
   $('pBtn').disabled = !ok;
   $('pBtn').textContent = ok ? 'Crear ' + ok + ' envío(s)' : 'Crear envíos';
@@ -1340,7 +1428,7 @@ function previewPegar(){
     }).join('') + '</tbody></table></div>';
 }
 function importarPegado(){
-  var rows = form.filas.filter(function(f){ return !f.err; }).map(function(f){
+  var rows = frm.filas.filter(function(f){ return !f.err; }).map(function(f){
     return {marca_id: sel.marca, fecha: f.fecha, hora: f.hora, canal: f.canal, tipo: f.tipo, titulo: f.titulo,
       asunto: f.asunto, segmento: f.segmento, notas: f.notas, estado: f.estado, creado_por: nombreUsuario()};
   });
@@ -1357,27 +1445,27 @@ function importarPegado(){
 function abrirCierre(){
   var envs = envDeMes(sel.marca, sel.periodo);
   var reg = mesReg(sel.marca, sel.periodo) || {};
-  form = {tipo: 'cierre', est: {}};
+  frm = {tipo: 'cierre', est: {}};
   envs.forEach(function(e){
-    form.est[e.id] = (e.estado === 'cancelado' || e.estado === 'enviado') ? e.estado
+    frm.est[e.id] = (e.estado === 'cancelado' || e.estado === 'enviado') ? e.estado
       : (e.estado === 'idea' ? 'cancelado' : 'enviado');
   });
-  form.funciono = reg.funciono || ''; form.no_funciono = reg.no_funciono || ''; form.repetir = reg.repetir || '';
+  frm.funciono = reg.funciono || ''; frm.no_funciono = reg.no_funciono || ''; frm.repetir = reg.repetir || '';
   dibujarCierre();
 }
 function leerCierre(){
   if (!$('cFun')) return;
-  form.funciono = $('cFun').value; form.no_funciono = $('cNo').value; form.repetir = $('cRep').value;
+  frm.funciono = $('cFun').value; frm.no_funciono = $('cNo').value; frm.repetir = $('cRep').value;
 }
 function dibujarCierre(){
-  var envs = envDeMes(sel.marca, sel.periodo), f = form;
+  var envs = envDeMes(sel.marca, sel.periodo), f = frm;
   var b = '<div class="note blue">Confirmá qué salió y qué no. Queda como historial y aparece como “mes anterior” cuando armes el próximo.</div>' +
     '<div class="dsec">Envíos del mes</div>' +
     (envs.length ? envs.map(function(e){
       return '<div class="pick-row"><span class="f">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + '</span><i class="dot ' + e.canal + '"></i>' +
         '<span class="t">' + esc(e.titulo) + '</span><span class="seg">' +
         ['enviado','cancelado'].map(function(s){
-          return '<button class="' + s + (f.est[e.id] === s ? ' on' : '') + '" onclick="leerCierre();form.est[' + e.id + ']=\'' + s + '\';dibujarCierre()">' + ELABEL[s] + '</button>';
+          return '<button class="' + s + (f.est[e.id] === s ? ' on' : '') + '" onclick="leerCierre();frm.est[' + e.id + ']=\'' + s + '\';dibujarCierre()">' + ELABEL[s] + '</button>';
         }).join('') + '</span></div>';
     }).join('') : '<div class="muted" style="font-size:12px">No hay envíos cargados.</div>') +
     '<div class="dsec">Aprendizajes</div>' +
@@ -1389,7 +1477,7 @@ function dibujarCierre(){
 }
 function ejecutarCierre(){
   leerCierre();
-  var f = form, envs = envDeMes(sel.marca, sel.periodo);
+  var f = frm, envs = envDeMes(sel.marca, sel.periodo);
   var grupos = {enviado: [], cancelado: []};
   envs.forEach(function(e){ if (f.est[e.id] && f.est[e.id] !== e.estado) grupos[f.est[e.id]].push(e.id); });
   var ahora = new Date().toISOString();
@@ -1677,7 +1765,7 @@ function abrirFecha(id){
     '<div class="fg"><label>Alcance</label><select id="kMarca">' + opciones + '</select></div>' +
     '<label class="chk" style="margin-bottom:14px"><input type="checkbox" id="kAnual"' + (f && f.anual ? ' checked' : '') + '> Se repite todos los años el mismo día</label>' +
     '<div class="fg"><label>Notas</label><textarea id="kNotas">' + esc(f && f.notas ? f.notas : '') + '</textarea></div>';
-  form = {tipo: 'fecha', id: id};
+  frm = {tipo: 'fecha', id: id};
   abrirDrawer(f ? 'Editar fecha clave' : 'Nueva fecha clave', '', b,
     '<button class="btn-orange" onclick="guardarFecha()">Guardar</button>' + (f ? '<span class="spacer"></span><button class="btn-danger" onclick="borrarFecha()">Eliminar</button>' : ''));
 }
@@ -1686,7 +1774,7 @@ function guardarFecha(){
     marca_id: $('kMarca').value ? +$('kMarca').value : null, anual: $('kAnual').checked, notas: $('kNotas').value.trim() || null};
   if (!row.nombre || !row.fecha) return toast('Faltan el nombre o la fecha', true);
   if (row.hasta && row.hasta < row.fecha) return toast('“Hasta” no puede ser anterior a “Desde”', true);
-  var id = form.id;
+  var id = frm.id;
   var q = id ? sb.from('cal_fechas').update(row).eq('id', id) : sb.from('cal_fechas').insert(row);
   q.select().single().then(function(r){
     if (r.error) return toast(r.error.message, true);
@@ -1697,7 +1785,7 @@ function guardarFecha(){
 }
 function borrarFecha(){
   if (!confirm('¿Eliminar esta fecha clave?')) return;
-  var id = form.id;
+  var id = frm.id;
   sb.from('cal_fechas').delete().eq('id', id).then(function(r){
     if (r.error) return toast(r.error.message, true);
     D.fechas = D.fechas.filter(function(x){ return x.id !== id; });
