@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We Are — Calendario Owned</title>
+<link rel="icon" type="image/png" href="Iso.png">
+<link rel="apple-touch-icon" href="Iso.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1929;--bg2:#112240;--bg3:#1a3355;
+  --border:rgba(255,255,255,0.18);--border2:rgba(255,255,255,0.15);
+  --text:#f0f0f0;--text2:#8892a4;--text3:#3d4f6b;
+  --orange:#f04e23;--orange2:#d43d16;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#7a9eca;
+  --ch-email:#f04e23;--ch-push:#7a9eca;--ch-wpp:#22c55e;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* auth */
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-xl);padding:40px;width:100%;max-width:380px}
+.text-logo-xl{font-size:36px;font-weight:800;letter-spacing:-0.03em;text-align:center;margin-bottom:6px}
+.text-logo-sm{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.logo-we{color:#f0f0f0}.logo-are{color:var(--orange)}
+.auth-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:24px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em}
+.fg input,.fg select,.fg textarea{font-family:var(--font);font-size:14px;padding:10px 13px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;width:100%}
+.fg textarea{min-height:70px;resize:vertical;line-height:1.45;font-size:13px}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--orange)}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-primary{width:100%;font-family:var(--font);font-size:14px;font-weight:600;padding:12px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;margin-top:6px}
+.btn-primary:hover{background:var(--orange2)}
+.auth-error{font-size:12px;color:var(--orange);text-align:center;margin-top:10px;min-height:18px;line-height:1.45}
+
+/* shell */
+.app{display:none;min-height:100vh;flex-direction:column}.app.visible{display:flex}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:200}
+.top-left{display:flex;align-items:center;gap:10px}
+.top-divider{width:1px;height:20px;background:var(--border2)}
+.top-right{display:flex;align-items:center;gap:8px}
+.user-pill{font-size:12px;color:var(--text2);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
+.role-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em}
+.role-admin{background:rgba(240,78,35,0.15);color:#f04e23;border:1px solid rgba(240,78,35,0.3)}
+.role-analista{background:rgba(61,79,107,0.3);color:#7a9eca;border:1px solid rgba(61,79,107,0.5)}
+.role-lector{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border2)}
+.btn-sm{font-family:var(--font);font-size:12px;padding:6px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;white-space:nowrap}
+.btn-sm:hover{color:var(--orange);border-color:var(--orange)}
+.btn-sm:disabled{opacity:.4;cursor:default}
+.btn-orange{font-family:var(--font);font-size:12px;font-weight:600;padding:8px 16px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;white-space:nowrap}
+.btn-orange:hover{background:var(--orange2)}
+.btn-orange:disabled{opacity:.4;cursor:default}
+.btn-danger{font-family:var(--font);font-size:12px;padding:8px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer}
+.btn-danger:hover{color:var(--red);border-color:var(--red)}
+.main{padding:20px 24px;max-width:1600px;width:100%;margin:0 auto}
+.loading{text-align:center;padding:60px 20px;color:var(--text3);font-size:13px}
+
+/* tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.tab{font-family:var(--font);font-size:13px;font-weight:500;padding:8px 18px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:7px}
+.tab:hover{border-color:var(--orange);color:var(--text)}
+.tab.active{background:var(--orange);color:#fff;border-color:var(--orange);font-weight:600}
+
+/* barra de filtros / selección */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filters select,.filters input{font-family:var(--font);font-size:13px;padding:7px 11px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none}
+.filters select:focus,.filters input:focus{border-color:var(--orange)}
+.filters select.sel-marca{font-weight:600;min-width:240px}
+.filters label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+.spacer{flex:1}
+.mesnav{display:inline-flex;align-items:center;gap:4px}
+.mesnav .lbl{font-size:15px;font-weight:700;min-width:150px;text-align:center;letter-spacing:-.01em}
+.mesnav button{font-family:var(--font);font-size:14px;width:32px;height:32px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer}
+.mesnav button:hover{color:var(--orange);border-color:var(--orange)}
+.mesnav button.hoy{width:auto;padding:0 10px;font-size:11px;font-weight:600}
+
+/* kpis */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:var(--radius-lg);padding:13px 16px}
+.kpi-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:700;font-family:var(--mono);line-height:1;letter-spacing:-.02em}
+.kpi-sub{font-size:11px;color:var(--text2);margin-top:5px}
+.kpi.ok{border-top-color:var(--green)}.kpi.bad{border-top-color:var(--red)}
+.kpi.warn{border-top-color:var(--amber)}.kpi.mute{border-top-color:var(--text3)}
+.kpi.email{border-top-color:var(--ch-email)}.kpi.push{border-top-color:var(--ch-push)}.kpi.wpp{border-top-color:var(--ch-wpp)}
+
+/* secciones y tablas */
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:18px}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+.section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:9px 14px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
+td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:rgba(255,255,255,.03)}
+tr.crow td{background:var(--bg3);padding:7px 14px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spacing:0;margin-left:8px}
+.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+.muted{color:var(--text3)}
+.strong{font-weight:600}
+.wrap-cell{max-width:260px;font-size:12px;color:var(--text2);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:20px;white-space:nowrap}
+.chip.green{background:rgba(34,197,94,.13);color:#22c55e;border:1px solid rgba(34,197,94,.28)}
+.chip.red{background:rgba(239,68,68,.13);color:#ef4444;border:1px solid rgba(239,68,68,.28)}
+.chip.amber{background:rgba(245,158,11,.13);color:#f59e0b;border:1px solid rgba(245,158,11,.28)}
+.chip.blue{background:rgba(122,158,202,.13);color:#7a9eca;border:1px solid rgba(122,158,202,.28)}
+.chip.grey{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border2)}
+.chip.orange{background:rgba(240,78,35,.13);color:#f04e23;border:1px solid rgba(240,78,35,.3)}
+.chip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.chip .x{cursor:pointer;opacity:.6;margin-left:2px}
+.chip .x:hover{opacity:1}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot.email{background:var(--ch-email)}.dot.push{background:var(--ch-push)}.dot.wpp{background:var(--ch-wpp)}
+
+/* filtro por canal */
+.fchip{font-family:var(--font);font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:20px;cursor:pointer;
+  background:transparent;color:var(--text3);border:1px solid var(--border2);display:inline-flex;align-items:center;gap:6px}
+.fchip:hover{color:var(--text)}
+.fchip.on{color:var(--text);border-color:var(--border);background:var(--bg3)}
+.fchip:not(.on) .dot{opacity:.3}
+.fchip b{font-family:var(--mono);font-size:10px;opacity:.75}
+
+/* barra del mes */
+.mesbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:14px}
+.seg{display:inline-flex;gap:3px;flex-wrap:wrap}
+.seg button{font-family:var(--font);font-size:10.5px;font-weight:700;padding:5px 10px;background:transparent;color:var(--text3);
+  border:1px solid var(--border2);border-radius:6px;cursor:pointer;letter-spacing:.02em}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--bg3);border-color:var(--border);color:var(--text)}
+.seg button.on.borrador{background:rgba(255,255,255,.1)}
+.seg button.on.revision{background:#f59e0b;border-color:#f59e0b;color:#3b2300}
+.seg button.on.aprobado{background:#16a34a;border-color:#16a34a;color:#fff}
+.seg button.on.cerrado{background:var(--blue);border-color:var(--blue);color:#0b1929}
+.seg button.on.email{background:var(--ch-email);border-color:var(--ch-email);color:#fff}
+.seg button.on.push{background:var(--ch-push);border-color:var(--ch-push);color:#0b1929}
+.seg button.on.wpp{background:var(--ch-wpp);border-color:var(--ch-wpp);color:#06210f}
+.seg button.on.idea{background:rgba(255,255,255,.12)}
+.seg button.on.planificado{background:var(--bg3);border-color:var(--text2)}
+.seg button.on.enviado{background:#16a34a;border-color:#16a34a;color:#fff}
+.seg button.on.cancelado{background:#dc2626;border-color:#dc2626;color:#fff}
+.seg button:disabled{cursor:default}
+.mesbar .lab{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.acciones{display:flex;gap:6px;flex-wrap:wrap}
+
+/* calendario */
+.cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media (max-width:1150px){.cal-layout{grid-template-columns:minmax(0,1fr)}}
+.cal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.cal-scroll{overflow-x:auto}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(104px,1fr));min-width:740px}
+.cal-dow{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:9px 10px;border-bottom:1px solid var(--border)}
+.cal-day{min-height:122px;border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);padding:6px;display:flex;flex-direction:column;gap:4px;position:relative}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day.edit{cursor:pointer}
+.cal-day.out{background:rgba(0,0,0,.2)}
+.cal-day.out .cal-num{opacity:.35}
+.cal-day.we{background:rgba(255,255,255,.018)}
+.cal-day.drop{outline:2px dashed var(--orange);outline-offset:-3px}
+.cal-top{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.cal-num{font-family:var(--mono);font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text2)}
+.cal-day.today .cal-num{background:var(--orange);color:#fff}
+.cal-plus{font-size:15px;color:var(--text3);opacity:0;line-height:1;padding:0 3px}
+.cal-day.edit:hover .cal-plus{opacity:1}
+.cal-key{font-size:9.5px;font-weight:700;background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.28);border-radius:4px;padding:2px 5px;line-height:1.25}
+.cal-key.marca{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
+.ev{font-size:11px;line-height:1.3;background:var(--bg3);border-left:3px solid var(--text3);border-radius:5px;padding:4px 6px;cursor:pointer;word-break:break-word}
+.ev:hover{outline:1px solid rgba(255,255,255,.35)}
+.ev.email{border-left-color:var(--ch-email)}.ev.push{border-left-color:var(--ch-push)}.ev.wpp{border-left-color:var(--ch-wpp)}
+.ev-h{font-family:var(--mono);font-size:9.5px;color:var(--text2);display:flex;justify-content:space-between;gap:4px}
+.ev-t{font-weight:600}
+.ev.st-idea{background:transparent;border:1px dashed var(--border2);border-left-width:3px}
+.ev.st-cancelado{opacity:.4}
+.ev.st-cancelado .ev-t{text-decoration:line-through}
+.ev .ok{color:var(--green);font-weight:700}
+
+/* panel lateral */
+.side-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px}
+.side-card.prev{border-left:3px solid var(--blue)}
+.side-card.rules{border-left:3px solid var(--amber)}
+.side-title{font-size:10.5px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.side-title a{font-size:10.5px;color:var(--text3);text-transform:none;letter-spacing:0;font-weight:500;cursor:pointer;text-decoration:underline}
+.side-title a:hover{color:var(--orange)}
+.side-lab{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:10px 0 4px}
+.side-txt{font-size:12.5px;line-height:1.5;white-space:pre-wrap;color:var(--text)}
+.side-txt.vacio{color:var(--text3);font-style:italic}
+.side-card textarea{width:100%;min-height:58px;font-family:var(--font);font-size:12.5px;line-height:1.45;padding:8px 10px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:8px;outline:none;resize:vertical}
+.side-card textarea:focus{border-color:var(--orange)}
+.cnt-row{display:flex;gap:8px;flex-wrap:wrap}
+.cnt{flex:1;min-width:70px;background:var(--bg3);border-radius:8px;padding:7px 9px;border-top:2px solid var(--text3)}
+.cnt.email{border-top-color:var(--ch-email)}.cnt.push{border-top-color:var(--ch-push)}.cnt.wpp{border-top-color:var(--ch-wpp)}
+.cnt b{display:block;font-family:var(--mono);font-size:17px}
+.cnt span{font-size:10px;color:var(--text2)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;margin-right:12px}
+.chk input{accent-color:var(--orange)}
+
+/* lista */
+.lst-fecha{font-family:var(--mono);font-size:12px;white-space:nowrap}
+
+/* drawer */
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none}
+.drawer-bg.open{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);border-left:1px solid var(--border);z-index:301;transform:translateX(100%);transition:transform .22s;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.drawer-name{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.drawer-meta{font-size:12px;color:var(--text2);margin-top:4px}
+.drawer-body{padding:18px 22px;overflow-y:auto;flex:1}
+.drawer-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.drawer-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.drawer-close:hover{color:var(--orange)}
+.dsec{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin:20px 0 9px}
+.dsec:first-child{margin-top:0}
+.pick-row{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:6px;font-size:12.5px;flex-wrap:wrap}
+.pick-row input[type=checkbox]{accent-color:var(--orange)}
+.pick-row .f{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap}
+.pick-row .t{flex:1;min-width:140px}
+.pick-row.off{opacity:.45}
+
+/* varios */
+.empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
+.note{font-size:12px;color:var(--text2);background:rgba(240,78,35,.07);border:1px solid rgba(240,78,35,.2);border-left:2px solid var(--orange);border-radius:var(--radius);padding:11px 14px;margin-bottom:16px;line-height:1.55}
+.note.blue{background:rgba(122,158,202,.07);border-color:rgba(122,158,202,.2);border-left-color:var(--blue)}
+.mini{font-family:var(--font);font-size:10px;font-weight:600;padding:3.5px 8px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:6px;cursor:pointer;white-space:nowrap}
+.mini:hover{border-color:var(--orange);color:var(--orange)}
+.mini.danger:hover{border-color:var(--red);color:var(--red)}
+.addrow{display:flex;gap:7px;margin:12px 18px 16px;flex-wrap:wrap}
+.addrow select,.addrow input{flex:1;font-family:var(--font);font-size:12.5px;padding:9px 11px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;min-width:140px}
+td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px 20px;font-size:13px;z-index:500;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.err{border-color:var(--red);color:#ffb4b4}
+.version{font-size:10px;color:var(--text3);font-family:var(--mono);text-align:center;padding:24px 0 10px}
+
+@media (max-width:640px){
+  .main{padding:16px}
+  .top-bar{padding:0 16px}
+  .user-pill{display:none}
+  .filters select.sel-marca{min-width:0;flex:1}
+  .mesnav .lbl{min-width:120px;font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="text-logo-xl"><span class="logo-we">WE</span><span class="logo-are">ARE</span></div>
+    <div class="auth-title">Calendario Owned Media</div>
+    <div class="auth-sub">Email · Push · WhatsApp, por marca y mes</div>
+    <div class="fg"><label>Email</label><input type="email" id="email" autocomplete="username"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="pass" autocomplete="current-password"></div>
+    <button class="btn-primary" id="loginBtn">Entrar</button>
+    <div class="auth-error" id="authErr"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div class="app" id="app">
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="text-logo-sm"><span class="logo-we">WE</span><span class="logo-are">ARE</span></div>
+      <div class="top-divider"></div>
+      <span style="font-size:13px;font-weight:600">Calendario Owned</span>
+    </div>
+    <div class="top-right">
+      <span class="user-pill" id="userPill"></span>
+      <span class="role-badge" id="roleBadge"></span>
+      <button class="btn-sm" id="logoutBtn">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs" id="tabs"></div>
+    <div id="panes"><div class="loading">Cargando…</div></div>
+    <div class="version" id="version"></div>
+  </div>
+</div>
+
+<div class="drawer-bg" id="drawerBg"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hdr">
+    <div><div class="drawer-name" id="dName"></div><div class="drawer-meta" id="dMeta"></div></div>
+    <button class="drawer-close" id="dClose">&times;</button>
+  </div>
+  <div class="drawer-body" id="dBody"></div>
+  <div class="drawer-foot" id="dFoot"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const VERSION_APP = '2026-10-07.1';
+const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+
+const CANALES = ['email','push','wpp'];
+const CLABEL  = {email:'Email', push:'Push', wpp:'WhatsApp'};
+const EST_ENV = ['idea','planificado','aprobado','enviado','cancelado'];
+const ELABEL  = {idea:'Idea', planificado:'Planificado', aprobado:'Aprobado', enviado:'Enviado', cancelado:'Cancelado'};
+const EST_MES = ['borrador','revision','aprobado','cerrado'];
+const MLABEL  = {borrador:'Borrador', revision:'En revisión cliente', aprobado:'Aprobado', cerrado:'Cerrado'};
+const MCHIP   = {borrador:'grey', revision:'amber', aprobado:'green', cerrado:'blue'};
+const TIPOS   = ['Promo','Newsletter / contenido','Lanzamiento','Fecha especial','Recordatorio','Recompra / retención','Institucional','Otro'];
+const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DOW     = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+var me   = null;      // fila de cal_usuarios
+var D    = {env:{}, meses:{}, cargando:{}};   // catálogos + datos por marca
+var R    = {};        // resumen por período (todas las marcas)
+var tab  = 'calendario';
+var sel  = {marca: null, periodo: null, vista: 'cal'};
+var filtroCanal = {email:true, push:true, wpp:true};
+var form = null;      // borrador del drawer abierto
+var arrastrando = null;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function toast(msg, isErr){
+  var t = $('toast'); t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._t); t._t = setTimeout(function(){ t.className = 'toast'; }, 2800);
+}
+function ymd(y, m, d){ return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0'); }
+function parseF(s){ var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +(p[2] || 1)); }
+function hoyStr(){ var d = new Date(); return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
+function periodoDe(fecha){ return fecha.slice(0, 7) + '-01'; }
+function addMes(periodo, n){
+  var d = parseF(periodo); d.setDate(1); d.setMonth(d.getMonth() + n);
+  return ymd(d.getFullYear(), d.getMonth() + 1, 1);
+}
+function diasDelMes(periodo){ var d = parseF(periodo); return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
+function finMes(periodo){ return periodo.slice(0, 8) + String(diasDelMes(periodo)).padStart(2,'0'); }
+function periodoLargo(p){ var d = p.split('-'); return MESES[+d[1] - 1] + ' ' + d[0]; }
+function periodoCorto(p){ var d = p.split('-'); return MESES[+d[1] - 1].slice(0,3).toLowerCase() + ' ' + d[0].slice(2); }
+function fechaCorta(f){ var d = f.split('-'); return d[2] + '/' + d[1]; }
+function fechaLarga(f){ var d = f.split('-'); return d[2] + '/' + d[1] + '/' + d[0]; }
+function dowDe(f){ return DOW[parseF(f).getDay()]; }
+function nombreUsuario(){ return me.nombre || me.email; }
+function canalesDe(marcaId){
+  var c = D.configById[marcaId];
+  return c && c.canales && c.canales.length ? CANALES.filter(function(k){ return c.canales.indexOf(k) >= 0; }) : CANALES.slice();
+}
+function puedeEditar(marcaId){
+  if (!me) return false;
+  if (me.rol === 'admin') return true;
+  return me.rol === 'analista' && D.misMarcas.indexOf(marcaId) >= 0;
+}
+function lsGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function guardarSel(){ lsSet('cal_sel', {marca: sel.marca, vista: sel.vista}); }
+
+// PostgREST corta en 1000 filas: paginamos
+function fetchAll(tabla, cols, filtro){
+  var out = [], size = 1000;
+  function paso(page){
+    var q = sb.from(tabla).select(cols || '*');
+    if (filtro) q = filtro(q);
+    return q.range(page * size, (page + 1) * size - 1).then(function(r){
+      if (r.error) throw r.error;
+      var rows = r.data || [];
+      out = out.concat(rows);
+      return rows.length < size ? out : paso(page + 1);
+    });
+  }
+  return paso(0);
+}
+
+// ── auth ───────────────────────────────────────────────────────────────────
+$('loginBtn').onclick = function(){
+  var e = $('email').value.trim(), p = $('pass').value;
+  if (!e || !p) { $('authErr').textContent = 'Completá email y contraseña'; return; }
+  $('authErr').textContent = '';
+  sb.auth.signInWithPassword({ email: e, password: p }).then(function(r){
+    if (r.error) { $('authErr').textContent = r.error.message || 'No se pudo entrar'; return; }
+    boot();
+  });
+};
+$('pass').onkeydown = function(ev){ if (ev.key === 'Enter') $('loginBtn').click(); };
+$('logoutBtn').onclick = function(){ sb.auth.signOut().then(function(){ location.reload(); }); };
+sb.auth.getSession().then(function(r){ if (r.data.session) boot(); });
+
+function boot(){
+  sb.rpc('cal_vincular').then(function(r){
+    var row = (r.data || [])[0];
+    if (r.error){
+      // si la función no existe es que falta correr el schema
+      var falta = /cal_vincular|function|schema cache/i.test(r.error.message || '');
+      $('authErr').textContent = falta
+        ? 'Falta correr calendario-schema.sql en el SQL editor de Supabase'
+        : (r.error.message || 'Error al validar el usuario');
+      sb.auth.signOut();
+      return;
+    }
+    if (!row){
+      $('authErr').textContent = 'Tu usuario no está habilitado en el calendario. Pedile acceso a Tomás.';
+      sb.auth.signOut();
+      return;
+    }
+    me = row;
+    $('authScreen').style.display = 'none';
+    $('app').classList.add('visible');
+    $('userPill').textContent = nombreUsuario();
+    $('roleBadge').textContent = me.rol;
+    $('roleBadge').className = 'role-badge role-' + me.rol;
+    $('version').textContent = 'versión ' + VERSION_APP;
+    cargar();
+  });
+}
+
+// ── datos ──────────────────────────────────────────────────────────────────
+function cargar(){
+  Promise.all([
+    fetchAll('sem_marcas', '*', function(q){ return q.order('nombre'); }),
+    fetchAll('sem_celulas', '*', function(q){ return q.order('nombre'); }),
+    fetchAll('cal_usuarios', '*', function(q){ return q.order('nombre'); }),
+    fetchAll('cal_usuario_marcas', '*'),
+    fetchAll('cal_marca_config', '*'),
+    fetchAll('cal_fechas', '*', function(q){ return q.order('fecha'); })
+  ]).then(function(res){
+    D.marcas   = res[0];
+    D.celulas  = res[1];
+    D.usuarios = res[2];
+    D.um       = res[3];
+    D.config   = res[4];
+    D.fechas   = res[5];
+    indexar();
+    var guardada = lsGet('cal_sel') || {};
+    var hoy = periodoDe(hoyStr());
+    // el calendario que se arma suele ser el del mes que viene; arranca ahí
+    sel.periodo = addMes(hoy, 1);
+    sel.vista   = guardada.vista === 'lista' ? 'lista' : 'cal';
+    var activas = D.marcas.filter(function(m){ return m.activa; });
+    var pref = D.misMarcas.length ? D.misMarcas : activas.map(function(m){ return m.id; });
+    sel.marca = D.marcaById[guardada.marca] ? guardada.marca : (pref[0] || null);
+    render();
+  }).catch(function(e){
+    $('panes').innerHTML = '<div class="empty">No se pudieron cargar los datos.<br><span class="muted">' +
+      esc(e.message || e) + '</span></div>';
+  });
+}
+function indexar(){
+  D.misMarcas = D.um.filter(function(x){ return x.usuario_id === me.id; }).map(function(x){ return x.marca_id; });
+  D.marcaById  = {}; D.marcas.forEach(function(m){ D.marcaById[m.id] = m; });
+  D.celulaById = {}; D.celulas.forEach(function(c){ D.celulaById[c.id] = c; });
+  D.configById = {}; D.config.forEach(function(c){ D.configById[c.marca_id] = c; });
+}
+// todos los envíos y meses de una marca (son pocos: ~30 por mes)
+function cargarMarca(marcaId){
+  if (D.cargando[marcaId]) return D.cargando[marcaId];
+  D.cargando[marcaId] = Promise.all([
+    fetchAll('cal_envios', '*', function(q){ return q.eq('marca_id', marcaId).order('fecha').order('hora'); }),
+    fetchAll('cal_meses', '*', function(q){ return q.eq('marca_id', marcaId); })
+  ]).then(function(res){
+    D.env[marcaId] = res[0];
+    D.meses[marcaId] = res[1];
+  }).catch(function(e){
+    delete D.cargando[marcaId];
+    toast('No se pudieron traer los envíos: ' + (e.message || e), true);
+  });
+  return D.cargando[marcaId];
+}
+function ordenEnv(a, b){
+  return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : String(a.hora || '99').localeCompare(String(b.hora || '99'));
+}
+function envDeMes(marcaId, periodo){
+  return (D.env[marcaId] || []).filter(function(e){ return periodoDe(e.fecha) === periodo; }).sort(ordenEnv);
+}
+function mesReg(marcaId, periodo){
+  return (D.meses[marcaId] || []).find(function(r){ return r.periodo === periodo; }) || null;
+}
+function contar(envs){
+  var c = {email:0, push:0, wpp:0, total:0, enviados:0, cancelados:0, ideas:0};
+  envs.forEach(function(e){
+    if (e.estado === 'cancelado') { c.cancelados++; return; }
+    c[e.canal]++; c.total++;
+    if (e.estado === 'enviado') c.enviados++;
+    if (e.estado === 'idea') c.ideas++;
+  });
+  return c;
+}
+// fechas clave que caen en el mes (generales + de la marca; las anuales se proyectan)
+function fechasDelMes(marcaId, periodo){
+  var y = +periodo.slice(0, 4), ini = periodo, fin = finMes(periodo), out = [];
+  D.fechas.forEach(function(f){
+    if (f.marca_id && f.marca_id !== marcaId) return;
+    var desde = f.fecha, hasta = f.hasta || f.fecha;
+    if (f.anual){
+      var off = parseF(hasta) - parseF(desde);
+      desde = y + desde.slice(4);
+      var h = new Date(parseF(desde).getTime() + off);
+      hasta = ymd(h.getFullYear(), h.getMonth() + 1, h.getDate());
+    }
+    if (hasta < ini || desde > fin) return;
+    out.push({id: f.id, nombre: f.nombre, desde: desde, hasta: hasta, marca: !!f.marca_id, notas: f.notas});
+  });
+  return out;
+}
+function invalidarResumen(){ R = {}; }
+
+// ── shell ──────────────────────────────────────────────────────────────────
+function render(){
+  var defs = [['calendario','Calendario'], ['resumen','Resumen del equipo'], ['historial','Historial de la marca'], ['fechas','Fechas clave']];
+  if (me.rol === 'admin') defs.push(['accesos','Accesos']);
+  $('tabs').innerHTML = defs.map(function(d){
+    return '<button class="tab' + (tab === d[0] ? ' active' : '') + '" data-t="' + d[0] + '">' + d[1] + '</button>';
+  }).join('');
+  Array.prototype.forEach.call($('tabs').children, function(b){
+    b.onclick = function(){ tab = b.dataset.t; render(); };
+  });
+  if (tab === 'calendario')     renderCalendario();
+  else if (tab === 'resumen')   renderResumen();
+  else if (tab === 'historial') renderHistorial();
+  else if (tab === 'fechas')    renderFechas();
+  else if (tab === 'accesos')   renderAccesos();
+}
+
+function selectorMarca(){
+  var activas = D.marcas.filter(function(m){ return m.activa || m.id === sel.marca; });
+  var html = '<select class="sel-marca" onchange="cambiarMarca(+this.value)">';
+  if (D.misMarcas.length){
+    html += '<optgroup label="Mis marcas">' + activas.filter(function(m){ return D.misMarcas.indexOf(m.id) >= 0; })
+      .map(optMarca).join('') + '</optgroup>';
+  }
+  var grupos = {};
+  activas.forEach(function(m){
+    if (D.misMarcas.indexOf(m.id) >= 0) return;
+    var k = m.celula_id && D.celulaById[m.celula_id] ? D.celulaById[m.celula_id].nombre : 'Sin célula';
+    (grupos[k] = grupos[k] || []).push(m);
+  });
+  Object.keys(grupos).sort().forEach(function(k){
+    html += '<optgroup label="' + esc(k) + '">' + grupos[k].map(optMarca).join('') + '</optgroup>';
+  });
+  return html + '</select>';
+}
+function optMarca(m){
+  return '<option value="' + m.id + '"' + (m.id === sel.marca ? ' selected' : '') + '>' + esc(m.nombre) + '</option>';
+}
+function navMes(){
+  return '<span class="mesnav"><button onclick="moverMes(-1)" title="Mes anterior">‹</button>' +
+    '<span class="lbl">' + periodoLargo(sel.periodo) + '</span>' +
+    '<button onclick="moverMes(1)" title="Mes siguiente">›</button>' +
+    '<button class="hoy" onclick="irHoy()">Este mes</button></span>';
+}
+function cambiarMarca(id){ sel.marca = id; guardarSel(); render(); }
+function moverMes(n){ sel.periodo = addMes(sel.periodo, n); render(); }
+function irHoy(){ sel.periodo = periodoDe(hoyStr()); render(); }
+function irA(marcaId, periodo){ sel.marca = marcaId; sel.periodo = periodo; tab = 'calendario'; guardarSel(); render(); window.scrollTo(0, 0); }
+
+// ══ CALENDARIO ══════════════════════════════════════════════════════════════
+function renderCalendario(){
+  var m = sel.marca;
+  if (!m){ $('panes').innerHTML = '<div class="empty">No hay marcas cargadas. Las marcas se dan de alta en el semáforo.</div>'; return; }
+  if (!D.env[m]){
+    $('panes').innerHTML = '<div class="loading">Cargando la marca…</div>';
+    cargarMarca(m).then(function(){ if (tab === 'calendario' && sel.marca === m && D.env[m]) render(); });
+    return;
+  }
+  var p = sel.periodo, ed = puedeEditar(m);
+  var envs = envDeMes(m, p);
+  var c = contar(envs);
+  var reg = mesReg(m, p) || {};
+  var estMes = reg.estado || 'borrador';
+  var canales = canalesDe(m);
+
+  var h = '<div class="filters">' + selectorMarca() + navMes() + '<span class="spacer"></span>' +
+    '<span class="seg"><button class="' + (sel.vista === 'cal' ? 'on' : '') + '" onclick="setVista(\'cal\')">Calendario</button>' +
+    '<button class="' + (sel.vista === 'lista' ? 'on' : '') + '" onclick="setVista(\'lista\')">Lista</button></span></div>';
+
+  // barra del mes: estado + canales + acciones
+  h += '<div class="mesbar"><span class="lab">Estado</span><span class="seg">' +
+    EST_MES.map(function(s){
+      return '<button class="' + s + (estMes === s ? ' on' : '') + '"' + (ed ? ' onclick="setEstadoMes(\'' + s + '\')"' : ' disabled') + '>' + MLABEL[s] + '</button>';
+    }).join('') + '</span><span class="spacer"></span>' +
+    CANALES.filter(function(k){ return canales.indexOf(k) >= 0 || c[k]; }).map(function(k){
+      return '<button class="fchip' + (filtroCanal[k] ? ' on' : '') + '" onclick="toggleCanal(\'' + k + '\')"><i class="dot ' + k + '"></i>' + CLABEL[k] + ' <b>' + c[k] + '</b></button>';
+    }).join('') + '</div>';
+
+  h += '<div class="filters"><div class="acciones">';
+  if (ed){
+    h += '<button class="btn-orange" onclick="abrirEnvio(null)">+ Envío</button>' +
+         '<button class="btn-sm" onclick="abrirCopia()">Copiar de otro mes</button>' +
+         '<button class="btn-sm" onclick="abrirCierre()">Cerrar el mes</button>';
+  }
+  h += '</div><span class="spacer"></span><div class="acciones">' +
+    '<button class="btn-sm" onclick="vistaCliente()">Vista para el cliente</button>' +
+    '<button class="btn-sm" onclick="copiarSheets()">Copiar para Sheets</button>' +
+    '<button class="btn-sm" onclick="descargarCSV()">Descargar CSV</button></div></div>';
+
+  var vis = envs.filter(function(e){ return filtroCanal[e.canal]; });
+  h += '<div class="cal-layout"><div>' +
+    (sel.vista === 'cal' ? gridMes(m, p, vis, ed) : listaMes(vis, ed)) +
+    '</div><div>' + panelLateral(m, p, reg, ed, canales) + '</div></div>';
+  $('panes').innerHTML = h;
+  if (ed && sel.vista === 'cal') engancharDrag();
+}
+function setVista(v){ sel.vista = v; guardarSel(); render(); }
+function toggleCanal(k){ filtroCanal[k] = !filtroCanal[k]; render(); }
+
+function gridMes(m, p, envs, ed){
+  var primero = parseF(p), dim = diasDelMes(p);
+  var lead = (primero.getDay() + 6) % 7;          // semana arranca el lunes
+  var total = Math.ceil((lead + dim) / 7) * 7;
+  var hoy = hoyStr();
+  var keys = fechasDelMes(m, p);
+  var porDia = {};
+  envs.forEach(function(e){ (porDia[e.fecha] = porDia[e.fecha] || []).push(e); });
+
+  var h = '<div class="cal"><div class="cal-scroll"><div class="cal-grid">' +
+    ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
+  for (var i = 0; i < total; i++){
+    var dia = i - lead + 1;
+    if (dia < 1 || dia > dim){ h += '<div class="cal-day out"></div>'; continue; }
+    var f = ymd(primero.getFullYear(), primero.getMonth() + 1, dia);
+    var we = (i % 7) >= 5;
+    h += '<div class="cal-day' + (we ? ' we' : '') + (f === hoy ? ' today' : '') + (ed ? ' edit' : '') + '" data-f="' + f + '"' +
+      (ed ? ' onclick="clickDia(event,\'' + f + '\')"' : '') + '>' +
+      '<div class="cal-top"><span class="cal-num">' + dia + '</span>' + (ed ? '<span class="cal-plus">+</span>' : '') + '</div>';
+    keys.forEach(function(k){
+      if (f >= k.desde && f <= k.hasta) h += '<div class="cal-key' + (k.marca ? ' marca' : '') + '" title="' + esc(k.notas || '') + '">★ ' + esc(k.nombre) + '</div>';
+    });
+    (porDia[f] || []).forEach(function(e){ h += chipEnvio(e, ed); });
+    h += '</div>';
+  }
+  return h + '</div></div></div>';
+}
+function chipEnvio(e, ed){
+  return '<div class="ev ' + e.canal + ' st-' + e.estado + '"' + (ed ? ' draggable="true"' : '') + ' data-id="' + e.id + '"' +
+    ' onclick="event.stopPropagation();abrirEnvio(' + e.id + ')" title="' + esc(CLABEL[e.canal] + ' · ' + ELABEL[e.estado] + (e.asunto ? '\n' + e.asunto : '')) + '">' +
+    '<div class="ev-h"><span>' + CLABEL[e.canal] + (e.hora ? ' ' + esc(e.hora) : '') + '</span>' +
+    (e.estado === 'enviado' ? '<span class="ok">✓</span>' : e.estado === 'aprobado' ? '<span>✔</span>' : e.estado === 'idea' ? '<span>idea</span>' : '') + '</div>' +
+    '<div class="ev-t">' + esc(e.titulo) + '</div></div>';
+}
+function clickDia(ev, f){ if (ev.target.closest('.ev')) return; abrirEnvio(null, f); }
+
+function engancharDrag(){
+  Array.prototype.forEach.call(document.querySelectorAll('.ev[draggable]'), function(el){
+    el.ondragstart = function(ev){ arrastrando = +el.dataset.id; ev.dataTransfer.effectAllowed = 'move'; };
+    el.ondragend = function(){ arrastrando = null; };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.cal-day[data-f]'), function(el){
+    el.ondragover = function(ev){ if (arrastrando){ ev.preventDefault(); el.classList.add('drop'); } };
+    el.ondragleave = function(){ el.classList.remove('drop'); };
+    el.ondrop = function(ev){
+      ev.preventDefault(); el.classList.remove('drop');
+      var id = arrastrando; arrastrando = null;
+      var e = buscarEnvio(id);
+      if (!e || e.fecha === el.dataset.f) return;
+      sb.from('cal_envios').update({fecha: el.dataset.f, actualizado_at: new Date().toISOString()})
+        .eq('id', id).select().single().then(function(r){
+          if (r.error) return toast(r.error.message, true);
+          reemplazarLocal(r.data); render(); toast('Movido al ' + fechaCorta(r.data.fecha));
+        });
+    };
+  });
+}
+
+function listaMes(envs, ed){
+  if (!envs.length) return '<div class="section"><div class="empty">No hay envíos cargados para este mes' +
+    (ed ? '.<br>Usá <b>+ Envío</b> o <b>Copiar de otro mes</b> para arrancar.' : '.') + '</div></div>';
+  return '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>' +
+    envs.map(function(e){
+      return '<tr class="clickable" onclick="abrirEnvio(' + e.id + ')"><td class="lst-fecha">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + '</td>' +
+        '<td class="lst-fecha muted">' + esc(e.hora || '') + '</td>' +
+        '<td><span class="chip grey"><i class="dot ' + e.canal + '"></i>' + CLABEL[e.canal] + '</span></td>' +
+        '<td class="muted">' + esc(e.tipo || '') + '</td><td class="strong">' + esc(e.titulo) + '</td>' +
+        '<td><div class="wrap-cell">' + esc(e.asunto || '') + '</div></td><td class="muted">' + esc(e.segmento || '') + '</td>' +
+        '<td>' + chipEstado(e.estado) + '</td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+function chipEstado(s){
+  var cls = {idea:'grey', planificado:'blue', aprobado:'amber', enviado:'green', cancelado:'red'}[s];
+  return '<span class="chip ' + cls + '">' + ELABEL[s] + '</span>';
+}
+
+// ── panel lateral: lo que pasó antes + memoria del mes ─────────────────────
+function panelLateral(m, p, reg, ed, canales){
+  var prev = addMes(p, -1), anio = addMes(p, -12);
+  var ePrev = envDeMes(m, prev), rPrev = mesReg(m, prev) || {};
+  var cP = contar(ePrev);
+  var h = '';
+
+  // este mes
+  h += '<div class="side-card"><div class="side-title">Foco de ' + MESES[+p.slice(5,7) - 1].toLowerCase() + '</div>' +
+    campoMes('foco', reg.foco, ed, 'Objetivo comercial, campañas fuertes, qué pidió el cliente…') + '</div>';
+
+  // mes anterior
+  h += '<div class="side-card prev"><div class="side-title">Mes anterior · ' + periodoLargo(prev) +
+    '<a onclick="irA(' + m + ',\'' + prev + '\')">ver</a></div>';
+  if (!ePrev.length && !rPrev.id){
+    h += '<div class="side-txt vacio">Sin datos cargados.</div>';
+  } else {
+    h += '<div class="cnt-row">' + CANALES.map(function(k){
+      return '<div class="cnt ' + k + '"><b>' + cP[k] + '</b><span>' + CLABEL[k] + '</span></div>';
+    }).join('') + '</div>' +
+    '<div class="side-lab">Resultado del armado</div><div class="side-txt">' + cP.enviados + ' enviados · ' + cP.cancelados + ' cancelados' +
+      (rPrev.estado ? ' · ' + MLABEL[rPrev.estado] : '') + '</div>' +
+    textoMes('Foco', rPrev.foco) + textoMes('Qué funcionó', rPrev.funciono) +
+    textoMes('Qué no funcionó', rPrev.no_funciono) + textoMes('Para repetir / probar', rPrev.repetir);
+    if (ed && ePrev.length) h += '<div style="margin-top:12px"><button class="btn-sm" onclick="abrirCopia(\'' + prev + '\')">Copiar sus envíos a este mes</button></div>';
+  }
+  h += '</div>';
+
+  // mismo mes del año pasado (estacionalidad)
+  var eAnio = envDeMes(m, anio);
+  if (eAnio.length){
+    var cA = contar(eAnio), rA = mesReg(m, anio) || {};
+    h += '<div class="side-card prev"><div class="side-title">Hace un año · ' + periodoLargo(anio) +
+      '<a onclick="irA(' + m + ',\'' + anio + '\')">ver</a></div>' +
+      '<div class="side-txt">' + cA.total + ' envíos (' + CANALES.map(function(k){ return cA[k] + ' ' + CLABEL[k].toLowerCase(); }).join(', ') + ')</div>' +
+      textoMes('Qué funcionó', rA.funciono) + textoMes('Para repetir', rA.repetir) +
+      (ed ? '<div style="margin-top:12px"><button class="btn-sm" onclick="abrirCopia(\'' + anio + '\')">Copiar sus envíos a este mes</button></div>' : '') +
+      '</div>';
+  }
+
+  // aprendizajes de este mes
+  h += '<div class="side-card"><div class="side-title">Aprendizajes de este mes</div>' +
+    '<div class="side-lab">Qué funcionó</div>' + campoMes('funciono', reg.funciono, ed, '') +
+    '<div class="side-lab">Qué no funcionó</div>' + campoMes('no_funciono', reg.no_funciono, ed, '') +
+    '<div class="side-lab">Para repetir / probar el mes que viene</div>' + campoMes('repetir', reg.repetir, ed, '') + '</div>';
+
+  // reglas de la marca
+  var cfg = D.configById[m] || {};
+  h += '<div class="side-card rules"><div class="side-title">Reglas de la marca</div>';
+  if (ed){
+    h += '<div style="margin-bottom:8px">' + CANALES.map(function(k){
+      return '<label class="chk"><input type="checkbox"' + (canales.indexOf(k) >= 0 ? ' checked' : '') +
+        ' onchange="toggleCanalMarca(\'' + k + '\', this.checked)"> ' + CLABEL[k] + '</label>';
+    }).join('') + '</div>' +
+    '<textarea placeholder="Días que no se envía, frecuencia pactada, quién aprueba, tono, exclusiones…" onchange="guardarReglas(this.value)">' + esc(cfg.reglas || '') + '</textarea>';
+  } else {
+    h += '<div class="side-txt">Canales: ' + canales.map(function(k){ return CLABEL[k]; }).join(', ') + '</div>' +
+      '<div class="side-txt' + (cfg.reglas ? '' : ' vacio') + '" style="margin-top:6px">' + esc(cfg.reglas || 'Sin reglas cargadas.') + '</div>';
+  }
+  return h + '</div>';
+}
+function campoMes(campo, val, ed, ph){
+  if (!ed) return '<div class="side-txt' + (val ? '' : ' vacio') + '">' + esc(val || '—') + '</div>';
+  return '<textarea placeholder="' + esc(ph) + '" onchange="guardarMes(\'' + campo + '\', this.value)">' + esc(val || '') + '</textarea>';
+}
+function textoMes(lab, val){
+  if (!val) return '';
+  return '<div class="side-lab">' + lab + '</div><div class="side-txt">' + esc(val) + '</div>';
+}
+
+function upsertMes(campos){
+  var m = sel.marca, p = sel.periodo;
+  var row = Object.assign({marca_id: m, periodo: p, actualizado_por: nombreUsuario(), actualizado_at: new Date().toISOString()}, campos);
+  return sb.from('cal_meses').upsert(row, {onConflict: 'marca_id,periodo'}).select().single().then(function(r){
+    if (r.error) { toast(r.error.message, true); return null; }
+    var lista = D.meses[m] = D.meses[m] || [];
+    var i = lista.findIndex(function(x){ return x.periodo === p; });
+    if (i >= 0) lista[i] = r.data; else lista.push(r.data);
+    invalidarResumen();
+    return r.data;
+  });
+}
+function guardarMes(campo, val){
+  var o = {}; o[campo] = val.trim() || null;
+  upsertMes(o).then(function(d){ if (d) toast('Guardado'); });
+}
+function setEstadoMes(s){ upsertMes({estado: s}).then(function(d){ if (d) render(); }); }
+
+function guardarConfig(campos){
+  var m = sel.marca;
+  var row = Object.assign({marca_id: m, canales: canalesDe(m), actualizado_at: new Date().toISOString()}, campos);
+  sb.from('cal_marca_config').upsert(row, {onConflict: 'marca_id'}).select().single().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    D.configById[m] = r.data;
+    var i = D.config.findIndex(function(x){ return x.marca_id === m; });
+    if (i >= 0) D.config[i] = r.data; else D.config.push(r.data);
+    toast('Guardado'); render();
+  });
+}
+function toggleCanalMarca(k, on){
+  var c = canalesDe(sel.marca).filter(function(x){ return x !== k; });
+  if (on) c.push(k);
+  if (!c.length) { toast('La marca tiene que tener al menos un canal', true); render(); return; }
+  guardarConfig({canales: CANALES.filter(function(x){ return c.indexOf(x) >= 0; })});
+}
+function guardarReglas(v){ guardarConfig({reglas: v.trim() || null}); }
+
+// ── drawer genérico ────────────────────────────────────────────────────────
+function abrirDrawer(titulo, meta, body, foot){
+  $('dName').textContent = titulo; $('dMeta').textContent = meta || '';
+  $('dBody').innerHTML = body; $('dFoot').innerHTML = foot || '';
+  $('dFoot').style.display = foot ? 'flex' : 'none';
+  $('drawer').classList.add('open'); $('drawerBg').classList.add('open');
+}
+function cerrarDrawer(){ $('drawer').classList.remove('open'); $('drawerBg').classList.remove('open'); form = null; }
+$('dClose').onclick = cerrarDrawer;
+$('drawerBg').onclick = cerrarDrawer;
+document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && $('drawer').classList.contains('open')) cerrarDrawer(); });
+
+// ── envío: alta / edición ──────────────────────────────────────────────────
+function buscarEnvio(id){
+  var out = null;
+  Object.keys(D.env).forEach(function(k){ D.env[k].forEach(function(e){ if (e.id === id) out = e; }); });
+  return out;
+}
+function reemplazarLocal(row){
+  var lista = D.env[row.marca_id] = D.env[row.marca_id] || [];
+  var i = lista.findIndex(function(x){ return x.id === row.id; });
+  if (i >= 0) lista[i] = row; else lista.push(row);
+  invalidarResumen();
+}
+function abrirEnvio(id, fecha){
+  var m = sel.marca;
+  var e = id ? buscarEnvio(id) : null;
+  var hoy = hoyStr();
+  var def = periodoDe(hoy) === sel.periodo ? hoy : sel.periodo;
+  form = e ? Object.assign({}, e) : {id: null, marca_id: m, fecha: fecha || def, hora: '', canal: canalesDe(m)[0],
+    tipo: '', titulo: '', asunto: '', segmento: '', notas: '', estado: 'planificado'};
+  dibujarEnvio();
+}
+function dibujarEnvio(){
+  var f = form, ed = puedeEditar(f.marca_id), dis = ed ? '' : ' disabled';
+  var usados = D.env[f.marca_id] || [];
+  var tipos = TIPOS.concat(usados.map(function(e){ return e.tipo; })).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
+  var segs = usados.map(function(e){ return e.segmento; }).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
+  var canalesM = canalesDe(f.marca_id);
+  if (canalesM.indexOf(f.canal) < 0) canalesM = canalesM.concat([f.canal]);
+
+  var b = '<div class="fg"><label>Canal</label><span class="seg">' + canalesM.map(function(k){
+      return '<button class="' + k + (f.canal === k ? ' on' : '') + '"' + dis + ' onclick="leerEnvio();form.canal=\'' + k + '\';dibujarEnvio()">' + CLABEL[k] + '</button>';
+    }).join('') + '</span></div>' +
+    '<div class="fg-row"><div class="fg"><label>Fecha</label><input type="date" id="fFecha" value="' + esc(f.fecha) + '"' + dis + '></div>' +
+    '<div class="fg"><label>Hora (opcional)</label><input type="time" id="fHora" value="' + esc(f.hora || '') + '"' + dis + '></div></div>' +
+    '<div class="fg"><label>Tema / nombre de la campaña</label><input id="fTitulo" value="' + esc(f.titulo) + '" placeholder="Ej: Lanzamiento colección verano"' + dis + '></div>' +
+    '<div class="fg-row"><div class="fg"><label>Tipo</label><input id="fTipo" list="lTipos" value="' + esc(f.tipo || '') + '"' + dis + '></div>' +
+    '<div class="fg"><label>Segmento</label><input id="fSeg" list="lSegs" value="' + esc(f.segmento || '') + '" placeholder="Base completa, compradores 90d…"' + dis + '></div></div>' +
+    '<datalist id="lTipos">' + tipos.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
+    '<datalist id="lSegs">' + segs.map(function(t){ return '<option value="' + esc(t) + '">'; }).join('') + '</datalist>' +
+    '<div class="fg"><label>' + (f.canal === 'email' ? 'Asunto / preheader' : 'Copy') + '</label><textarea id="fAsunto"' + dis + '>' + esc(f.asunto || '') + '</textarea></div>' +
+    '<div class="fg"><label>Estado</label><span class="seg">' + EST_ENV.map(function(s){
+      return '<button class="' + s + (f.estado === s ? ' on' : '') + '"' + dis + ' onclick="leerEnvio();form.estado=\'' + s + '\';dibujarEnvio()">' + ELABEL[s] + '</button>';
+    }).join('') + '</span></div>' +
+    '<div class="fg"><label>Notas internas (no salen en la vista cliente)</label><textarea id="fNotas"' + dis + '>' + esc(f.notas || '') + '</textarea></div>';
+  if (f.id) b += '<div class="muted" style="font-size:11px">Cargado por ' + esc(f.creado_por || '—') + (f.copiado_de ? ' · copiado de otro mes' : '') + '</div>';
+
+  var foot = ed ? '<button class="btn-orange" onclick="guardarEnvio()">Guardar</button>' +
+    (f.id ? '<button class="btn-sm" onclick="duplicarEnvio()">Duplicar</button><span class="spacer"></span><button class="btn-danger" onclick="borrarEnvio()">Eliminar</button>' : '') : '';
+  var marca = D.marcaById[f.marca_id];
+  abrirDrawer(f.id ? 'Editar envío' : 'Nuevo envío', marca ? marca.nombre : '', b, foot);
+}
+function leerEnvio(){
+  if (!form || !$('fFecha')) return;
+  form.fecha = $('fFecha').value; form.hora = $('fHora').value; form.titulo = $('fTitulo').value;
+  form.tipo = $('fTipo').value; form.segmento = $('fSeg').value; form.asunto = $('fAsunto').value; form.notas = $('fNotas').value;
+}
+function guardarEnvio(){
+  leerEnvio();
+  var f = form;
+  if (!f.fecha) return toast('Falta la fecha', true);
+  if (!f.titulo.trim()) return toast('Falta el tema del envío', true);
+  var row = {marca_id: f.marca_id, fecha: f.fecha, hora: f.hora || null, canal: f.canal, tipo: f.tipo.trim() || null,
+    titulo: f.titulo.trim(), asunto: f.asunto.trim() || null, segmento: f.segmento.trim() || null,
+    notas: f.notas.trim() || null, estado: f.estado, actualizado_at: new Date().toISOString()};
+  var q = f.id
+    ? sb.from('cal_envios').update(row).eq('id', f.id)
+    : sb.from('cal_envios').insert(Object.assign(row, {creado_por: nombreUsuario(), copiado_de: f.copiado_de || null}));
+  q.select().single().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    reemplazarLocal(r.data);
+    var otroMes = periodoDe(r.data.fecha) !== sel.periodo;
+    cerrarDrawer(); render();
+    toast(otroMes ? 'Guardado en ' + periodoLargo(periodoDe(r.data.fecha)) : 'Guardado');
+  });
+}
+function duplicarEnvio(){
+  leerEnvio();
+  form = Object.assign({}, form, {id: null, estado: 'planificado', copiado_de: null, creado_por: null});
+  dibujarEnvio();
+  $('dName').textContent = 'Duplicar envío';
+  toast('Cambiá la fecha o el canal y guardá');
+}
+function borrarEnvio(){
+  if (!confirm('¿Eliminar este envío?\nSi se canceló, mejor marcalo como Cancelado así queda en el historial.')) return;
+  var f = form;
+  sb.from('cal_envios').delete().eq('id', f.id).then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    D.env[f.marca_id] = D.env[f.marca_id].filter(function(x){ return x.id !== f.id; });
+    invalidarResumen(); cerrarDrawer(); render(); toast('Eliminado');
+  });
+}
+
+// ── copiar envíos de otro mes ──────────────────────────────────────────────
+// "mismo día de la semana": el 2do martes cae en el 2do martes del mes destino
+function fechaEquivalente(fecha, destino, modo){
+  var d = parseF(fecha), t = parseF(destino), dim = diasDelMes(destino), dia;
+  if (modo === 'numero'){
+    dia = Math.min(d.getDate(), dim);
+  } else {
+    var n = Math.floor((d.getDate() - 1) / 7);
+    var off = (d.getDay() - t.getDay() + 7) % 7;
+    dia = 1 + off + 7 * n;
+    while (dia > dim) dia -= 7;
+  }
+  return ymd(t.getFullYear(), t.getMonth() + 1, dia);
+}
+function abrirCopia(origen){
+  var m = sel.marca;
+  var opciones = [];
+  for (var i = 1; i <= 13; i++){
+    var p = addMes(sel.periodo, -i);
+    if (envDeMes(m, p).length) opciones.push(p);
+  }
+  if (!opciones.length) return toast('Esta marca no tiene envíos cargados en los meses anteriores', true);
+  if (!origen || opciones.indexOf(origen) < 0) origen = opciones[0];
+  form = {tipo: 'copia', origen: origen, opciones: opciones, modo: 'semana', no: {}};
+  envDeMes(m, origen).forEach(function(e){ if (e.estado === 'cancelado') form.no[e.id] = true; });
+  dibujarCopia();
+}
+function dibujarCopia(){
+  var f = form, m = sel.marca, envs = envDeMes(m, f.origen);
+  var yaHay = envDeMes(m, sel.periodo).length;
+  var n = envs.filter(function(e){ return !f.no[e.id]; }).length;
+  var b = (yaHay ? '<div class="note">Este mes ya tiene ' + yaHay + ' envío(s). Los copiados se suman, no reemplazan.</div>' : '') +
+    '<div class="fg"><label>Copiar desde</label><select onchange="form.origen=this.value;form.no={};dibujarCopia()">' +
+    f.opciones.map(function(p){ return '<option value="' + p + '"' + (p === f.origen ? ' selected' : '') + '>' + periodoLargo(p) + ' (' + envDeMes(m, p).length + ' envíos)</option>'; }).join('') +
+    '</select></div>' +
+    '<div class="fg"><label>Cómo ubicar las fechas</label><span class="seg">' +
+    '<button class="' + (f.modo === 'semana' ? 'on' : '') + '" onclick="form.modo=\'semana\';dibujarCopia()">Mismo día de la semana</button>' +
+    '<button class="' + (f.modo === 'numero' ? 'on' : '') + '" onclick="form.modo=\'numero\';dibujarCopia()">Mismo número de día</button></span></div>' +
+    '<div class="dsec">Envíos (' + n + ' de ' + envs.length + ' seleccionados)</div>' +
+    envs.map(function(e){
+      var nf = fechaEquivalente(e.fecha, sel.periodo, f.modo);
+      return '<label class="pick-row' + (f.no[e.id] ? ' off' : '') + '"><input type="checkbox"' + (f.no[e.id] ? '' : ' checked') +
+        ' onchange="form.no[' + e.id + ']=!this.checked;dibujarCopia()">' +
+        '<span class="f">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + ' → ' + dowDe(nf) + ' ' + fechaCorta(nf) + '</span>' +
+        '<i class="dot ' + e.canal + '"></i><span class="t">' + esc(e.titulo) + '</span>' + chipEstado(e.estado) + '</label>';
+    }).join('') +
+    '<div class="muted" style="font-size:11.5px;margin-top:10px;line-height:1.5">Se copian tema, canal, tipo, hora, asunto, segmento y notas. Quedan como <b>Planificado</b> para que los ajustes.</div>';
+  abrirDrawer('Copiar envíos a ' + periodoLargo(sel.periodo), D.marcaById[m].nombre, b,
+    '<button class="btn-orange"' + (n ? '' : ' disabled') + ' onclick="ejecutarCopia()">Copiar ' + n + ' envío(s)</button>');
+}
+function ejecutarCopia(){
+  var f = form, m = sel.marca;
+  var rows = envDeMes(m, f.origen).filter(function(e){ return !f.no[e.id]; }).map(function(e){
+    return {marca_id: m, fecha: fechaEquivalente(e.fecha, sel.periodo, f.modo), hora: e.hora, canal: e.canal, tipo: e.tipo,
+      titulo: e.titulo, asunto: e.asunto, segmento: e.segmento, notas: e.notas, estado: 'planificado',
+      copiado_de: e.id, creado_por: nombreUsuario()};
+  });
+  if (!rows.length) return;
+  sb.from('cal_envios').insert(rows).select().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    r.data.forEach(reemplazarLocal);
+    cerrarDrawer(); render(); toast(r.data.length + ' envío(s) copiados');
+  });
+}
+
+// ── cerrar el mes: marcar qué salió y dejar los aprendizajes ───────────────
+function abrirCierre(){
+  var envs = envDeMes(sel.marca, sel.periodo);
+  var reg = mesReg(sel.marca, sel.periodo) || {};
+  form = {tipo: 'cierre', est: {}};
+  envs.forEach(function(e){
+    form.est[e.id] = (e.estado === 'cancelado' || e.estado === 'enviado') ? e.estado
+      : (e.estado === 'idea' ? 'cancelado' : 'enviado');
+  });
+  form.funciono = reg.funciono || ''; form.no_funciono = reg.no_funciono || ''; form.repetir = reg.repetir || '';
+  dibujarCierre();
+}
+function leerCierre(){
+  if (!$('cFun')) return;
+  form.funciono = $('cFun').value; form.no_funciono = $('cNo').value; form.repetir = $('cRep').value;
+}
+function dibujarCierre(){
+  var envs = envDeMes(sel.marca, sel.periodo), f = form;
+  var b = '<div class="note blue">Confirmá qué salió y qué no. Queda como historial y aparece como “mes anterior” cuando armes el próximo.</div>' +
+    '<div class="dsec">Envíos del mes</div>' +
+    (envs.length ? envs.map(function(e){
+      return '<div class="pick-row"><span class="f">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + '</span><i class="dot ' + e.canal + '"></i>' +
+        '<span class="t">' + esc(e.titulo) + '</span><span class="seg">' +
+        ['enviado','cancelado'].map(function(s){
+          return '<button class="' + s + (f.est[e.id] === s ? ' on' : '') + '" onclick="leerCierre();form.est[' + e.id + ']=\'' + s + '\';dibujarCierre()">' + ELABEL[s] + '</button>';
+        }).join('') + '</span></div>';
+    }).join('') : '<div class="muted" style="font-size:12px">No hay envíos cargados.</div>') +
+    '<div class="dsec">Aprendizajes</div>' +
+    '<div class="fg"><label>Qué funcionó</label><textarea id="cFun">' + esc(f.funciono) + '</textarea></div>' +
+    '<div class="fg"><label>Qué no funcionó</label><textarea id="cNo">' + esc(f.no_funciono) + '</textarea></div>' +
+    '<div class="fg"><label>Para repetir / probar el mes que viene</label><textarea id="cRep">' + esc(f.repetir) + '</textarea></div>';
+  abrirDrawer('Cerrar ' + periodoLargo(sel.periodo), D.marcaById[sel.marca].nombre, b,
+    '<button class="btn-orange" onclick="ejecutarCierre()">Cerrar el mes</button>');
+}
+function ejecutarCierre(){
+  leerCierre();
+  var f = form, envs = envDeMes(sel.marca, sel.periodo);
+  var grupos = {enviado: [], cancelado: []};
+  envs.forEach(function(e){ if (f.est[e.id] && f.est[e.id] !== e.estado) grupos[f.est[e.id]].push(e.id); });
+  var ahora = new Date().toISOString();
+  var ps = Object.keys(grupos).filter(function(k){ return grupos[k].length; }).map(function(k){
+    return sb.from('cal_envios').update({estado: k, actualizado_at: ahora}).in('id', grupos[k]).select().then(function(r){
+      if (r.error) throw r.error;
+      r.data.forEach(reemplazarLocal);
+    });
+  });
+  Promise.all(ps).then(function(){
+    return upsertMes({estado: 'cerrado', funciono: f.funciono.trim() || null,
+      no_funciono: f.no_funciono.trim() || null, repetir: f.repetir.trim() || null});
+  }).then(function(d){
+    if (!d) return;
+    cerrarDrawer(); render(); toast('Mes cerrado');
+  }).catch(function(e){ toast(e.message || String(e), true); });
+}
+
+// ── salidas: vista cliente, Sheets, CSV ────────────────────────────────────
+function filasExport(envs, marcaNombre){
+  return envs.map(function(e){
+    return [marcaNombre(e), fechaLarga(e.fecha), dowDe(e.fecha), e.hora || '', CLABEL[e.canal], e.tipo || '',
+      e.titulo, e.asunto || '', e.segmento || '', ELABEL[e.estado], e.notas || ''];
+  });
+}
+const CAB_EXPORT = ['Marca','Fecha','Día','Hora','Canal','Tipo','Tema','Asunto / copy','Segmento','Estado','Notas'];
+function nombreDe(e){ return (D.marcaById[e.marca_id] || {}).nombre || ''; }
+function envsExport(){ return envDeMes(sel.marca, sel.periodo).filter(function(e){ return filtroCanal[e.canal]; }); }
+
+function copiarSheets(){
+  var envs = envsExport();
+  if (!envs.length) return toast('No hay envíos para copiar', true);
+  var limpio = function(v){ return String(v).replace(/[\t\r\n]+/g, ' '); };
+  var txt = [CAB_EXPORT].concat(filasExport(envs, nombreDe)).map(function(r){ return r.map(limpio).join('\t'); }).join('\n');
+  navigator.clipboard.writeText(txt).then(function(){
+    toast(envs.length + ' filas copiadas: pegalas en Sheets con Ctrl+V');
+  }, function(){ toast('El navegador no dejó copiar; usá Descargar CSV', true); });
+}
+function bajarCSV(filas, nombre){
+  var q = function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; };
+  var csv = '﻿' + [CAB_EXPORT].concat(filas).map(function(r){ return r.map(q).join(','); }).join('\r\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+  a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+}
+function slug(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase(); }
+function descargarCSV(){
+  var envs = envsExport();
+  if (!envs.length) return toast('No hay envíos para exportar', true);
+  bajarCSV(filasExport(envs, nombreDe), 'calendario-' + slug(D.marcaById[sel.marca].nombre) + '-' + sel.periodo.slice(0, 7) + '.csv');
+}
+
+// página prolija, en claro, para mandar al cliente o guardar como PDF
+function vistaCliente(){
+  var m = sel.marca, p = sel.periodo, marca = D.marcaById[m].nombre;
+  var envs = envDeMes(m, p).filter(function(e){ return e.estado !== 'cancelado' && e.estado !== 'idea' && filtroCanal[e.canal]; });
+  var reg = mesReg(m, p) || {};
+  var keys = fechasDelMes(m, p);
+  var col = {email:'#f04e23', push:'#3b6ea8', wpp:'#16a34a'};
+  var primero = parseF(p), dim = diasDelMes(p), lead = (primero.getDay() + 6) % 7, total = Math.ceil((lead + dim) / 7) * 7;
+  var porDia = {}; envs.forEach(function(e){ (porDia[e.fecha] = porDia[e.fecha] || []).push(e); });
+  var c = contar(envs);
+
+  var grid = '';
+  for (var i = 0; i < total; i++){
+    var dia = i - lead + 1;
+    if (dia < 1 || dia > dim){ grid += '<div class="d out"></div>'; continue; }
+    var f = ymd(primero.getFullYear(), primero.getMonth() + 1, dia);
+    grid += '<div class="d"><div class="n">' + dia + '</div>';
+    keys.forEach(function(k){ if (f >= k.desde && f <= k.hasta) grid += '<div class="k">★ ' + esc(k.nombre) + '</div>'; });
+    (porDia[f] || []).forEach(function(e){
+      grid += '<div class="e" style="border-left-color:' + col[e.canal] + '"><b>' + CLABEL[e.canal] + (e.hora ? ' · ' + esc(e.hora) : '') + '</b>' + esc(e.titulo) + '</div>';
+    });
+    grid += '</div>';
+  }
+  var filas = envs.map(function(e){
+    return '<tr><td>' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + (e.hora ? ' · ' + esc(e.hora) : '') + '</td>' +
+      '<td><span class="c" style="background:' + col[e.canal] + '"></span>' + CLABEL[e.canal] + '</td>' +
+      '<td><b>' + esc(e.titulo) + '</b>' + (e.tipo ? '<br><small>' + esc(e.tipo) + '</small>' : '') + '</td>' +
+      '<td>' + esc(e.asunto || '') + '</td><td>' + esc(e.segmento || '') + '</td></tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + esc(marca) + ' — Calendario ' + periodoLargo(p) + '</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,sans-serif;color:#0b1929;background:#fff;padding:32px;font-size:12px}' +
+    'header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #f04e23;padding-bottom:14px;margin-bottom:18px;gap:20px}' +
+    'h1{font-size:24px;font-weight:800;letter-spacing:-.02em}h1 span{color:#f04e23}.sub{color:#5b6678;margin-top:4px;font-size:13px}' +
+    '.logo{font-weight:800;font-size:18px}.logo span{color:#f04e23}' +
+    '.foco{background:#fff4f0;border-left:3px solid #f04e23;padding:10px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.5;white-space:pre-wrap}' +
+    '.res{display:flex;gap:18px;margin-bottom:14px;font-size:12px;color:#5b6678}.res b{color:#0b1929;font-size:15px;margin-right:4px}' +
+    '.g{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid #d9dee6;border-radius:8px;overflow:hidden;margin-bottom:24px}' +
+    '.h{background:#0b1929;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:7px 8px}' +
+    '.d{min-height:92px;border-right:1px solid #e6e9ef;border-top:1px solid #e6e9ef;padding:5px;display:flex;flex-direction:column;gap:3px}' +
+    '.d:nth-child(7n){border-right:none}.d.out{background:#f5f6f8}.n{font-weight:700;color:#5b6678;font-size:11px}' +
+    '.k{font-size:9.5px;font-weight:700;color:#b45309;background:#fef3c7;border-radius:3px;padding:1px 4px}' +
+    '.e{font-size:10.5px;line-height:1.3;border-left:3px solid;background:#f5f6f8;border-radius:3px;padding:3px 5px}.e b{display:block;font-size:9px;color:#5b6678;text-transform:uppercase}' +
+    'table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6678;border-bottom:2px solid #0b1929;padding:7px 8px}' +
+    'td{padding:8px;border-bottom:1px solid #e6e9ef;vertical-align:top;line-height:1.4}small{color:#5b6678}.c{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}' +
+    'h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.btn{position:fixed;top:16px;right:16px;font-family:inherit;font-weight:600;background:#f04e23;color:#fff;border:none;border-radius:8px;padding:9px 16px;cursor:pointer}' +
+    '@media print{body{padding:0}.btn{display:none}.g{break-inside:avoid}@page{size:A4 landscape;margin:12mm}}' +
+    '</style></head><body><button class="btn" onclick="print()">Imprimir / PDF</button>' +
+    '<header><div><h1>' + esc(marca) + ' <span>·</span> ' + periodoLargo(p) + '</h1><div class="sub">Calendario de Owned Media — Email, Push y WhatsApp</div></div>' +
+    '<div class="logo">WE<span>ARE</span></div></header>' +
+    (reg.foco ? '<div class="foco"><b>Foco del mes.</b> ' + esc(reg.foco) + '</div>' : '') +
+    '<div class="res"><span><b>' + c.total + '</b>envíos</span>' + CANALES.filter(function(k){ return c[k]; }).map(function(k){
+      return '<span><span class="c" style="background:' + col[k] + '"></span><b>' + c[k] + '</b>' + CLABEL[k] + '</span>'; }).join('') + '</div>' +
+    '<div class="g">' + ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map(function(d){ return '<div class="h">' + d + '</div>'; }).join('') + grid + '</div>' +
+    '<h2>Detalle</h2><table><thead><tr><th>Fecha</th><th>Canal</th><th>Campaña</th><th>Asunto / copy</th><th>Segmento</th></tr></thead><tbody>' +
+    (filas || '<tr><td colspan="5">Sin envíos planificados.</td></tr>') + '</tbody></table></body></html>';
+  var w = window.open('', '_blank');
+  if (!w) return toast('El navegador bloqueó la ventana nueva: habilitá los pop-ups', true);
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+// ══ RESUMEN DEL EQUIPO ══════════════════════════════════════════════════════
+var filtroCelula = '';
+function renderResumen(){
+  var p = sel.periodo, prev = addMes(p, -1);
+  if (!R[p]){
+    $('panes').innerHTML = '<div class="filters">' + navMes() + '</div><div class="loading">Cargando…</div>';
+    R[p] = Promise.all([
+      fetchAll('cal_envios', 'marca_id,canal,estado,fecha', function(q){ return q.gte('fecha', prev).lte('fecha', finMes(p)); }),
+      fetchAll('cal_meses', 'marca_id,periodo,estado,actualizado_por,actualizado_at', function(q){ return q.in('periodo', [p, prev]); })
+    ]).then(function(res){ R[p] = {envs: res[0], meses: res[1]}; if (tab === 'resumen' && sel.periodo === p) render(); })
+      .catch(function(e){ delete R[p]; toast(e.message || String(e), true); });
+    return;
+  }
+  if (typeof R[p].then === 'function') return;   // sigue cargando
+  var datos = R[p];
+  var marcas = D.marcas.filter(function(m){ return m.activa && (!filtroCelula || String(m.celula_id || 0) === filtroCelula); });
+  var filas = marcas.map(function(m){
+    var eM = datos.envs.filter(function(e){ return e.marca_id === m.id; });
+    var c  = contar(eM.filter(function(e){ return periodoDe(e.fecha) === p; }));
+    var cP = contar(eM.filter(function(e){ return periodoDe(e.fecha) === prev; }));
+    var reg = datos.meses.find(function(r){ return r.marca_id === m.id && r.periodo === p; });
+    var regP = datos.meses.find(function(r){ return r.marca_id === m.id && r.periodo === prev; });
+    return {m: m, c: c, cP: cP, reg: reg, regP: regP};
+  });
+  var conCal = filas.filter(function(f){ return f.c.total > 0; }).length;
+  var aprob  = filas.filter(function(f){ return f.reg && (f.reg.estado === 'aprobado' || f.reg.estado === 'cerrado'); }).length;
+  var revis  = filas.filter(function(f){ return f.reg && f.reg.estado === 'revision'; }).length;
+  var sinCerrarPrev = filas.filter(function(f){ return f.cP.total + f.cP.cancelados > 0 && !(f.regP && f.regP.estado === 'cerrado'); }).length;
+  var tot = {email:0, push:0, wpp:0};
+  filas.forEach(function(f){ CANALES.forEach(function(k){ tot[k] += f.c[k]; }); });
+
+  var celOpts = '<option value="">Todas las células</option>' + D.celulas.map(function(c){
+    return '<option value="' + c.id + '"' + (String(c.id) === filtroCelula ? ' selected' : '') + '>' + esc(c.nombre) + '</option>';
+  }).join('') + '<option value="0"' + (filtroCelula === '0' ? ' selected' : '') + '>Sin célula</option>';
+
+  var h = '<div class="filters">' + navMes() + '<select onchange="filtroCelula=this.value;render()">' + celOpts + '</select>' +
+    '<span class="spacer"></span><button class="btn-sm" onclick="csvEquipo()">Descargar CSV de todas las marcas</button></div>' +
+    '<div class="kpi-row">' +
+    '<div class="kpi' + (conCal === filas.length ? ' ok' : ' warn') + '"><div class="kpi-label">Con calendario</div><div class="kpi-val">' + conCal + '<span class="muted" style="font-size:14px"> / ' + filas.length + '</span></div><div class="kpi-sub">marcas con envíos cargados</div></div>' +
+    '<div class="kpi warn"><div class="kpi-label">En revisión cliente</div><div class="kpi-val">' + revis + '</div></div>' +
+    '<div class="kpi ok"><div class="kpi-label">Aprobados</div><div class="kpi-val">' + aprob + '</div></div>' +
+    '<div class="kpi' + (sinCerrarPrev ? ' bad' : ' mute') + '"><div class="kpi-label">' + periodoLargo(prev) + ' sin cerrar</div><div class="kpi-val">' + sinCerrarPrev + '</div><div class="kpi-sub">faltan aprendizajes</div></div>' +
+    CANALES.map(function(k){ return '<div class="kpi ' + k + '"><div class="kpi-label">' + CLABEL[k] + '</div><div class="kpi-val">' + tot[k] + '</div></div>'; }).join('') +
+    '</div>';
+
+  // agrupado por célula
+  var grupos = {};
+  filas.forEach(function(f){ var k = f.m.celula_id || 0; (grupos[k] = grupos[k] || []).push(f); });
+  var orden = Object.keys(grupos).sort(function(a, b){
+    if (a === '0') return 1; if (b === '0') return -1;
+    return String((D.celulaById[a] || {}).nombre || '').localeCompare(String((D.celulaById[b] || {}).nombre || ''));
+  });
+  h += '<div class="section"><div class="twrap"><table><thead><tr><th>Marca</th><th>Canales</th>' +
+    CANALES.map(function(k){ return '<th class="num">' + CLABEL[k] + '</th>'; }).join('') +
+    '<th class="num">Total</th><th class="num">Mes ant.</th><th>Estado ' + periodoCorto(p) + '</th><th>' + periodoCorto(prev) + '</th><th>Última edición</th></tr></thead><tbody>';
+  orden.forEach(function(k){
+    var cel = D.celulaById[k];
+    h += '<tr class="crow"><td colspan="' + (CANALES.length + 7) + '">' + esc(cel ? cel.nombre : 'Sin célula') + (cel && cel.kam ? '<span class="kam">' + esc(cel.kam) + '</span>' : '') + '</td></tr>';
+    grupos[k].forEach(function(f){
+      var est = f.reg ? f.reg.estado : null;
+      var cerradoP = f.regP && f.regP.estado === 'cerrado';
+      h += '<tr class="clickable" onclick="irA(' + f.m.id + ',\'' + p + '\')"><td class="strong">' + esc(f.m.nombre) +
+        (D.misMarcas.indexOf(f.m.id) >= 0 ? ' <span class="chip orange">mía</span>' : '') + '</td>' +
+        '<td>' + canalesDe(f.m.id).map(function(c){ return '<i class="dot ' + c + '" title="' + CLABEL[c] + '" style="margin-right:3px"></i>'; }).join('') + '</td>' +
+        CANALES.map(function(c){ return '<td class="num' + (f.c[c] ? '' : ' muted') + '">' + (f.c[c] || '—') + '</td>'; }).join('') +
+        '<td class="num strong">' + (f.c.total || '<span class="muted">—</span>') + '</td>' +
+        '<td class="num muted">' + (f.cP.total || '—') + '</td>' +
+        '<td>' + (est ? '<span class="chip ' + MCHIP[est] + '">' + MLABEL[est] + '</span>' : (f.c.total ? '<span class="chip grey">Borrador</span>' : '<span class="chip red">Sin armar</span>')) + '</td>' +
+        '<td>' + (cerradoP ? '<span class="chip blue">Cerrado</span>' : (f.cP.total ? '<span class="chip amber">Sin cerrar</span>' : '<span class="muted">—</span>')) + '</td>' +
+        '<td class="muted" style="font-size:11.5px">' + (f.reg && f.reg.actualizado_por ? esc(f.reg.actualizado_por) + ' · ' + fechaCorta(f.reg.actualizado_at.slice(0, 10)) : '') + '</td></tr>';
+    });
+  });
+  if (!filas.length) h += '<tr><td colspan="' + (CANALES.length + 7) + '"><div class="empty">No hay marcas activas.</div></td></tr>';
+  $('panes').innerHTML = h + '</tbody></table></div></div>';
+}
+function csvEquipo(){
+  var p = sel.periodo;
+  fetchAll('cal_envios', '*', function(q){ return q.gte('fecha', p).lte('fecha', finMes(p)).order('fecha'); }).then(function(rows){
+    if (!rows.length) return toast('No hay envíos en ' + periodoLargo(p), true);
+    rows.sort(function(a, b){ return nombreDe(a).localeCompare(nombreDe(b)) || ordenEnv(a, b); });
+    bajarCSV(filasExport(rows, nombreDe), 'calendario-owned-' + p.slice(0, 7) + '.csv');
+  }).catch(function(e){ toast(e.message || String(e), true); });
+}
+
+// ══ HISTORIAL DE LA MARCA ═══════════════════════════════════════════════════
+function renderHistorial(){
+  var m = sel.marca;
+  if (!m){ $('panes').innerHTML = '<div class="empty">No hay marcas.</div>'; return; }
+  if (!D.env[m]){
+    $('panes').innerHTML = '<div class="loading">Cargando la marca…</div>';
+    cargarMarca(m).then(function(){ if (tab === 'historial' && sel.marca === m && D.env[m]) render(); });
+    return;
+  }
+  var periodos = {};
+  D.env[m].forEach(function(e){ periodos[periodoDe(e.fecha)] = 1; });
+  (D.meses[m] || []).forEach(function(r){ periodos[r.periodo] = 1; });
+  var lista = Object.keys(periodos).sort().reverse();
+
+  var h = '<div class="filters">' + selectorMarca() + '</div>' +
+    '<div class="note blue">Todo lo que se armó y se mandó en cada mes, con los aprendizajes. Tocá un mes para abrir su calendario.</div>';
+  if (!lista.length){ $('panes').innerHTML = h + '<div class="section"><div class="empty">Esta marca todavía no tiene meses cargados.</div></div>'; return; }
+
+  // tipos de envío más usados: sirve para ver el mix de la marca
+  var tipos = {};
+  D.env[m].forEach(function(e){ if (e.estado !== 'cancelado' && e.tipo) tipos[e.tipo] = (tipos[e.tipo] || 0) + 1; });
+  var topTipos = Object.keys(tipos).sort(function(a, b){ return tipos[b] - tipos[a]; }).slice(0, 6);
+  if (topTipos.length) h += '<div class="filters"><label>Mix histórico</label>' + topTipos.map(function(t){ return '<span class="chip grey">' + esc(t) + ' · ' + tipos[t] + '</span>'; }).join('') + '</div>';
+
+  h += '<div class="section"><div class="twrap"><table><thead><tr><th>Mes</th>' +
+    CANALES.map(function(k){ return '<th class="num">' + CLABEL[k] + '</th>'; }).join('') +
+    '<th class="num">Enviados</th><th class="num">Cancel.</th><th>Estado</th><th>Foco</th><th>Qué funcionó</th><th>Qué no</th><th>Para repetir</th></tr></thead><tbody>' +
+    lista.map(function(p){
+      var c = contar(envDeMes(m, p)), r = mesReg(m, p) || {};
+      return '<tr class="clickable" onclick="irA(' + m + ',\'' + p + '\')"><td class="strong" style="white-space:nowrap">' + periodoLargo(p) + '</td>' +
+        CANALES.map(function(k){ return '<td class="num' + (c[k] ? '' : ' muted') + '">' + (c[k] || '—') + '</td>'; }).join('') +
+        '<td class="num">' + c.enviados + '</td><td class="num muted">' + (c.cancelados || '—') + '</td>' +
+        '<td>' + (r.estado ? '<span class="chip ' + MCHIP[r.estado] + '">' + MLABEL[r.estado] + '</span>' : '<span class="chip grey">Borrador</span>') + '</td>' +
+        ['foco','funciono','no_funciono','repetir'].map(function(k){ return '<td><div class="wrap-cell">' + esc(r[k] || '') + '</div></td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody></table></div></div>';
+  $('panes').innerHTML = h;
+}
+
+// ══ FECHAS CLAVE ════════════════════════════════════════════════════════════
+var filtroFechas = 'proximas';
+function proyeccionFecha(f, desde){
+  // próxima ocurrencia (para ordenar las anuales)
+  if (!f.anual) return f.fecha;
+  var y = +desde.slice(0, 4), cand = y + f.fecha.slice(4);
+  return cand >= desde ? cand : (y + 1) + f.fecha.slice(4);
+}
+function renderFechas(){
+  var hoy = hoyStr();
+  var lista = D.fechas.map(function(f){ return Object.assign({}, f, {prox: proyeccionFecha(f, hoy)}); });
+  if (filtroFechas === 'proximas') lista = lista.filter(function(f){ return (f.hasta && !f.anual ? f.hasta : f.prox) >= hoy; });
+  else if (filtroFechas === 'generales') lista = lista.filter(function(f){ return !f.marca_id; });
+  else if (filtroFechas === 'marca') lista = lista.filter(function(f){ return f.marca_id === sel.marca; });
+  lista.sort(function(a, b){ return a.prox < b.prox ? -1 : a.prox > b.prox ? 1 : 0; });
+  var puedeAlgo = me.rol === 'admin' || (me.rol === 'analista' && D.misMarcas.length);
+
+  var h = '<div class="filters"><span class="seg">' +
+    [['proximas','Próximas'],['generales','Generales'],['marca','De la marca'],['todas','Todas']].map(function(o){
+      return '<button class="' + (filtroFechas === o[0] ? 'on' : '') + '" onclick="filtroFechas=\'' + o[0] + '\';render()">' + o[1] + '</button>';
+    }).join('') + '</span>' + (filtroFechas === 'marca' ? selectorMarca() : '') +
+    '<span class="spacer"></span>' + (puedeAlgo ? '<button class="btn-orange" onclick="abrirFecha(null)">+ Fecha clave</button>' : '') + '</div>' +
+    '<div class="note blue">Las generales aparecen en el calendario de todas las marcas; las de marca, solo en la suya. CyberMonday y Hot Sale cambian cada año: cargalas cuando se anuncien.</div>' +
+    '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Nombre</th><th>Alcance</th><th>Repite</th><th>Notas</th></tr></thead><tbody>' +
+    (lista.length ? lista.map(function(f){
+      var marca = f.marca_id ? D.marcaById[f.marca_id] : null;
+      var ed = f.marca_id ? puedeEditar(f.marca_id) : me.rol === 'admin';
+      var hasta = f.hasta ? (f.anual ? f.prox.slice(0, 4) + f.hasta.slice(4) : f.hasta) : null;
+      return '<tr' + (ed ? ' class="clickable" onclick="abrirFecha(' + f.id + ')"' : '') + '>' +
+        '<td class="lst-fecha">' + dowDe(f.prox) + ' ' + fechaLarga(f.prox) + (hasta ? ' → ' + fechaCorta(hasta) : '') + '</td>' +
+        '<td class="strong">' + esc(f.nombre) + '</td>' +
+        '<td>' + (marca ? '<span class="chip orange">' + esc(marca.nombre) + '</span>' : '<span class="chip amber">General</span>') + '</td>' +
+        '<td class="muted">' + (f.anual ? 'Todos los años' : '—') + '</td>' +
+        '<td><div class="wrap-cell">' + esc(f.notas || '') + '</div></td></tr>';
+    }).join('') : '<tr><td colspan="5"><div class="empty">No hay fechas para este filtro.</div></td></tr>') +
+    '</tbody></table></div></div>';
+  $('panes').innerHTML = h;
+}
+function abrirFecha(id){
+  var f = id ? D.fechas.find(function(x){ return x.id === id; }) : null;
+  var opciones = (me.rol === 'admin' ? '<option value="">General (todas las marcas)</option>' : '') +
+    D.marcas.filter(function(m){ return m.activa && puedeEditar(m.id); }).map(function(m){
+      var on = f ? f.marca_id === m.id : (me.rol !== 'admin' && m.id === sel.marca);
+      return '<option value="' + m.id + '"' + (on ? ' selected' : '') + '>' + esc(m.nombre) + '</option>';
+    }).join('');
+  var b = '<div class="fg"><label>Nombre</label><input id="kNom" value="' + esc(f ? f.nombre : '') + '" placeholder="Ej: Hot Sale, aniversario de la marca…"></div>' +
+    '<div class="fg-row"><div class="fg"><label>Desde</label><input type="date" id="kDesde" value="' + esc(f ? f.fecha : '') + '"></div>' +
+    '<div class="fg"><label>Hasta (opcional)</label><input type="date" id="kHasta" value="' + esc(f && f.hasta ? f.hasta : '') + '"></div></div>' +
+    '<div class="fg"><label>Alcance</label><select id="kMarca">' + opciones + '</select></div>' +
+    '<label class="chk" style="margin-bottom:14px"><input type="checkbox" id="kAnual"' + (f && f.anual ? ' checked' : '') + '> Se repite todos los años el mismo día</label>' +
+    '<div class="fg"><label>Notas</label><textarea id="kNotas">' + esc(f && f.notas ? f.notas : '') + '</textarea></div>';
+  form = {tipo: 'fecha', id: id};
+  abrirDrawer(f ? 'Editar fecha clave' : 'Nueva fecha clave', '', b,
+    '<button class="btn-orange" onclick="guardarFecha()">Guardar</button>' + (f ? '<span class="spacer"></span><button class="btn-danger" onclick="borrarFecha()">Eliminar</button>' : ''));
+}
+function guardarFecha(){
+  var row = {nombre: $('kNom').value.trim(), fecha: $('kDesde').value, hasta: $('kHasta').value || null,
+    marca_id: $('kMarca').value ? +$('kMarca').value : null, anual: $('kAnual').checked, notas: $('kNotas').value.trim() || null};
+  if (!row.nombre || !row.fecha) return toast('Faltan el nombre o la fecha', true);
+  if (row.hasta && row.hasta < row.fecha) return toast('“Hasta” no puede ser anterior a “Desde”', true);
+  var id = form.id;
+  var q = id ? sb.from('cal_fechas').update(row).eq('id', id) : sb.from('cal_fechas').insert(row);
+  q.select().single().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    var i = D.fechas.findIndex(function(x){ return x.id === r.data.id; });
+    if (i >= 0) D.fechas[i] = r.data; else D.fechas.push(r.data);
+    cerrarDrawer(); render(); toast('Guardado');
+  });
+}
+function borrarFecha(){
+  if (!confirm('¿Eliminar esta fecha clave?')) return;
+  var id = form.id;
+  sb.from('cal_fechas').delete().eq('id', id).then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    D.fechas = D.fechas.filter(function(x){ return x.id !== id; });
+    cerrarDrawer(); render(); toast('Eliminada');
+  });
+}
+
+// ══ ACCESOS (admin) ═════════════════════════════════════════════════════════
+function renderAccesos(){
+  var h = '<div class="note">El mail tiene que ser el mismo con el que la persona entra a Supabase (@we-are.com.ar). ' +
+    'La cuenta se crea en Supabase → Authentication → Users; acá solo se autoriza y se le asignan marcas. ' +
+    'Los <b>admin</b> editan todo, los <b>analistas</b> solo sus marcas, los <b>lectores</b> miran.</div>' +
+    '<div class="section"><div class="section-hdr"><span class="section-title">Usuarios del calendario</span></div><div class="twrap"><table><thead><tr>' +
+    '<th>Nombre</th><th>Email</th><th>Rol</th><th>Activo</th><th>Marcas que edita</th><th>Último ingreso</th></tr></thead><tbody>' +
+    D.usuarios.map(function(u){
+      var suyas = D.um.filter(function(x){ return x.usuario_id === u.id; }).map(function(x){ return x.marca_id; });
+      var libres = D.marcas.filter(function(m){ return m.activa && suyas.indexOf(m.id) < 0; });
+      return '<tr><td class="strong">' + esc(u.nombre || '') + '</td><td class="muted">' + esc(u.email) + '</td>' +
+        '<td><select class="inl" onchange="updUsuario(' + u.id + ',{rol:this.value})">' + ['admin','analista','lector'].map(function(r){
+          return '<option' + (u.rol === r ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></td>' +
+        '<td><input type="checkbox"' + (u.activo ? ' checked' : '') + (u.id === me.id ? ' disabled' : '') + ' onchange="updUsuario(' + u.id + ',{activo:this.checked})"></td>' +
+        '<td>' + (u.rol === 'admin' ? '<span class="muted">Todas</span>' :
+          '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">' + suyas.map(function(id){
+            return '<span class="chip grey">' + esc((D.marcaById[id] || {}).nombre || id) + '<span class="x" onclick="quitarMarca(' + u.id + ',' + id + ')">×</span></span>';
+          }).join('') +
+          (libres.length ? '<select class="inl" onchange="if(this.value)sumarMarca(' + u.id + ',+this.value)"><option value="">+ marca</option>' +
+            libres.map(function(m){ return '<option value="' + m.id + '">' + esc(m.nombre) + '</option>'; }).join('') + '</select>' : '') + '</div>') + '</td>' +
+        '<td class="muted" style="font-size:11.5px">' + (u.ultimo_ingreso ? fechaLarga(u.ultimo_ingreso.slice(0, 10)) : 'nunca') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<div class="addrow"><input id="nuNom" placeholder="Nombre"><input id="nuMail" placeholder="email@we-are.com.ar">' +
+    '<select id="nuRol"><option>analista</option><option>lector</option><option>admin</option></select>' +
+    '<button class="btn-orange" onclick="altaUsuario()">Agregar</button></div></div>';
+  $('panes').innerHTML = h;
+}
+function altaUsuario(){
+  var row = {nombre: $('nuNom').value.trim() || null, email: $('nuMail').value.trim().toLowerCase(), rol: $('nuRol').value};
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email)) return toast('Mail inválido', true);
+  sb.from('cal_usuarios').insert(row).select().single().then(function(r){
+    if (r.error) return toast(/duplicate/i.test(r.error.message) ? 'Ese mail ya está cargado' : r.error.message, true);
+    D.usuarios.push(r.data); render(); toast('Usuario agregado');
+  });
+}
+function updUsuario(id, campos){
+  sb.from('cal_usuarios').update(campos).eq('id', id).select().single().then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    var i = D.usuarios.findIndex(function(x){ return x.id === id; }); D.usuarios[i] = r.data;
+    render(); toast('Guardado');
+  });
+}
+function sumarMarca(uid, mid){
+  sb.from('cal_usuario_marcas').insert({usuario_id: uid, marca_id: mid}).then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    D.um.push({usuario_id: uid, marca_id: mid}); indexar(); render();
+  });
+}
+function quitarMarca(uid, mid){
+  sb.from('cal_usuario_marcas').delete().eq('usuario_id', uid).eq('marca_id', mid).then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    D.um = D.um.filter(function(x){ return !(x.usuario_id === uid && x.marca_id === mid); }); indexar(); render();
+  });
+}
+</script>
+</body>
+</html>
