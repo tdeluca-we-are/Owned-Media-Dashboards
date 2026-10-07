@@ -398,7 +398,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.4';
+const VERSION_APP = '2026-10-07.5';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -721,6 +721,7 @@ function renderCalendario(){
   h += '<div class="filters"><div class="acciones">';
   if (ed){
     h += '<button class="btn-orange" onclick="abrirEnvio(null)">+ Envío</button>' +
+         '<button class="btn-sm" onclick="abrirAcciones()">Cargar acciones comerciales</button>' +
          '<button class="btn-sm" onclick="abrirPegar()">Pegar desde planilla</button>' +
          '<button class="btn-sm" onclick="abrirCopia()">Copiar de otro mes</button>' +
          '<button class="btn-sm" onclick="abrirCierre()">Cerrar el mes</button>';
@@ -1458,6 +1459,232 @@ function importarPegado(){
     r.data.forEach(reemplazarLocal);
     cerrarDrawer(); render(); toast(r.data.length + ' envío(s) creados');
   });
+}
+
+// ── acciones comerciales: del archivo del cliente al calendario ────────────
+// El archivo cambia de formato pero siempre trae "de tal fecha a tal fecha, tal
+// acción". Se busca el rango de fechas en cada línea y lo que sobra es el nombre.
+const MESES_RE = 'ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|set(?:iembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?';
+function mesDeTxt(s){
+  var n = normTxt(s).slice(0, 3);
+  if (n === 'set') return 9;
+  return ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'].indexOf(n) + 1;
+}
+// sin año: el más cercano al mes que se está armando (dic → ene cruza de año)
+function anioPara(mes, periodo){
+  var y = +periodo.slice(0, 4), pm = +periodo.slice(5, 7);
+  if (mes - pm > 6) return y - 1;
+  if (pm - mes > 6) return y + 1;
+  return y;
+}
+function fechaValida(y, m, d){
+  var dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d ? ymd(y, m, d) : null;
+}
+function armarFecha(d, mNum, mTxt, yTxt, periodo){
+  var m = mNum ? +mNum : mesDeTxt(mTxt);
+  if (!m) return null;
+  var y = yTxt ? (yTxt.length === 2 ? 2000 + +yTxt : +yTxt) : anioPara(m, periodo);
+  return fechaValida(y, m, +d);
+}
+function extraerFechas(linea, periodo){
+  // los días de la semana se tapan (mismo largo) para que "del lunes 2 al viernes 6" quede "2 al 6"
+  linea = linea.replace(/\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi, function(w){ return ' '.repeat(w.length); });
+  var encontradas = [], tapado = linea;
+  var tapar = function(m){ tapado = tapado.slice(0, m.index) + ' '.repeat(m[0].length) + tapado.slice(m.index + m[0].length); };
+  // "10 al 15/11", "10-15 de noviembre": el primer día toma el mes del segundo.
+  // El lookbehind evita leer "10/11 al 15/11" como "11 al 15/11".
+  var reCorto = new RegExp('(?<![\\d\\/.\\-])\\b(\\d{1,2})\\s*(?:al|a|-|–|y|hasta(?:\\s+el)?)\\s*(\\d{1,2})\\s*(?:[\\/.\\-]\\s*(\\d{1,2})(?:\\s*[\\/.\\-]\\s*(\\d{2,4}))?|\\s+(?:de\\s+)?(' + MESES_RE + ')\\b(?:\\s+(?:de\\s+)?(\\d{4}))?)', 'gi');
+  var m;
+  while ((m = reCorto.exec(linea))){
+    var f2 = armarFecha(m[2], m[3], m[5], m[4] || m[6], periodo);
+    var f1 = f2 ? fechaValida(+f2.slice(0, 4), +f2.slice(5, 7), +m[1]) : null;
+    if (f1 && f2 && f1 <= f2){ encontradas.push({f: f1, pos: m.index}, {f: f2, pos: m.index + 1}); tapar(m); }
+  }
+  // fechas completas: 10/11, 10/11/2026, 10 de noviembre
+  var reFull = new RegExp('\\b(\\d{1,2})\\s*(?:[\\/.\\-]\\s*(\\d{1,2})(?:\\s*[\\/.\\-]\\s*(\\d{2,4}))?|\\s+(?:de\\s+)?(' + MESES_RE + ')\\b(?:\\s+(?:de\\s+)?(\\d{4}))?)', 'gi');
+  var base = tapado;
+  while ((m = reFull.exec(base))){
+    var f = armarFecha(m[1], m[2], m[4], m[3] || m[5], periodo);
+    if (f){ encontradas.push({f: f, pos: m.index}); tapar(m); }
+  }
+  encontradas.sort(function(a, b){ return a.pos - b.pos; });
+  return {fechas: encontradas.map(function(x){ return x.f; }), resto: tapado};
+}
+function limpiarNombre(s){
+  var t = s.replace(/\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/gi, ' ')
+    .replace(/\s*\|\s*/g, ' · ').replace(/\s+/g, ' ').trim();
+  var borde = /^(?:[\s\-–:·,.;|]+|(?:del|desde|hasta|al|el|y|a|de|vigencia|fecha|fechas|acci[oó]n|acciones)\b)+|(?:[\s\-–:·,.;|]+|\b(?:del|desde|hasta|al|el|y|a|de)\b)+$/gi;
+  var antes;
+  do { antes = t; t = t.replace(borde, '').trim(); } while (t !== antes);
+  return t;
+}
+function parseAcciones(txt, periodo){
+  var out = [], prev = null;
+  String(txt || '').split(/\r?\n/).forEach(function(l){
+    var raw = l.replace(/\t+/g, ' | ').replace(/^\s*[|·]\s*|\s*[|·]\s*$/g, '').trim();
+    if (!raw) return;
+    var r = extraerFechas(raw, periodo);
+    if (!r.fechas.length){
+      // una fila de títulos ("Fecha | Acción | Descripción") se descarta
+      var palabras = normTxt(raw).split(/[^a-z]+/).filter(Boolean);
+      if (palabras.length && palabras.every(function(w){ return /^(fechas?|desde|hasta|inicio|fin|accion|acciones|descripcion|detalle|nombre|promo|promocion|vigencia|mecanica|canal|dia|dias|comercial|comerciales|observaciones|notas|de|y|del)$/.test(w); })) return;
+      // sin fecha: es la descripción de la acción anterior (o un título suelto)
+      if (prev) prev.notas = (prev.notas ? prev.notas + '\n' : '') + raw.replace(/\s*\|\s*/g, ' · ');
+      return;
+    }
+    var desde = r.fechas[0], hasta = r.fechas[r.fechas.length - 1];
+    if (hasta < desde){ var x = desde; desde = hasta; hasta = x; }
+    prev = {desde: desde, hasta: hasta !== desde ? hasta : null, nombre: limpiarNombre(r.resto), notas: '', incluir: true};
+    out.push(prev);
+  });
+  return out;
+}
+function diasEntre(a, b){ return Math.round((parseF(b) - parseF(a)) / 86400000); }
+function sumarDias(f, n){ var d = parseF(f); d.setDate(d.getDate() + n); return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
+
+// receta: qué envíos se arman por cada acción (se recuerda por marca)
+function recetaDefault(cs){
+  var fin = cs.indexOf('wpp') >= 0 ? 'wpp' : cs.indexOf('push') >= 0 ? 'push' : cs[0];
+  var ini = {}; cs.forEach(function(k){ ini[k] = k === 'email'; });
+  if (cs.indexOf('email') < 0) ini[cs[0]] = true;
+  return {ini: ini, mitad: false, mitadCanal: cs.indexOf('push') >= 0 ? 'push' : cs[0], ultimo: true, ultimoCanal: fin};
+}
+function enviosDeAccion(a, rec, cs){
+  var out = [], fin = a.hasta || a.desde, dur = diasEntre(a.desde, fin);
+  cs.forEach(function(k){ if (rec.ini[k]) out.push({fecha: a.desde, canal: k, titulo: a.nombre}); });
+  if (rec.mitad && dur >= 3) out.push({fecha: sumarDias(a.desde, Math.floor(dur / 2)), canal: rec.mitadCanal, titulo: a.nombre + ' — recordatorio'});
+  if (rec.ultimo && dur >= 1) out.push({fecha: fin, canal: rec.ultimoCanal, titulo: a.nombre + ' — último día'});
+  return out;
+}
+function abrirAcciones(){
+  var m = sel.marca, cs = canalesDe(m);
+  var rec = lsGet('cal_receta_' + m) || recetaDefault(cs);
+  cs.forEach(function(k){ if (rec.ini[k] == null) rec.ini[k] = false; });
+  if (cs.indexOf(rec.mitadCanal) < 0) rec.mitadCanal = cs[0];
+  if (cs.indexOf(rec.ultimoCanal) < 0) rec.ultimoCanal = cs[0];
+  frm = {tipo: 'acciones', txt: '', acciones: [], rec: rec};
+  var b = '<div class="note blue">Subí el archivo de acciones del cliente o pegá el texto tal cual te llegó (de Excel, Word, mail o WhatsApp). ' +
+    'De cada línea se toma el <b>rango de fechas</b> y el resto es el <b>nombre de la acción</b>; las líneas sin fecha se suman como descripción de la acción de arriba.<br>' +
+    'Entiende <b>10/11 al 15/11</b>, <b>del 10 al 15/11</b>, <b>10-15 de noviembre</b>, <b>lunes 10 de noviembre</b>…</div>' +
+    '<div class="fg"><label>Archivo (Excel o CSV)</label><input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="leerArchivoAcciones(this.files[0])"></div>' +
+    '<div class="fg"><label>…o pegá el texto</label><textarea class="paste" id="acTxt" style="white-space:pre-wrap" placeholder="10/11 al 15/11 · Cyber Monday: 20% off en toda la tienda&#10;del 20 al 22/11 Envío gratis&#10;27/11 Black Friday" oninput="frm.txt=this.value;frm.acciones=parseAcciones(this.value,sel.periodo);previewAcciones()"></textarea></div>' +
+    '<div id="acPrev"></div>';
+  abrirDrawer('Cargar acciones comerciales', D.marcaById[m].nombre, b,
+    '<button class="btn-orange" id="acBtn" disabled onclick="importarAcciones()">Cargar</button>');
+  previewAcciones();
+  setTimeout(function(){ var t = $('acTxt'); if (t) t.focus(); }, 50);
+}
+// Excel: se carga la librería solo cuando hace falta
+function cargarXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  return new Promise(function(ok, mal){
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = ok; s.onerror = function(){ mal(new Error('No se pudo cargar el lector de Excel')); };
+    document.head.appendChild(s);
+  });
+}
+function leerArchivoAcciones(file){
+  if (!file) return;
+  var esExcel = /\.xlsx?$/i.test(file.name);
+  var listo = function(txt){
+    frm.txt = txt; $('acTxt').value = txt;
+    frm.acciones = parseAcciones(txt, sel.periodo); previewAcciones();
+    toast(frm.acciones.length + ' acción(es) encontradas en ' + file.name);
+  };
+  if (!esExcel){
+    var r = new FileReader();
+    r.onload = function(){ listo(String(r.result)); };
+    r.readAsText(file);
+    return;
+  }
+  cargarXLSX().then(function(){
+    var r = new FileReader();
+    r.onload = function(){
+      var wb = XLSX.read(new Uint8Array(r.result), {type: 'array', cellDates: true});
+      var lineas = [];
+      wb.SheetNames.forEach(function(n){
+        XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: false, dateNF: 'dd/mm/yyyy', blankrows: false}).forEach(function(row){
+          var celdas = row.map(function(c){ return String(c == null ? '' : c).replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+          if (celdas.length) lineas.push(celdas.join('\t'));
+        });
+      });
+      listo(lineas.join('\n'));
+    };
+    r.readAsArrayBuffer(file);
+  }).catch(function(e){ toast(e.message + '. Copiá y pegá el contenido.', true); });
+}
+function accionesElegidas(){ return frm.acciones.filter(function(a){ return a.incluir && a.nombre; }); }
+function enviosPropuestos(){
+  var m = sel.marca, cs = canalesDe(m), out = [];
+  var existe = function(e){ return (D.env[m] || []).some(function(x){ return x.fecha === e.fecha && x.canal === e.canal && x.titulo === e.titulo; }); };
+  accionesElegidas().forEach(function(a){
+    enviosDeAccion(a, frm.rec, cs).forEach(function(e){ if (!existe(e)) out.push(e); });
+  });
+  return out;
+}
+function previewAcciones(){
+  var m = sel.marca, cs = canalesDe(m), a = frm.acciones, rec = frm.rec;
+  var elegidas = accionesElegidas(), envs = enviosPropuestos();
+  var btn = $('acBtn');
+  btn.disabled = !elegidas.length;
+  btn.textContent = elegidas.length ? 'Cargar ' + elegidas.length + ' acción(es)' + (envs.length ? ' y ' + envs.length + ' envío(s)' : '') : 'Cargar';
+  if (!a.length){
+    $('acPrev').innerHTML = frm.txt.trim() ? '<div class="note">No encontré fechas en el texto. Revisá que cada acción tenga su fecha (ej: 10/11 o 10 de noviembre).</div>' : '';
+    return;
+  }
+  var selCanal = function(campo){
+    return '<select class="inl" onchange="frm.rec.' + campo + '=this.value;guardarReceta()">' + opciones(cs, rec[campo], CLABEL) + '</select>';
+  };
+  var h = '<div class="dsec">Acciones encontradas (' + elegidas.length + ' de ' + a.length + ')</div>' +
+    a.map(function(x, i){
+      var rango = dowDe(x.desde) + ' ' + fechaCorta(x.desde) + (x.hasta ? ' → ' + dowDe(x.hasta) + ' ' + fechaCorta(x.hasta) : '');
+      return '<div class="pick-row' + (x.incluir ? '' : ' off') + '" style="align-items:flex-start">' +
+        '<input type="checkbox" style="margin-top:7px"' + (x.incluir ? ' checked' : '') + ' onchange="frm.acciones[' + i + '].incluir=this.checked;previewAcciones()">' +
+        '<div style="flex:1;min-width:0"><div class="f" style="margin-bottom:4px">' + rango +
+        (periodoDe(x.desde) !== sel.periodo ? ' · <span style="color:var(--amber)">' + periodoLargo(periodoDe(x.desde)) + '</span>' : '') +
+        (D.fechas.some(function(f){ return f.marca_id === m && f.fecha === x.desde && f.nombre === x.nombre; }) ? ' · <span class="chip grey">ya cargada</span>' : '') + '</div>' +
+        '<input class="m-in" style="padding:6px 10px" value="' + esc(x.nombre) + '" placeholder="Nombre de la acción" onchange="frm.acciones[' + i + '].nombre=this.value.trim();previewAcciones()">' +
+        (x.notas ? '<div class="muted" style="font-size:11.5px;margin-top:5px;white-space:pre-wrap">' + esc(x.notas) + '</div>' : '') + '</div></div>';
+    }).join('') +
+    '<div class="dsec">Envíos que se arman por cada acción</div>' +
+    '<div class="side-card" style="margin-bottom:8px">' +
+    '<div class="side-lab" style="margin-top:0">El día que arranca</div><div>' + cs.map(function(k){
+      return '<label class="chk"><input type="checkbox"' + (rec.ini[k] ? ' checked' : '') + ' onchange="frm.rec.ini.' + k + '=this.checked;guardarReceta()"> ' + CLABEL[k] + '</label>';
+    }).join('') + '</div>' +
+    '<div class="side-lab">Recordatorio a mitad (acciones de 4 días o más)</div>' +
+    '<label class="chk"><input type="checkbox"' + (rec.mitad ? ' checked' : '') + ' onchange="frm.rec.mitad=this.checked;guardarReceta()"> Sí, por</label>' + selCanal('mitadCanal') +
+    '<div class="side-lab">Último día (acciones de 2 días o más)</div>' +
+    '<label class="chk"><input type="checkbox"' + (rec.ultimo ? ' checked' : '') + ' onchange="frm.rec.ultimo=this.checked;guardarReceta()"> Sí, por</label>' + selCanal('ultimoCanal') +
+    '</div><div class="muted" style="font-size:11.5px;line-height:1.5">' +
+    (envs.length ? 'Se van a crear <b>' + envs.length + ' envíos</b> como <b>Planificado</b>, para que después ajustes asunto y segmento. ' : 'No se crea ningún envío: solo las acciones como fechas clave. ') +
+    'Las acciones aparecen en el calendario con ★ en los días que duran. Si un envío igual ya existe, no se duplica.</div>';
+  $('acPrev').innerHTML = h;
+}
+function guardarReceta(){ lsSet('cal_receta_' + sel.marca, frm.rec); previewAcciones(); }
+function importarAcciones(){
+  var m = sel.marca, elegidas = accionesElegidas(), envs = enviosPropuestos();
+  var yaFecha = function(a){ return D.fechas.some(function(f){ return f.marca_id === m && f.fecha === a.desde && f.nombre === a.nombre; }); };
+  var fechas = elegidas.filter(function(a){ return !yaFecha(a); }).map(function(a){
+    return {marca_id: m, fecha: a.desde, hasta: a.hasta, nombre: a.nombre, anual: false, notas: a.notas || null};
+  });
+  var filas = envs.map(function(e){
+    return {marca_id: m, fecha: e.fecha, canal: e.canal, titulo: e.titulo, tipo: 'Promo', estado: 'planificado',
+      notas: 'Armado desde acciones comerciales', creado_por: nombreUsuario()};
+  });
+  $('acBtn').disabled = true;
+  var p1 = fechas.length ? sb.from('cal_fechas').insert(fechas).select() : Promise.resolve({data: []});
+  p1.then(function(r){
+    if (r.error) throw r.error;
+    r.data.forEach(function(f){ D.fechas.push(f); });
+    return filas.length ? sb.from('cal_envios').insert(filas).select() : {data: []};
+  }).then(function(r){
+    if (r.error) throw r.error;
+    r.data.forEach(reemplazarLocal);
+    cerrarDrawer(); render();
+    toast(elegidas.length + ' acción(es) y ' + r.data.length + ' envío(s) cargados');
+  }).catch(function(e){ $('acBtn').disabled = false; toast(e.message || String(e), true); });
 }
 
 // ── cerrar el mes: marcar qué salió y dejar los aprendizajes ───────────────
