@@ -228,6 +228,9 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .legend-cat{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin:8px 2px 0}
 /* arrastrar: destinos, bandeja y tira de días de la lista */
 [data-drop].drop{outline:2px dashed var(--orange);outline-offset:-3px;background:rgba(240,78,35,.07)}
+@keyframes flash{0%{background:rgba(240,78,35,.35);box-shadow:0 0 0 2px var(--orange)}100%{background:transparent;box-shadow:0 0 0 0 transparent}}
+.ev.flash{animation:flash 1.8s ease-out}
+tr.flash td{animation:flash 1.8s ease-out}
 .side-card.bandeja{border-left:3px solid var(--orange)}
 .bj-list{display:flex;flex-direction:column;gap:5px}
 .bj-add{display:flex;gap:6px;margin-top:10px}
@@ -237,13 +240,6 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .grip{cursor:grab;color:var(--text3);padding:0 7px 0 0;user-select:none;font-size:12px;letter-spacing:-2px;vertical-align:middle}
 .grip:hover{color:var(--orange)}
 .ltab td.sel{white-space:nowrap}
-.dropstrip{display:none;gap:4px;flex-wrap:wrap;align-items:stretch;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(240,78,35,.06)}
-body.dragging .dropstrip{display:flex}
-.ds-lab{width:100%;font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
-.ds-day{width:40px;padding:4px 0;text-align:center;border:1px dashed var(--border2);border-radius:6px;font-size:9.5px;color:var(--text3);background:var(--bg2)}
-.ds-day b{display:block;font-family:var(--mono);font-size:12px;color:var(--text)}
-.ds-day.we{background:var(--bg3)}
-.ds-day.ds-bandeja{width:auto;padding:4px 10px;border-color:var(--orange)}
 .ev{font-size:11px;line-height:1.3;background:var(--bg3);border-left:3px solid var(--text3);border-radius:5px;padding:4px 6px;cursor:pointer;word-break:break-word}
 .ev:hover{outline:1px solid rgba(255,255,255,.35)}
 .ev.email{border-left-color:var(--ch-email)}.ev.push{border-left-color:var(--ch-push)}.ev.wpp{border-left-color:var(--ch-wpp)}
@@ -429,7 +425,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.8';
+const VERSION_APP = '2026-10-07.9';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -872,6 +868,16 @@ function clickDia(ev, f){
 // Un solo manejador para todo: lo que se agarra lleva data-drag (id del envío) y
 // donde se suelta lleva data-drop (una fecha YYYY-MM-DD o "bandeja").
 function engancharDrag(){}   // compatibilidad: los listeners son globales
+// después de mover un envío: llevar la vista hasta donde quedó y marcarlo un momento
+// (en la Lista la fila salta a su nueva fecha y, si no, parece que desapareció)
+function resaltar(id){
+  var el = document.querySelector('.ltab tr[data-id="' + id + '"]') ||
+           document.querySelector('.cal-grid .ev[data-id="' + id + '"]') ||
+           document.querySelector('.bandeja .ev[data-id="' + id + '"]');
+  if (!el) return;
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  el.scrollIntoView({block: 'center', behavior: 'smooth'});
+}
 function limpiarDrop(){ Array.prototype.forEach.call(document.querySelectorAll('.drop'), function(x){ x.classList.remove('drop'); }); }
 document.addEventListener('dragstart', function(ev){
   var el = ev.target.closest && ev.target.closest('[data-drag]');
@@ -879,10 +885,8 @@ document.addEventListener('dragstart', function(ev){
   arrastrando = +el.dataset.drag;
   ev.dataTransfer.effectAllowed = 'move';
   try { ev.dataTransfer.setData('text/plain', el.dataset.drag); } catch(e){}
-  // la tira de días de la lista aparece recién después de arrancar el arrastre
-  setTimeout(function(){ document.body.classList.add('dragging'); }, 0);
 });
-document.addEventListener('dragend', function(){ arrastrando = null; document.body.classList.remove('dragging'); limpiarDrop(); });
+document.addEventListener('dragend', function(){ arrastrando = null; limpiarDrop(); });
 document.addEventListener('dragover', function(ev){
   if (!arrastrando) return;
   var t = ev.target.closest && ev.target.closest('[data-drop]');
@@ -895,7 +899,7 @@ document.addEventListener('drop', function(ev){
   if (!t || !arrastrando) return;
   ev.preventDefault();
   var id = arrastrando;
-  arrastrando = null; document.body.classList.remove('dragging'); limpiarDrop();
+  arrastrando = null; limpiarDrop();
   moverEnvio(id, t.dataset.drop);
 });
 function moverEnvio(id, destino){
@@ -914,7 +918,7 @@ function moverEnvio(id, destino){
   }
   sb.from('cal_envios').update(o).eq('id', id).select().single().then(function(r){
     if (r.error) return toast(errBandeja(r.error), true);
-    reemplazarLocal(r.data); render();
+    reemplazarLocal(r.data); render(); resaltar(id);
     toast(destino === 'bandeja' ? 'A la bandeja (sin día)' : 'Movido al ' + dowDe(r.data.fecha) + ' ' + fechaCorta(r.data.fecha));
   });
 }
@@ -965,7 +969,7 @@ function listaMes(envs, ed){
   }
   var h = '<div class="section">';
   if (nSel) h += barraLote(nSel, cs);
-  h += tiraDias() + '<div class="twrap"><table class="ltab"><thead><tr>' +
+  h += '<div class="twrap"><table class="ltab"><thead><tr>' +
     '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + (envs.length ? '' : ' disabled') + ' onchange="selTodos(this.checked)"></th>' +
     '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>';
   if (!envs.length) h += '<tr><td colspan="9"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
@@ -974,7 +978,7 @@ function listaMes(envs, ed){
       return '<td class="ed ' + cls + '" onclick="editarCelda(this,' + id + ',\'' + campo + '\')">' + html + '</td>';
     };
     var csE = cs.indexOf(e.canal) >= 0 ? cs : cs.concat([e.canal]);
-    h += '<tr class="' + (selIds[id] ? 'chk-on' : '') + '" data-drop="' + e.fecha + '">' +
+    h += '<tr class="' + (selIds[id] ? 'chk-on' : '') + '" data-id="' + id + '" data-drop="' + e.fecha + '">' +
       '<td class="sel"><span class="grip" draggable="true" data-drag="' + id + '" title="Arrastrá para cambiar el día">⋮⋮</span><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
       ce('fecha', 'lst-fecha', dowDe(e.fecha) + ' ' + fechaCorta(e.fecha)) +
       ce('hora', 'lst-fecha muted', esc(e.hora || '')) +
@@ -997,16 +1001,6 @@ function listaMes(envs, ed){
     '<div class="hint" style="margin-top:-8px">Tocá cualquier celda para editarla (Enter guarda, Esc cancela). Canal y estado se cambian desde su chip. ' +
     'Tildá varios para cambiarlos juntos.</div>';
   return h;
-}
-// tira con los días del mes: aparece solo mientras se arrastra una fila de la lista
-function tiraDias(){
-  var p = sel.periodo, dim = diasDelMes(p), y = +p.slice(0, 4), mo = +p.slice(5, 7), h = '';
-  for (var d = 1; d <= dim; d++){
-    var f = ymd(y, mo, d), dw = parseF(f).getDay();
-    h += '<div class="ds-day' + (dw === 0 || dw === 6 ? ' we' : '') + '" data-drop="' + f + '"><span>' + DOW[dw].slice(0, 2) + '</span><b>' + d + '</b></div>';
-  }
-  return '<div class="dropstrip"><div class="ds-lab">Soltalo en un día</div>' + h +
-    '<div class="ds-day ds-bandeja" data-drop="bandeja"><span>sin día</span><b>Bandeja</b></div></div>';
 }
 function editarCelda(td, id, campo){
   if (td.querySelector('input')) return;
@@ -1058,6 +1052,7 @@ function editCampo(id, campo, val){
     if (r.error){ toast(r.error.message, true); render(); return; }
     reemplazarLocal(r.data);
     render();
+    if (campo === 'fecha') resaltar(id);
     if (campo === 'fecha' && periodoDe(val) !== sel.periodo) toast('Movido a ' + periodoLargo(periodoDe(val)));
   });
 }
