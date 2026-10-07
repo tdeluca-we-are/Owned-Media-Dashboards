@@ -436,7 +436,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.11';
+const VERSION_APP = '2026-10-07.12';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -940,10 +940,13 @@ document.addEventListener('dragover', function(ev){
     }
     var ref = buscarEnvio(+t.dataset.id);
     if (+t.dataset.id === arrastrando){ p.className = 'drag-pill mute'; p.textContent = 'Es el mismo envío'; return; }
-    var lugar = (pos === 'antes' ? 'antes de “' : 'después de “') + (ref ? ref.titulo.slice(0, 28) + (ref.titulo.length > 28 ? '…' : '') : '') + '”';
-    var flecha = !e || e.bandeja || d === e.fecha ? '↕' : d < e.fecha ? '↑' : '↓';
+    var lugar = (pos === 'antes' ? 'antes de “' : 'después de “') + (ref ? ref.titulo.slice(0, 32) + (ref.titulo.length > 32 ? '…' : '') : '') + '”';
+    // subir o bajar según la posición en pantalla, no la fecha (la fecha no cambia)
+    var filas = Array.prototype.map.call(document.querySelectorAll('.ltab tr[data-id]'), function(x){ return +x.dataset.id; });
+    var iSrc = filas.indexOf(arrastrando), iDst = filas.indexOf(+t.dataset.id);
+    var sube = iSrc < 0 || iDst < iSrc;
     p.className = 'drag-pill';
-    p.textContent = flecha + ' ' + dowDe(d) + ' ' + fechaCorta(d) + ' · ' + lugar;
+    p.textContent = (sube ? '↑ Subir' : '↓ Bajar') + ' · ' + lugar;
     return;
   }
   if (!t.classList.contains('drop')){ limpiarDrop(); t.classList.add('drop'); }
@@ -960,36 +963,40 @@ document.addEventListener('drop', function(ev){
   finDrag();
   if (refId) reordenar(id, refId, pos); else moverEnvio(id, t.dataset.drop);
 });
-// Deja el envío justo antes/después de otro: toma su día y se renumera el orden de ese día
+// Orden de la Lista: lo decide el usuario arrastrando. Solo cambia la posición,
+// nunca la fecha. Se renumera el orden de todo el mes (incluye canales filtrados).
 function reordenar(id, refId, pos){
   var e = buscarEnvio(id), ref = buscarEnvio(refId);
   if (!e || !ref || id === refId || !puedeEditar(e.marca_id)) return;
-  var fecha = ref.fecha;
-  var dia = envDeMes(e.marca_id, periodoDe(fecha)).filter(function(x){ return x.fecha === fecha && x.id !== id; });
-  var i = dia.findIndex(function(x){ return x.id === refId; });
-  dia.splice(pos === 'despues' ? i + 1 : i, 0, e);
+  var p = periodoDe(ref.fecha);
+  var lista = envDeMes(e.marca_id, p).sort(ordenLista).filter(function(x){ return x.id !== id; });
+  var i = lista.findIndex(function(x){ return x.id === refId; });
+  lista.splice(pos === 'despues' ? i + 1 : i, 0, e);
   var ahora = new Date().toISOString();
   var cambios = [];
-  dia.forEach(function(x, k){
+  lista.forEach(function(x, k){
     var o = {};
     if (x.orden !== k + 1) o.orden = k + 1;
-    if (x.id === id){
-      if (x.fecha !== fecha) o.fecha = fecha;
-      if (x.bandeja) o.bandeja = false;
-    }
+    if (x.id === id && x.bandeja) o.bandeja = false;   // desde la bandeja: sale de ahí, la fecha queda igual
     if (Object.keys(o).length){ o.actualizado_at = ahora; cambios.push({id: x.id, o: o}); }
   });
   if (!cambios.length) return;
-  var cambioDia = e.fecha !== fecha || e.bandeja;
   Promise.all(cambios.map(function(c){
     return sb.from('cal_envios').update(c.o).eq('id', c.id).select().single().then(function(r){
       if (r.error) throw r.error;
       reemplazarLocal(r.data);
     });
   })).then(function(){
-    render(); resaltar(id);
-    toast(cambioDia ? 'Movido al ' + dowDe(fecha) + ' ' + fechaCorta(fecha) : 'Orden actualizado');
+    render(); resaltar(id); toast('Orden actualizado');
   }).catch(function(err){ render(); toast(errBandeja(err), true); });
+}
+// los que tienen orden manual van primero en ese orden; los nuevos, después por fecha
+function ordenLista(a, b){
+  var oa = a.orden, ob = b.orden;
+  if (oa != null && ob != null && oa !== ob) return oa - ob;
+  if (oa != null && ob == null) return -1;
+  if (oa == null && ob != null) return 1;
+  return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : String(a.hora || '99').localeCompare(String(b.hora || '99')) || a.id - b.id;
 }
 function moverEnvio(id, destino){
   var e = buscarEnvio(id);
@@ -1047,6 +1054,7 @@ function opciones(lista, actual, etiquetas){
   return lista.map(function(v){ return '<option value="' + v + '"' + (v === actual ? ' selected' : '') + '>' + etiquetas[v] + '</option>'; }).join('');
 }
 function listaMes(envs, ed){
+  envs = envs.slice().sort(ordenLista);   // el orden de la lista es el que armó el usuario
   if (!ed) return listaLectura(envs, ed);
   var m = sel.marca, cs = canalesDe(m), usados = D.env[m] || [];
   var tipos = TIPOS.concat(usados.map(function(e){ return e.tipo; })).filter(function(x, i, a){ return x && a.indexOf(x) === i; });
