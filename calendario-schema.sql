@@ -100,6 +100,10 @@ create table if not exists cal_envios (
 create index if not exists cal_envios_marca_fecha_idx on cal_envios (marca_id, fecha);
 create index if not exists cal_envios_fecha_idx       on cal_envios (fecha);
 
+-- Bandeja (07/10/2026): envíos del mes que todavía no tienen día. La fecha
+-- queda en el mes al que pertenecen; bandeja = true los saca de la grilla.
+alter table cal_envios add column if not exists bandeja boolean not null default false;
+
 -- ── FECHAS CLAVE ────────────────────────────────────────────────────────────
 -- marca_id null = fecha general (aparece en todas las marcas).
 -- anual = se repite todos los años el mismo día (Navidad, San Valentín…).

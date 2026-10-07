@@ -226,6 +226,24 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
 .cat-dot.cat-bancaria{background:#7a9eca}.cat-dot.cat-comercial{background:#f04e23}.cat-dot.cat-microevento{background:#c084fc}.cat-dot.cat-always_on{background:#22c55e}
 .legend-cat{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin:8px 2px 0}
+/* arrastrar: destinos, bandeja y tira de días de la lista */
+[data-drop].drop{outline:2px dashed var(--orange);outline-offset:-3px;background:rgba(240,78,35,.07)}
+.side-card.bandeja{border-left:3px solid var(--orange)}
+.bj-list{display:flex;flex-direction:column;gap:5px}
+.bj-add{display:flex;gap:6px;margin-top:10px}
+.bj-add select,.bj-add input{font-family:var(--font);font-size:12px;padding:7px 9px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:8px;outline:none}
+.bj-add input{flex:1;min-width:0}
+.bj-add select:focus,.bj-add input:focus{border-color:var(--orange)}
+.grip{cursor:grab;color:var(--text3);padding:0 7px 0 0;user-select:none;font-size:12px;letter-spacing:-2px;vertical-align:middle}
+.grip:hover{color:var(--orange)}
+.ltab td.sel{white-space:nowrap}
+.dropstrip{display:none;gap:4px;flex-wrap:wrap;align-items:stretch;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(240,78,35,.06)}
+body.dragging .dropstrip{display:flex}
+.ds-lab{width:100%;font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.ds-day{width:40px;padding:4px 0;text-align:center;border:1px dashed var(--border2);border-radius:6px;font-size:9.5px;color:var(--text3);background:var(--bg2)}
+.ds-day b{display:block;font-family:var(--mono);font-size:12px;color:var(--text)}
+.ds-day.we{background:var(--bg3)}
+.ds-day.ds-bandeja{width:auto;padding:4px 10px;border-color:var(--orange)}
 .ev{font-size:11px;line-height:1.3;background:var(--bg3);border-left:3px solid var(--text3);border-radius:5px;padding:4px 6px;cursor:pointer;word-break:break-word}
 .ev:hover{outline:1px solid rgba(255,255,255,.35)}
 .ev.email{border-left-color:var(--ch-email)}.ev.push{border-left-color:var(--ch-push)}.ev.wpp{border-left-color:var(--ch-wpp)}
@@ -411,7 +429,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.7';
+const VERSION_APP = '2026-10-07.8';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -594,7 +612,7 @@ function ordenEnv(a, b){
   return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : String(a.hora || '99').localeCompare(String(b.hora || '99'));
 }
 function envDeMes(marcaId, periodo){
-  return (D.env[marcaId] || []).filter(function(e){ return periodoDe(e.fecha) === periodo; }).sort(ordenEnv);
+  return (D.env[marcaId] || []).filter(function(e){ return !e.bandeja && periodoDe(e.fecha) === periodo; }).sort(ordenEnv);
 }
 function mesReg(marcaId, periodo){
   return (D.meses[marcaId] || []).find(function(r){ return r.periodo === periodo; }) || null;
@@ -774,7 +792,7 @@ function gridMes(m, p, envs, ed){
     if (dia < 1 || dia > dim){ h += '<div class="cal-day out"></div>'; continue; }
     var f = ymd(primero.getFullYear(), primero.getMonth() + 1, dia);
     var we = (i % 7) >= 5;
-    h += '<div class="cal-day' + (we ? ' we' : '') + (f === hoy ? ' today' : '') + (ed ? ' edit' : '') + '" data-f="' + f + '"' +
+    h += '<div class="cal-day' + (we ? ' we' : '') + (f === hoy ? ' today' : '') + (ed ? ' edit' : '') + '" data-f="' + f + '"' + (ed ? ' data-drop="' + f + '"' : '') +
       (ed ? ' onclick="clickDia(event,\'' + f + '\')"' : '') + '>' +
       '<div class="cal-top"><span class="cal-num">' + dia + '</span>' + (ed ? '<span class="cal-plus" title="Envío con todos los campos">+</span>' : '') + '</div>';
     keys.forEach(function(k){
@@ -835,7 +853,7 @@ function qaKey(ev){
   });
 }
 function chipEnvio(e, ed){
-  return '<div class="ev ' + e.canal + ' st-' + e.estado + '"' + (ed ? ' draggable="true"' : '') + ' data-id="' + e.id + '"' +
+  return '<div class="ev ' + e.canal + ' st-' + e.estado + '"' + (ed ? ' draggable="true" data-drag="' + e.id + '"' : '') + ' data-id="' + e.id + '"' +
     ' onclick="event.stopPropagation();abrirEnvio(' + e.id + ')" title="' + esc(CLABEL[e.canal] + ' · ' + ELABEL[e.estado] + (e.asunto ? '\n' + e.asunto : '')) + '">' +
     '<div class="ev-h"><span>' + CLABEL[e.canal] + (e.hora ? ' ' + esc(e.hora) : '') + '</span>' +
     (e.estado === 'enviado' ? '<span class="ok">✓</span>' : e.estado === 'aprobado' ? '<span>✔</span>' : e.estado === 'idea' ? '<span>idea</span>' : '') + '</div>' +
@@ -850,25 +868,84 @@ function clickDia(ev, f){
   render();
 }
 
-function engancharDrag(){
-  Array.prototype.forEach.call(document.querySelectorAll('.ev[draggable]'), function(el){
-    el.ondragstart = function(ev){ arrastrando = +el.dataset.id; ev.dataTransfer.effectAllowed = 'move'; };
-    el.ondragend = function(){ arrastrando = null; };
+// ── arrastrar y soltar ─────────────────────────────────────────────────────
+// Un solo manejador para todo: lo que se agarra lleva data-drag (id del envío) y
+// donde se suelta lleva data-drop (una fecha YYYY-MM-DD o "bandeja").
+function engancharDrag(){}   // compatibilidad: los listeners son globales
+function limpiarDrop(){ Array.prototype.forEach.call(document.querySelectorAll('.drop'), function(x){ x.classList.remove('drop'); }); }
+document.addEventListener('dragstart', function(ev){
+  var el = ev.target.closest && ev.target.closest('[data-drag]');
+  if (!el) return;
+  arrastrando = +el.dataset.drag;
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', el.dataset.drag); } catch(e){}
+  // la tira de días de la lista aparece recién después de arrancar el arrastre
+  setTimeout(function(){ document.body.classList.add('dragging'); }, 0);
+});
+document.addEventListener('dragend', function(){ arrastrando = null; document.body.classList.remove('dragging'); limpiarDrop(); });
+document.addEventListener('dragover', function(ev){
+  if (!arrastrando) return;
+  var t = ev.target.closest && ev.target.closest('[data-drop]');
+  if (!t) return;
+  ev.preventDefault();
+  if (!t.classList.contains('drop')){ limpiarDrop(); t.classList.add('drop'); }
+});
+document.addEventListener('drop', function(ev){
+  var t = ev.target.closest && ev.target.closest('[data-drop]');
+  if (!t || !arrastrando) return;
+  ev.preventDefault();
+  var id = arrastrando;
+  arrastrando = null; document.body.classList.remove('dragging'); limpiarDrop();
+  moverEnvio(id, t.dataset.drop);
+});
+function moverEnvio(id, destino){
+  var e = buscarEnvio(id);
+  if (!e || !puedeEditar(e.marca_id)) return;
+  var o = {actualizado_at: new Date().toISOString()};
+  if (destino === 'bandeja'){
+    if (e.bandeja) return;
+    o.bandeja = true;
+    // queda en la bandeja del mes que se está mirando
+    if (periodoDe(e.fecha) !== sel.periodo) o.fecha = sel.periodo;
+  } else {
+    if (e.fecha === destino && !e.bandeja) return;
+    o.fecha = destino;
+    if (e.bandeja) o.bandeja = false;
+  }
+  sb.from('cal_envios').update(o).eq('id', id).select().single().then(function(r){
+    if (r.error) return toast(errBandeja(r.error), true);
+    reemplazarLocal(r.data); render();
+    toast(destino === 'bandeja' ? 'A la bandeja (sin día)' : 'Movido al ' + dowDe(r.data.fecha) + ' ' + fechaCorta(r.data.fecha));
   });
-  Array.prototype.forEach.call(document.querySelectorAll('.cal-day[data-f]'), function(el){
-    el.ondragover = function(ev){ if (arrastrando){ ev.preventDefault(); el.classList.add('drop'); } };
-    el.ondragleave = function(){ el.classList.remove('drop'); };
-    el.ondrop = function(ev){
-      ev.preventDefault(); el.classList.remove('drop');
-      var id = arrastrando; arrastrando = null;
-      var e = buscarEnvio(id);
-      if (!e || e.fecha === el.dataset.f) return;
-      sb.from('cal_envios').update({fecha: el.dataset.f, actualizado_at: new Date().toISOString()})
-        .eq('id', id).select().single().then(function(r){
-          if (r.error) return toast(r.error.message, true);
-          reemplazarLocal(r.data); render(); toast('Movido al ' + fechaCorta(r.data.fecha));
-        });
-    };
+}
+function errBandeja(err){
+  return /bandeja/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
+}
+// envíos sin día del mes
+function bandejaDeMes(marcaId, periodo){
+  return (D.env[marcaId] || []).filter(function(e){ return e.bandeja && periodoDe(e.fecha) === periodo; })
+    .sort(function(a, b){ return a.id - b.id; });
+}
+function tarjetaBandeja(m, p, ed){
+  var bj = bandejaDeMes(m, p);
+  if (!ed && !bj.length) return '';
+  return '<div class="side-card bandeja"' + (ed ? ' data-drop="bandeja"' : '') + '>' +
+    '<div class="side-title">Bandeja · sin día <span class="muted" style="font-family:var(--mono)">' + (bj.length || '') + '</span></div>' +
+    (bj.length ? '<div class="bj-list">' + bj.map(function(e){ return chipEnvio(e, ed); }).join('') + '</div>'
+      : '<div class="side-txt vacio">Arrastrá acá lo que todavía no tiene día, o anotá ideas abajo. Después las arrastrás a un día del calendario.</div>') +
+    (ed ? '<div class="bj-add"><select id="bjCanal">' + opciones(canalesDe(m), canalesDe(m).indexOf(ultimoCanal) >= 0 ? ultimoCanal : canalesDe(m)[0], CABREV) + '</select>' +
+      '<input id="bjTxt" data-k="bj" placeholder="Idea sin día + Enter" autocomplete="off" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarBandeja()}"></div>' : '') +
+    '</div>';
+}
+function agregarBandeja(){
+  var t = $('bjTxt').value.trim();
+  if (!t) return;
+  var canal = $('bjCanal').value;
+  sb.from('cal_envios').insert({marca_id: sel.marca, fecha: sel.periodo, bandeja: true, canal: canal, titulo: t,
+    estado: 'idea', creado_por: nombreUsuario()}).select().single().then(function(r){
+    if (r.error) return toast(errBandeja(r.error), true);
+    reemplazarLocal(r.data); ultimoCanal = canal; render();
+    var i = $('bjTxt'); if (i) i.focus();
   });
 }
 
@@ -888,7 +965,7 @@ function listaMes(envs, ed){
   }
   var h = '<div class="section">';
   if (nSel) h += barraLote(nSel, cs);
-  h += '<div class="twrap"><table class="ltab"><thead><tr>' +
+  h += tiraDias() + '<div class="twrap"><table class="ltab"><thead><tr>' +
     '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + (envs.length ? '' : ' disabled') + ' onchange="selTodos(this.checked)"></th>' +
     '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>';
   if (!envs.length) h += '<tr><td colspan="9"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
@@ -897,8 +974,8 @@ function listaMes(envs, ed){
       return '<td class="ed ' + cls + '" onclick="editarCelda(this,' + id + ',\'' + campo + '\')">' + html + '</td>';
     };
     var csE = cs.indexOf(e.canal) >= 0 ? cs : cs.concat([e.canal]);
-    h += '<tr class="' + (selIds[id] ? 'chk-on' : '') + '">' +
-      '<td class="sel"><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
+    h += '<tr class="' + (selIds[id] ? 'chk-on' : '') + '" data-drop="' + e.fecha + '">' +
+      '<td class="sel"><span class="grip" draggable="true" data-drag="' + id + '" title="Arrastrá para cambiar el día">⋮⋮</span><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
       ce('fecha', 'lst-fecha', dowDe(e.fecha) + ' ' + fechaCorta(e.fecha)) +
       ce('hora', 'lst-fecha muted', esc(e.hora || '')) +
       '<td><select class="chip-sel c-' + e.canal + '" onchange="editCampo(' + id + ',\'canal\',this.value)">' + opciones(csE, e.canal, CLABEL) + '</select></td>' +
@@ -920,6 +997,16 @@ function listaMes(envs, ed){
     '<div class="hint" style="margin-top:-8px">Tocá cualquier celda para editarla (Enter guarda, Esc cancela). Canal y estado se cambian desde su chip. ' +
     'Tildá varios para cambiarlos juntos.</div>';
   return h;
+}
+// tira con los días del mes: aparece solo mientras se arrastra una fila de la lista
+function tiraDias(){
+  var p = sel.periodo, dim = diasDelMes(p), y = +p.slice(0, 4), mo = +p.slice(5, 7), h = '';
+  for (var d = 1; d <= dim; d++){
+    var f = ymd(y, mo, d), dw = parseF(f).getDay();
+    h += '<div class="ds-day' + (dw === 0 || dw === 6 ? ' we' : '') + '" data-drop="' + f + '"><span>' + DOW[dw].slice(0, 2) + '</span><b>' + d + '</b></div>';
+  }
+  return '<div class="dropstrip"><div class="ds-lab">Soltalo en un día</div>' + h +
+    '<div class="ds-day ds-bandeja" data-drop="bandeja"><span>sin día</span><b>Bandeja</b></div></div>';
 }
 function editarCelda(td, id, campo){
   if (td.querySelector('input')) return;
@@ -1031,7 +1118,7 @@ function panelLateral(m, p, reg, ed, canales){
   var prev = addMes(p, -1), anio = addMes(p, -12);
   var ePrev = envDeMes(m, prev), rPrev = mesReg(m, prev) || {};
   var cP = contar(ePrev);
-  var h = '';
+  var h = tarjetaBandeja(m, p, ed);
 
   // este mes
   h += '<div class="side-card"><div class="side-title">Foco de ' + MESES[+p.slice(5,7) - 1].toLowerCase() + '</div>' +
@@ -1212,6 +1299,7 @@ function dibujarEnvio(enfocar){
       (f.id ? '' : '<div class="m-lab">Estado</div>' + segEstado) +
       '<textarea class="m-area" id="fNotas" rows="2" placeholder="Notas internas (no salen en la vista cliente)"' + dis + '>' + esc(f.notas || '') + '</textarea>';
   }
+  if (f.bandeja && !f.dup) h += '<div class="m-kbd" style="margin-top:10px;color:var(--orange)">Está en la bandeja (sin día). Cambiale la fecha y guardá, o arrastralo a un día del calendario.</div>';
   if (f.id && !f.dup) h += '<div class="m-kbd" style="margin-top:10px">Cargado por ' + esc(f.creado_por || '—') + (f.copiado_de ? ' · copiado de otro mes' : '') + '</div>';
   h += '</div><div class="m-foot">';
   if (ed && f.id && !f.dup) h += '<button class="m-link" onclick="duplicarEnvio()">Duplicar</button><button class="m-link del" onclick="borrarEnvio()">Eliminar</button>';
@@ -1240,6 +1328,10 @@ function guardarEnvio(){
   var row = {marca_id: f.marca_id, fecha: f.fecha, hora: f.hora || null, canal: f.canal, tipo: t(f.tipo),
     titulo: f.titulo.trim(), asunto: t(f.asunto), segmento: t(f.segmento), notas: t(f.notas),
     estado: f.estado, actualizado_at: new Date().toISOString()};
+  // de la bandeja: si le cambiaron la fecha, queda agendado
+  var orig = f.id ? buscarEnvio(f.id) : null;
+  if (orig && orig.bandeja && f.fecha !== orig.fecha && !f.dup) row.bandeja = false;
+  if (f.dup && f.bandeja) row.bandeja = true;
   var q = f.id
     ? sb.from('cal_envios').update(row).eq('id', f.id)
     : sb.from('cal_envios').insert(Object.assign(row, {creado_por: nombreUsuario(), copiado_de: f.copiado_de || null}));
@@ -2018,7 +2110,7 @@ function renderResumen(){
   if (!R[p]){
     $('panes').innerHTML = '<div class="filters">' + navMes() + '</div><div class="loading">Cargando…</div>';
     R[p] = Promise.all([
-      fetchAll('cal_envios', 'marca_id,canal,estado,fecha', function(q){ return q.gte('fecha', prev).lte('fecha', finMes(p)); }),
+      fetchAll('cal_envios', '*', function(q){ return q.gte('fecha', prev).lte('fecha', finMes(p)); }).then(function(rows){ return rows.filter(function(e){ return !e.bandeja; }); }),
       fetchAll('cal_meses', 'marca_id,periodo,estado,actualizado_por,actualizado_at', function(q){ return q.in('periodo', [p, prev]); })
     ]).then(function(res){ R[p] = {envs: res[0], meses: res[1]}; if (tab === 'resumen' && sel.periodo === p) render(); })
       .catch(function(e){ delete R[p]; toast(e.message || String(e), true); });
@@ -2090,6 +2182,7 @@ function csvEquipo(){
   var p = sel.periodo;
   fetchAll('cal_envios', '*', function(q){ return q.gte('fecha', p).lte('fecha', finMes(p)).order('fecha'); }).then(function(rows){
     if (!rows.length) return toast('No hay envíos en ' + periodoLargo(p), true);
+    rows = rows.filter(function(e){ return !e.bandeja; });
     rows.sort(function(a, b){ return nombreDe(a).localeCompare(nombreDe(b)) || ordenEnv(a, b); });
     bajarCSV(filasExport(rows, nombreDe), 'calendario-owned-' + p.slice(0, 7) + '.csv');
   }).catch(function(e){ toast(e.message || String(e), true); });
