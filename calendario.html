@@ -301,6 +301,10 @@ textarea.paste:focus{border-color:var(--orange)}
 .ptab td,.ptab th{padding:6px 8px}
 .ptab tr.err td{color:#ffb4b4}
 .ptab .ok{color:var(--green);font-weight:700}
+/* acciones comerciales escritas a mano */
+.ac-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.ac-row .ac-f{width:142px;padding:7px 9px;font-family:var(--mono);font-size:11.5px}
+.ac-row .ac-nom{flex:1;min-width:170px;padding:7px 10px}
 
 /* drawer */
 .drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none}
@@ -398,7 +402,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.5';
+const VERSION_APP = '2026-10-07.6';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -1520,8 +1524,14 @@ function limpiarNombre(s){
   return t;
 }
 function parseAcciones(txt, periodo){
-  var out = [], prev = null;
+  var out = [], prev = null, lineas = [];
+  // varias acciones en una misma línea separadas por ";" se parten
   String(txt || '').split(/\r?\n/).forEach(function(l){
+    var partes = l.split(/\s*;\s*/);
+    var conFecha = partes.filter(function(p){ return extraerFechas(p, periodo).fechas.length; }).length;
+    if (partes.length > 1 && conFecha > 1) lineas = lineas.concat(partes); else lineas.push(l);
+  });
+  lineas.forEach(function(l){
     var raw = l.replace(/\t+/g, ' | ').replace(/^\s*[|·]\s*|\s*[|·]\s*$/g, '').trim();
     if (!raw) return;
     var r = extraerFechas(raw, periodo);
@@ -1563,17 +1573,48 @@ function abrirAcciones(){
   cs.forEach(function(k){ if (rec.ini[k] == null) rec.ini[k] = false; });
   if (cs.indexOf(rec.mitadCanal) < 0) rec.mitadCanal = cs[0];
   if (cs.indexOf(rec.ultimoCanal) < 0) rec.ultimoCanal = cs[0];
-  frm = {tipo: 'acciones', txt: '', acciones: [], rec: rec};
-  var b = '<div class="note blue">Subí el archivo de acciones del cliente o pegá el texto tal cual te llegó (de Excel, Word, mail o WhatsApp). ' +
-    'De cada línea se toma el <b>rango de fechas</b> y el resto es el <b>nombre de la acción</b>; las líneas sin fecha se suman como descripción de la acción de arriba.<br>' +
-    'Entiende <b>10/11 al 15/11</b>, <b>del 10 al 15/11</b>, <b>10-15 de noviembre</b>, <b>lunes 10 de noviembre</b>…</div>' +
+  frm = {tipo: 'acciones', txt: '', acciones: [], rec: rec, manual: [{desde: sel.periodo, hasta: '', nombre: ''}]};
+  var b = '<div class="note blue">Cargá <b>todas las acciones del mes juntas</b>: escribilas acá abajo (Enter agrega otra) o subí / pegá el archivo del cliente con <b>una acción por línea</b>. ' +
+    'Entiende <b>10/11 al 15/11</b>, <b>del 10 al 15/11</b>, <b>10-15 de noviembre</b>, <b>lunes 10 de noviembre</b>…; las líneas sin fecha se suman como descripción de la acción de arriba.</div>' +
+    '<div class="dsec">Escribilas acá</div><div id="acManual"></div>' +
+    '<div class="dsec">…o desde el archivo del cliente</div>' +
     '<div class="fg"><label>Archivo (Excel o CSV)</label><input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="leerArchivoAcciones(this.files[0])"></div>' +
-    '<div class="fg"><label>…o pegá el texto</label><textarea class="paste" id="acTxt" style="white-space:pre-wrap" placeholder="10/11 al 15/11 · Cyber Monday: 20% off en toda la tienda&#10;del 20 al 22/11 Envío gratis&#10;27/11 Black Friday" oninput="frm.txt=this.value;frm.acciones=parseAcciones(this.value,sel.periodo);previewAcciones()"></textarea></div>' +
+    '<div class="fg"><label>…o pegá el texto (una acción por línea)</label><textarea class="paste" id="acTxt" style="white-space:pre-wrap" placeholder="10/11 al 15/11 · Cyber Monday: 20% off en toda la tienda&#10;del 20 al 22/11 Envío gratis&#10;27/11 Black Friday" oninput="frm.txt=this.value;frm.acciones=parseAcciones(this.value,sel.periodo);previewAcciones()"></textarea></div>' +
     '<div id="acPrev"></div>';
   abrirDrawer('Cargar acciones comerciales', D.marcaById[m].nombre, b,
     '<button class="btn-orange" id="acBtn" disabled onclick="importarAcciones()">Cargar</button>');
+  dibujarManual();
   previewAcciones();
-  setTimeout(function(){ var t = $('acTxt'); if (t) t.focus(); }, 50);
+  setTimeout(function(){ var t = document.querySelector('#acManual .ac-nom'); if (t) t.focus(); }, 50);
+}
+// filas para escribir acciones a mano: desde · hasta · nombre
+function dibujarManual(){
+  $('acManual').innerHTML = frm.manual.map(function(r, i){
+    return '<div class="ac-row">' +
+      '<input type="date" class="m-in ac-f" title="Desde" value="' + esc(r.desde) + '" oninput="frm.manual[' + i + '].desde=this.value;previewAcciones()">' +
+      '<span class="muted">→</span>' +
+      '<input type="date" class="m-in ac-f" title="Hasta (opcional)" value="' + esc(r.hasta) + '" oninput="frm.manual[' + i + '].hasta=this.value;previewAcciones()">' +
+      '<input class="m-in ac-nom" placeholder="Nombre de la acción (ej: Cyber 20% off)" value="' + esc(r.nombre) + '" autocomplete="off"' +
+      ' oninput="frm.manual[' + i + '].nombre=this.value;previewAcciones()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();otraAccion()}">' +
+      '<button class="mini danger" title="Quitar" onclick="quitarManual(' + i + ')">×</button></div>';
+  }).join('') + '<button class="btn-sm" onclick="otraAccion()">+ Otra acción</button>';
+}
+function otraAccion(){
+  var ult = frm.manual[frm.manual.length - 1] || {};
+  frm.manual.push({desde: ult.hasta || ult.desde || sel.periodo, hasta: '', nombre: ''});
+  dibujarManual();
+  var ins = document.querySelectorAll('#acManual .ac-nom');
+  if (ins.length) ins[ins.length - 1].focus();
+}
+function quitarManual(i){
+  frm.manual.splice(i, 1);
+  if (!frm.manual.length) frm.manual.push({desde: sel.periodo, hasta: '', nombre: ''});
+  dibujarManual(); previewAcciones();
+}
+function manualesValidas(){
+  return frm.manual.filter(function(r){ return r.desde && String(r.nombre).trim(); }).map(function(r){
+    return {desde: r.desde, hasta: r.hasta && r.hasta > r.desde ? r.hasta : null, nombre: r.nombre.trim(), notas: '', incluir: true};
+  });
 }
 // Excel: se carga la librería solo cuando hace falta
 function cargarXLSX(){
@@ -1615,7 +1656,7 @@ function leerArchivoAcciones(file){
     r.readAsArrayBuffer(file);
   }).catch(function(e){ toast(e.message + '. Copiá y pegá el contenido.', true); });
 }
-function accionesElegidas(){ return frm.acciones.filter(function(a){ return a.incluir && a.nombre; }); }
+function accionesElegidas(){ return manualesValidas().concat(frm.acciones.filter(function(a){ return a.incluir && a.nombre; })); }
 function enviosPropuestos(){
   var m = sel.marca, cs = canalesDe(m), out = [];
   var existe = function(e){ return (D.env[m] || []).some(function(x){ return x.fecha === e.fecha && x.canal === e.canal && x.titulo === e.titulo; }); };
@@ -1630,14 +1671,12 @@ function previewAcciones(){
   var btn = $('acBtn');
   btn.disabled = !elegidas.length;
   btn.textContent = elegidas.length ? 'Cargar ' + elegidas.length + ' acción(es)' + (envs.length ? ' y ' + envs.length + ' envío(s)' : '') : 'Cargar';
-  if (!a.length){
-    $('acPrev').innerHTML = frm.txt.trim() ? '<div class="note">No encontré fechas en el texto. Revisá que cada acción tenga su fecha (ej: 10/11 o 10 de noviembre).</div>' : '';
-    return;
-  }
+  var aviso = !a.length && frm.txt.trim() ? '<div class="note">No encontré fechas en el texto. Revisá que cada acción tenga su fecha (ej: 10/11 o 10 de noviembre).</div>' : '';
+  if (!elegidas.length && !a.length){ $('acPrev').innerHTML = aviso; return; }
   var selCanal = function(campo){
     return '<select class="inl" onchange="frm.rec.' + campo + '=this.value;guardarReceta()">' + opciones(cs, rec[campo], CLABEL) + '</select>';
   };
-  var h = '<div class="dsec">Acciones encontradas (' + elegidas.length + ' de ' + a.length + ')</div>' +
+  var h = aviso + (a.length ? '<div class="dsec">Encontradas en el archivo / texto (' + a.filter(function(x){ return x.incluir && x.nombre; }).length + ' de ' + a.length + ')</div>' : '') +
     a.map(function(x, i){
       var rango = dowDe(x.desde) + ' ' + fechaCorta(x.desde) + (x.hasta ? ' → ' + dowDe(x.hasta) + ' ' + fechaCorta(x.hasta) : '');
       return '<div class="pick-row' + (x.incluir ? '' : ' off') + '" style="align-items:flex-start">' +
