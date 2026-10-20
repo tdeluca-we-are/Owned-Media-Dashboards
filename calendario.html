@@ -503,6 +503,31 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-v
 .m-tema{font-weight:700;letter-spacing:-.015em}
 .text-logo-xl,.text-logo-sm{letter-spacing:-.02em}
 .cell-in[type=date],.cell-in[type=time],.ac-row .ac-f,.addline input[type=date],.m-pill input{font-size:12px}
+/* piezas (links) y editor de estados */
+.pz-list{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.lk-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;text-decoration:none;
+  background:rgba(122,158,202,.14);color:#9dbbe0;border:1px solid rgba(122,158,202,.35);white-space:nowrap}
+.lk-chip:hover{background:rgba(122,158,202,.26)}
+.lk-wrap{display:inline-flex;align-items:center;gap:2px}
+.lk-x{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 3px}
+.lk-x:hover{color:var(--red)}
+.pz-add{background:none;border:1px dashed var(--border2);color:var(--text3);font-family:var(--font);font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;cursor:pointer}
+.pz-add:hover{color:var(--orange);border-color:var(--orange)}
+.ltab .pz-cell{min-width:90px}
+.ltab th.est-cell{padding:10px 12px !important;text-align:center}
+.est-edit{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0 2px}
+.est-edit:hover{color:var(--orange)}
+.chip-est{background:rgba(255,255,255,.06);color:var(--text2);border:1px solid var(--border2)}
+.est-row{gap:8px}
+.ev-h{align-items:center}
+.ev-can{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.ev-h > span:not(.ev-can){flex-shrink:0}
+.est-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;background:var(--text3)}
+.est-color{width:34px;height:30px;border:1px solid var(--border2);border-radius:8px;background:none;padding:2px;cursor:pointer;flex-shrink:0}
+.est-nom{width:150px;padding:6px 10px}
+.est-prev{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+.est-como{font-size:11px;max-width:220px}
+[data-theme="light"] .lk-chip{background:#e8f0fb;color:#2f5d8f;border-color:#b9cde8}
 </style>
 </head>
 <body>
@@ -558,7 +583,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-v
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.8';
+const VERSION_APP = '2026-10-20.10';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -567,6 +592,47 @@ const CANALES = ['email','push','wpp'];
 const CLABEL  = {email:'Email', push:'Push', wpp:'WhatsApp'};
 const EST_ENV = ['idea','planificado','aprobado','enviado','cancelado'];
 const ELABEL  = {idea:'Idea', planificado:'Planificado', aprobado:'Aprobado', enviado:'Enviado', cancelado:'Cancelado'};
+// Estados editables (tabla cal_estados). EST_ENV y ELABEL se rearman al cargar.
+// Cada estado tiene una "base" que define cómo lo trata la app.
+const ESTADOS_BASE = [
+  {clave:'idea',        nombre:'Idea',        color:'#7b8698', orden:1, base:'idea'},
+  {clave:'planificado', nombre:'Planificado', color:'#579bfc', orden:2, base:'planificado'},
+  {clave:'aprobado',    nombre:'Aprobado',    color:'#fdab3d', orden:3, base:'aprobado'},
+  {clave:'enviado',     nombre:'Enviado',     color:'#00c875', orden:4, base:'enviado'},
+  {clave:'cancelado',   nombre:'Cancelado',   color:'#e2445c', orden:5, base:'cancelado'}
+];
+const BASE_DESC = {idea:'Idea (no sale en la vista cliente)', planificado:'Pendiente / en proceso', aprobado:'Aprobado',
+  enviado:'Enviado (cuenta como enviado)', cancelado:'Cancelado (no se cuenta)'};
+function baseDe(k){ var e = D.estadoByClave && D.estadoByClave[k]; return e ? e.base : (BASE_DESC[k] ? k : 'planificado'); }
+function estLabel(k){ return ELABEL[k] || k; }
+// texto blanco o oscuro según qué tan claro es el color
+function textoSobre(hex){
+  var h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h.split('').map(function(c){ return c + c; }).join('');
+  var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  if (isNaN(r)) return '#fff';
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 170 ? '#1b2333' : '#fff';
+}
+function aplicarEstados(rows){
+  var lista = (rows && rows.length ? rows : ESTADOS_BASE).slice().sort(function(a, b){ return a.orden - b.orden; });
+  D.estados = lista;
+  EST_ENV.length = 0;
+  Object.keys(ELABEL).forEach(function(k){ delete ELABEL[k]; });
+  D.estadoByClave = {};
+  lista.forEach(function(e){ EST_ENV.push(e.clave); ELABEL[e.clave] = e.nombre; D.estadoByClave[e.clave] = e; });
+  // colores: se generan reglas para el bloque de la lista, los botones y los chips
+  var css = lista.map(function(e){
+    var k = e.clave, c = e.color, t = textoSobre(c);
+    return '.est-block.s-' + k + '{background:' + c + ';color:' + t + '}' +
+      '.seg button.on.' + k + '{background:' + c + ';border-color:' + c + ';color:' + t + '}' +
+      '.est-dot.s-' + k + '{background:' + c + '}' +
+      '.chip-est.s-' + k + '{background:' + c + '26;color:' + c + ';border:1px solid ' + c + '66}' +
+      '[data-theme="light"] .chip-est.s-' + k + '{background:' + c + '22;color:#1b2333;border-color:' + c + '}';
+  }).join('\n');
+  var st = $('estStyles');
+  if (!st){ st = document.createElement('style'); st.id = 'estStyles'; document.head.appendChild(st); }
+  st.textContent = css;
+}
 const EST_MES = ['borrador','revision','aprobado','cerrado'];
 const MLABEL  = {borrador:'Borrador', revision:'En revisión cliente', aprobado:'Aprobado', cerrado:'Cerrado'};
 const MCHIP   = {borrador:'grey', revision:'amber', aprobado:'green', cerrado:'blue'};
@@ -708,7 +774,9 @@ function cargar(){
     fetchAll('cal_usuarios', '*', function(q){ return q.order('nombre'); }),
     fetchAll('cal_usuario_marcas', '*'),
     fetchAll('cal_marca_config', '*'),
-    fetchAll('cal_fechas', '*', function(q){ return q.order('fecha'); })
+    fetchAll('cal_fechas', '*', function(q){ return q.order('fecha'); }),
+    // si la base todavía no tiene la tabla de estados, se usan los de siempre
+    fetchAll('cal_estados', '*').catch(function(){ return []; })
   ]).then(function(res){
     D.marcas   = res[0];
     D.celulas  = res[1];
@@ -716,6 +784,7 @@ function cargar(){
     D.um       = res[3];
     D.config   = res[4];
     D.fechas   = res[5];
+    aplicarEstados(res[6]);
     indexar();
     var guardada = lsGet('cal_sel') || {};
     var hoy = periodoDe(hoyStr());
@@ -773,10 +842,11 @@ function mesReg(marcaId, periodo){
 function contar(envs){
   var c = {email:0, push:0, wpp:0, total:0, enviados:0, cancelados:0, ideas:0};
   envs.forEach(function(e){
-    if (e.estado === 'cancelado') { c.cancelados++; return; }
+    var b = baseDe(e.estado);
+    if (b === 'cancelado') { c.cancelados++; return; }
     c[e.canal]++; c.total++;
-    if (e.estado === 'enviado') c.enviados++;
-    if (e.estado === 'idea') c.ideas++;
+    if (b === 'enviado') c.enviados++;
+    if (b === 'idea') c.ideas++;
   });
   return c;
 }
@@ -1052,10 +1122,12 @@ function qaKey(ev){
   });
 }
 function chipEnvio(e, ed){
-  return '<div class="ev ' + e.canal + ' st-' + e.estado + '"' + (ed ? ' draggable="true" data-drag="' + e.id + '"' : '') + ' data-id="' + e.id + '"' +
-    ' onclick="event.stopPropagation();abrirEnvio(' + e.id + ')" title="' + esc(CLABEL[e.canal] + ' · ' + ELABEL[e.estado] + (e.asunto ? '\n' + e.asunto : '')) + '">' +
-    '<div class="ev-h"><span>' + CLABEL[e.canal] + (e.hora ? ' ' + esc(e.hora) : '') + '</span>' +
-    (e.estado === 'enviado' ? '<span class="ok">✓</span>' : e.estado === 'aprobado' ? '<span>✔</span>' : e.estado === 'idea' ? '<span>idea</span>' : '') + '</div>' +
+  var bs = baseDe(e.estado);
+  return '<div class="ev ' + e.canal + ' st-' + bs + '"' + (ed ? ' draggable="true" data-drag="' + e.id + '"' : '') + ' data-id="' + e.id + '"' +
+    ' onclick="event.stopPropagation();abrirEnvio(' + e.id + ')" title="' + esc(CLABEL[e.canal] + ' · ' + estLabel(e.estado) + ((e.links || []).length ? ' · ' + e.links.length + ' pieza(s)' : '') + (e.asunto ? '\n' + e.asunto : '')) + '">' +
+    '<div class="ev-h"><span class="ev-can"><i class="est-dot s-' + e.estado + '" title="' + esc(estLabel(e.estado)) + '"></i>' + CLABEL[e.canal] + (e.hora ? ' ' + esc(e.hora) : '') + '</span>' +
+    ((e.links || []).length ? '<span title="Tiene piezas">📎</span>' : '') +
+    (bs === 'enviado' ? '<span class="ok">✓</span>' : bs === 'aprobado' ? '<span>✔</span>' : bs === 'idea' ? '<span>' + esc(estLabel(e.estado).toLowerCase()) + '</span>' : '') + '</div>' +
     '<div class="ev-t">' + esc(e.titulo) + '</div>' + hubDeEnvio(e) + '</div>';
 }
 // Etiqueta chica con el estado de la news en el hub (solo envíos de email que ya tienen news).
@@ -1212,7 +1284,7 @@ function moverEnvio(id, destino){
   });
 }
 function errBandeja(err){
-  return /bandeja|orden|origen|preheader|rubro/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
+  return /bandeja|orden|origen|preheader|rubro|estados|links|carpeta/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
 }
 // envíos sin día del mes
 function bandejaDeMes(marcaId, periodo){
@@ -1261,8 +1333,8 @@ function listaMes(envs, ed){
   if (nSel) h += barraLote(nSel, cs);
   h += '<div class="twrap"><table class="ltab"><thead><tr>' +
     '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + (envs.length ? '' : ' disabled') + ' onchange="selTodos(this.checked)"></th>' +
-    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th class="est-cell">Estado</th><th class="more-cell"></th></tr></thead><tbody>';
-  if (!envs.length) h += '<tr><td colspan="11"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
+    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th>Piezas</th><th class="est-cell">Estado' + (me.rol === 'admin' ? ' <button class="est-edit" title="Editar estados y colores" onclick="abrirEstados()">✎</button>' : '') + '</th><th class="more-cell"></th></tr></thead><tbody>';
+  if (!envs.length) h += '<tr><td colspan="12"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
   envs.forEach(function(e){
     var id = e.id, ce = function(campo, cls, html){
       return '<td class="ed ' + cls + '" onclick="editarCelda(this,' + id + ',\'' + campo + '\')">' + html + '</td>';
@@ -1278,6 +1350,7 @@ function listaMes(envs, ed){
       ce('asunto', '', '<div class="wrap-cell">' + esc(e.asunto || '') + '</div>') +
       (e.canal === 'email' ? ce('preheader', 'muted', '<div class="wrap-cell">' + esc(e.preheader || '') + '</div>') : '<td class="muted">—</td>') +
       ce('segmento', 'muted', esc(e.segmento || '')) +
+      '<td class="pz-cell">' + piezasCelda(e) + '</td>' +
       '<td class="est-cell"><select class="est-block s-' + e.estado + '" onchange="editCampo(' + id + ',\'estado\',this.value)">' + opciones(EST_ENV, e.estado, ELABEL) + '</select>' +
       '</td><td class="more-cell"><button class="mini" title="Abrir el envío completo" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
   });
@@ -1384,7 +1457,7 @@ function borrarLote(){
 function listaLectura(envs, ed){
   if (!envs.length) return '<div class="section"><div class="empty">No hay envíos cargados para este mes' +
     (ed ? '.<br>Usá <b>+ Envío</b> o <b>Copiar de otro mes</b> para arrancar.' : '.') + '</div></div>';
-  return '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>' +
+  return '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th>Piezas</th><th>Estado</th></tr></thead><tbody>' +
     envs.map(function(e){
       return '<tr class="clickable" onclick="abrirEnvio(' + e.id + ')"><td class="lst-fecha">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + '</td>' +
         '<td class="lst-fecha muted">' + esc(e.hora || '') + '</td>' +
@@ -1394,9 +1467,110 @@ function listaLectura(envs, ed){
         '<td>' + chipEstado(e.estado) + '</td></tr>';
     }).join('') + '</tbody></table></div></div>';
 }
+// ── links de las piezas ────────────────────────────────────────────────────
+function nombreLink(url){
+  var u = String(url).toLowerCase();
+  if (u.indexOf('drive.google') >= 0) return 'Drive';
+  if (u.indexOf('docs.google.com/spreadsheets') >= 0) return 'Sheets';
+  if (u.indexOf('docs.google.com/presentation') >= 0) return 'Slides';
+  if (u.indexOf('docs.google') >= 0) return 'Docs';
+  if (u.indexOf('figma.com') >= 0) return 'Figma';
+  if (u.indexOf('canva.') >= 0) return 'Canva';
+  if (u.indexOf('dropbox') >= 0) return 'Dropbox';
+  if (u.indexOf('wetransfer') >= 0) return 'WeTransfer';
+  if (u.indexOf('monday.com') >= 0) return 'Monday';
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch(e){ return 'Link'; }
+}
+function normLink(v){
+  v = String(v || '').trim();
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : 'https://' + v;
+}
+function chipLink(l){
+  return '<a class="lk-chip" href="' + esc(l.url) + '" target="_blank" rel="noopener" title="' + esc(l.url) + '" onclick="event.stopPropagation()">' +
+    esc(l.nombre || nombreLink(l.url)) + ' ↗</a>';
+}
+function piezasCelda(e){
+  var ls = e.links || [];
+  if (!ls.length) return puedeEditar(e.marca_id) ? '<button class="pz-add" title="Agregar el link de la pieza" onclick="abrirEnvio(' + e.id + ',null,true)">+ link</button>' : '';
+  return '<div class="pz-list">' + ls.map(chipLink).join('') + '</div>';
+}
+
+// ── editor de estados (admin) ──────────────────────────────────────────────
+function abrirEstados(){
+  if (me.rol !== 'admin') return;
+  frm = {tipo: 'estados'};
+  abrirDrawer('Estados de los envíos', 'Nombre, color y orden · aplica a todas las marcas', '<div id="estEd"></div>', '');
+  dibujarEstados();
+}
+function dibujarEstados(){
+  var lista = D.estados;
+  var h = '<div class="note blue">Cambiá el nombre o el color tocándolos. Los estados nuevos <b>funcionan como</b> uno de los de base: ' +
+    'eso define si cuenta como enviado, si sale en la vista para el cliente, etc. Los 5 de base se pueden renombrar y recolorear, pero no borrar.</div>' +
+    lista.map(function(e, i){
+      var esBase = !!BASE_DESC[e.clave];
+      return '<div class="pick-row est-row">' +
+        '<input type="color" class="est-color" value="' + esc(e.color) + '" title="Color" onchange="updEstado(\'' + e.clave + '\',{color:this.value})">' +
+        '<input class="m-in est-nom" value="' + esc(e.nombre) + '" onchange="if(this.value.trim())updEstado(\'' + e.clave + '\',{nombre:this.value.trim()})">' +
+        '<span class="chip-est est-prev s-' + e.clave + '">' + esc(e.nombre) + '</span>' +
+        (esBase ? '<span class="muted est-como">' + BASE_DESC[e.base] + '</span>'
+          : '<select class="inl est-como" onchange="updEstado(\'' + e.clave + '\',{base:this.value})">' +
+            Object.keys(BASE_DESC).map(function(b){ return '<option value="' + b + '"' + (b === e.base ? ' selected' : '') + '>Como: ' + BASE_DESC[b] + '</option>'; }).join('') + '</select>') +
+        '<span class="spacer"></span>' +
+        '<button class="mini" title="Subir"' + (i ? ' onclick="moverEstado(' + i + ',-1)"' : ' disabled') + '>↑</button>' +
+        '<button class="mini" title="Bajar"' + (i < lista.length - 1 ? ' onclick="moverEstado(' + i + ',1)"' : ' disabled') + '>↓</button>' +
+        (esBase ? '' : '<button class="mini danger" title="Borrar" onclick="borrarEstado(\'' + e.clave + '\')">×</button>') + '</div>';
+    }).join('') +
+    '<div class="dsec">Agregar un estado</div>' +
+    '<div class="pick-row est-row"><input type="color" class="est-color" id="neColor" value="#a25ddc">' +
+    '<input class="m-in est-nom" id="neNom" placeholder="Ej: En diseño" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarEstado()}">' +
+    '<select class="inl est-como" id="neBase">' + Object.keys(BASE_DESC).map(function(b){ return '<option value="' + b + '"' + (b === 'planificado' ? ' selected' : '') + '>Como: ' + BASE_DESC[b] + '</option>'; }).join('') + '</select>' +
+    '<button class="btn-orange" onclick="agregarEstado()">Agregar</button></div>';
+  $('estEd').innerHTML = h;
+}
+function guardarEstados(rows){
+  return sb.from('cal_estados').upsert(rows, {onConflict: 'clave'}).select().then(function(r){
+    if (r.error) throw r.error;
+    r.data.forEach(function(nuevo){
+      var i = D.estados.findIndex(function(x){ return x.clave === nuevo.clave; });
+      if (i >= 0) D.estados[i] = nuevo; else D.estados.push(nuevo);
+    });
+    aplicarEstados(D.estados); dibujarEstados(); render();
+  }).catch(function(e){ toast(errBandeja(e), true); dibujarEstados(); });
+}
+function updEstado(clave, campos){
+  var e = D.estadoByClave[clave];
+  if (!e) return;
+  guardarEstados([Object.assign({}, e, campos)]).then(function(){ toast('Guardado'); });
+}
+function moverEstado(i, d){
+  var l = D.estados.map(function(e){ return Object.assign({}, e); });
+  var j = i + d, tmp = l[i]; l[i] = l[j]; l[j] = tmp;
+  l.forEach(function(e, k){ e.orden = k + 1; });
+  guardarEstados(l);
+}
+function agregarEstado(){
+  var nom = $('neNom').value.trim();
+  if (!nom) return toast('Poné el nombre del estado', true);
+  if (D.estados.some(function(e){ return normTxt(e.nombre) === normTxt(nom); })) return toast('Ya hay un estado con ese nombre', true);
+  var clave = 'x_' + slug(nom).replace(/-/g, '_').slice(0, 24) + '_' + Date.now().toString(36).slice(-4);
+  var orden = D.estados.reduce(function(m, e){ return Math.max(m, e.orden); }, 0) + 1;
+  guardarEstados([{clave: clave, nombre: nom, color: $('neColor').value, orden: orden, base: $('neBase').value}]).then(function(){ toast('Estado agregado'); });
+}
+function borrarEstado(clave){
+  sb.from('cal_envios').select('id', {count: 'exact', head: true}).eq('estado', clave).then(function(r){
+    if (r.error) return toast(r.error.message, true);
+    if (r.count) return toast('No se puede borrar: hay ' + r.count + ' envío(s) con ese estado. Cambialos primero.', true);
+    if (!confirm('¿Borrar el estado "' + estLabel(clave) + '"?')) return;
+    sb.from('cal_estados').delete().eq('clave', clave).then(function(d){
+      if (d.error) return toast(d.error.message, true);
+      aplicarEstados(D.estados.filter(function(e){ return e.clave !== clave; }));
+      dibujarEstados(); render(); toast('Estado borrado');
+    });
+  });
+}
 function chipEstado(s){
-  var cls = {idea:'grey', planificado:'blue', aprobado:'amber', enviado:'green', cancelado:'red'}[s];
-  return '<span class="chip ' + cls + '">' + ELABEL[s] + '</span>';
+  return '<span class="chip chip-est s-' + s + '">' + esc(estLabel(s)) + '</span>';
 }
 
 // ── panel lateral: lo que pasó antes + memoria del mes ─────────────────────
@@ -1408,7 +1582,13 @@ function panelLateral(m, p, reg, ed, canales){
 
   // este mes
   h += '<div class="side-card"><div class="side-title">Foco de ' + MESES[+p.slice(5,7) - 1].toLowerCase() + '</div>' +
-    campoMes('foco', reg.foco, ed, 'Objetivo comercial, campañas fuertes, qué pidió el cliente…') + '</div>';
+    campoMes('foco', reg.foco, ed, 'Objetivo comercial, campañas fuertes, qué pidió el cliente…') +
+    // carpeta general del mes (Drive con todas las piezas)
+    '<div class="side-lab">Carpeta del mes</div>' +
+    (ed ? '<div class="bj-add" style="margin-top:0"><input placeholder="Link a la carpeta de Drive del mes" value="' + esc(reg.carpeta || '') + '" onchange="guardarMes(\'carpeta\', normLink(this.value))">' +
+      (reg.carpeta ? '<a class="lk-chip" href="' + esc(reg.carpeta) + '" target="_blank" rel="noopener">Abrir ↗</a>' : '') + '</div>'
+      : (reg.carpeta ? '<a class="lk-chip" href="' + esc(reg.carpeta) + '" target="_blank" rel="noopener">' + esc(nombreLink(reg.carpeta)) + ' ↗</a>' : '<div class="side-txt vacio">Sin carpeta.</div>')) +
+    '</div>';
 
   // mes anterior
   h += '<div class="side-card prev"><div class="side-title">Mes anterior · ' + periodoLargo(prev) +
@@ -1487,7 +1667,7 @@ function upsertMes(campos){
 }
 function guardarMes(campo, val){
   var o = {}; o[campo] = val.trim() || null;
-  upsertMes(o).then(function(d){ if (d) toast('Guardado'); });
+  upsertMes(o).then(function(d){ if (d){ toast('Guardado'); if (campo === 'carpeta') render(); } });
 }
 function setEstadoMes(s){ upsertMes({estado: s}).then(function(d){ if (d) render(); }); }
 
@@ -1545,7 +1725,7 @@ function reemplazarLocal(row){
   if (i >= 0) lista[i] = row; else lista.push(row);
   invalidarResumen();
 }
-function abrirEnvio(id, fecha){
+function abrirEnvio(id, fecha, aLinks){
   var m = sel.marca;
   var e = id ? buscarEnvio(id) : null;
   var hoy = hoyStr();
@@ -1557,6 +1737,8 @@ function abrirEnvio(id, fecha){
   // los detalles arrancan abiertos solo si el envío ya tiene alguno cargado
   frm.mas = !!(e && (e.tipo || e.segmento || e.notas));
   frm.dup = false;
+  frm.links = (e && e.links ? e.links : []).map(function(l){ return {url: l.url, nombre: l.nombre}; });
+  frm.aLinks = !!aLinks;   // abierto desde "+ link" de la lista: foco en el campo del link
   dibujarEnvio(true);
 }
 // tarjeta liviana: canal, tema, fecha/hora y asunto a la vista; el resto plegado
@@ -1592,6 +1774,11 @@ function dibujarEnvio(enfocar){
       : '<textarea class="m-area" id="fAsunto" rows="2" placeholder="Copy del mensaje (opcional)"' + dis +
         ' onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){event.preventDefault();guardarEnvio()}">' + esc(f.asunto || '') + '</textarea>') +
     (f.id ? '<div class="m-lab">Estado</div>' + segEstado : '') +
+    // piezas: links a Drive, Figma, Canva…
+    '<div class="m-lab">Piezas</div><div class="pz-list" style="margin-bottom:6px">' + (f.links.length ? f.links.map(function(l, i){
+      return '<span class="lk-wrap">' + chipLink(l) + (ed ? '<button class="lk-x" title="Quitar" onclick="leerEnvio();frm.links.splice(' + i + ',1);dibujarEnvio()">×</button>' : '') + '</span>';
+    }).join('') : '<span class="muted" style="font-size:12px">Sin links todavía.</span>') + '</div>' +
+    (ed ? '<input class="m-in" id="fLink" placeholder="Pegá el link de la pieza (Drive, Figma, Canva…) y Enter" autocomplete="off" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarLink()}">' : '') +
     (f.id && f.canal === 'email' ? (function(){
       var h = D.hub[f.marca_id] && D.hub[f.marca_id][f.id];
       if (h) return '<div class="m-hub"><a class="m-hub-btn" href="' + HUB_URL + '#news/' + h.news_id + '" target="_blank" rel="noopener">Abrir en el hub</a><span>News: <b>' + esc(HUB_EST[h.estado] || h.estado) + '</b></span></div>';
@@ -1617,6 +1804,14 @@ function dibujarEnvio(enfocar){
   $('modal').innerHTML = h;
   $('mBg').classList.add('open');
   if (enfocar && ed && !f.id){ var t = $('fTitulo'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+  else if (ed && (f.aLinks || f.foco === 'link') && $('fLink')){ $('fLink').focus(); f.aLinks = false; f.foco = null; }
+}
+// agrega el link escrito (leerEnvio ya lo suma a la lista) y deja el cursor para el siguiente
+function agregarLink(){
+  if (!$('fLink') || !$('fLink').value.trim()) return;
+  leerEnvio();
+  frm.foco = 'link';
+  dibujarEnvio();
 }
 function cerrarModal(){ $('mBg').classList.remove('open'); frm = null; }
 $('mBg').onclick = function(ev){ if (ev.target === $('mBg')) cerrarModal(); };
@@ -1625,6 +1820,8 @@ function leerEnvio(){
   var v = function(id, k){ var el = $(id); if (el) frm[k] = el.value; };
   v('fFecha', 'fecha'); v('fHora', 'hora'); v('fTitulo', 'titulo'); v('fAsunto', 'asunto'); v('fPre', 'preheader');
   v('fTipo', 'tipo'); v('fSeg', 'segmento'); v('fNotas', 'notas');
+  // un link pegado y sin Enter también se guarda
+  var lk = $('fLink'); if (lk && lk.value.trim()){ frm.links.push({url: normLink(lk.value), nombre: nombreLink(normLink(lk.value))}); lk.value = ''; }
 }
 function guardarEnvio(){
   leerEnvio();
@@ -1640,6 +1837,8 @@ function guardarEnvio(){
   var orig = f.id ? buscarEnvio(f.id) : null;
   // el preheader se manda solo si hay algo (así no falla si la base todavía no tiene la columna)
   if (t(f.preheader) || (orig && orig.preheader)) row.preheader = t(f.preheader);
+  var linksOrig = orig && orig.links ? orig.links : [];
+  if (f.links.length || linksOrig.length) row.links = f.links;
   if (orig && orig.bandeja && f.fecha !== orig.fecha && !f.dup) row.bandeja = false;
   if (f.dup && f.bandeja) row.bandeja = true;
   var q = f.id
@@ -1694,7 +1893,7 @@ function abrirCopia(origen){
   if (!opciones.length) return toast('Esta marca no tiene envíos cargados en los meses anteriores', true);
   if (!origen || opciones.indexOf(origen) < 0) origen = opciones[0];
   frm = {tipo: 'copia', origen: origen, opciones: opciones, modo: 'semana', no: {}};
-  envDeMes(m, origen).forEach(function(e){ if (e.estado === 'cancelado') frm.no[e.id] = true; });
+  envDeMes(m, origen).forEach(function(e){ if (baseDe(e.estado) === 'cancelado') frm.no[e.id] = true; });
   dibujarCopia();
 }
 function dibujarCopia(){
@@ -1748,7 +1947,9 @@ function parseCanal(s){
 function parseEstado(s){
   var n = normTxt(s);
   if (!n) return 'planificado';
-  var k = EST_ENV.find(function(x){ return n.indexOf(x.slice(0, 4)) === 0; });
+  // primero por nombre exacto (incluye estados propios), después por las primeras letras
+  var k = EST_ENV.find(function(x){ return normTxt(estLabel(x)) === n; }) ||
+          EST_ENV.find(function(x){ return normTxt(estLabel(x)).indexOf(n.slice(0, 4)) === 0 || n.indexOf(x.slice(0, 4)) === 0; });
   return k || 'planificado';
 }
 function parseHora(s){
@@ -2154,7 +2355,7 @@ function enviosPropuestos(){
     if (envsMarca.some(function(x){ return x.fecha === fecha && x.canal === canal && x.titulo === titulo; })) return;
     // ¿ya hay uno armado desde acciones ese día y canal? se le suman los nombres que falten
     var previo = envsMarca.find(function(x){
-      return x.fecha === fecha && x.canal === canal && (x.origen === 'acciones' || x.notas === MARCA_ACCIONES) && (x.estado === 'planificado' || x.estado === 'idea');
+      return x.fecha === fecha && x.canal === canal && (x.origen === 'acciones' || x.notas === MARCA_ACCIONES) && (baseDe(x.estado) === 'planificado' || baseDe(x.estado) === 'idea');
     });
     if (previo){
       var faltan = prop.nombres.filter(function(n){ return previo.titulo.indexOf(n) < 0; });
@@ -2268,8 +2469,9 @@ function abrirCierre(){
   var reg = mesReg(sel.marca, sel.periodo) || {};
   frm = {tipo: 'cierre', est: {}};
   envs.forEach(function(e){
-    frm.est[e.id] = (e.estado === 'cancelado' || e.estado === 'enviado') ? e.estado
-      : (e.estado === 'idea' ? 'cancelado' : 'enviado');
+    var be = baseDe(e.estado);
+    frm.est[e.id] = (be === 'cancelado' || be === 'enviado') ? be
+      : (be === 'idea' ? 'cancelado' : 'enviado');
   });
   frm.funciono = reg.funciono || ''; frm.no_funciono = reg.no_funciono || ''; frm.repetir = reg.repetir || '';
   dibujarCierre();
@@ -2300,7 +2502,7 @@ function ejecutarCierre(){
   leerCierre();
   var f = frm, envs = envDeMes(sel.marca, sel.periodo);
   var grupos = {enviado: [], cancelado: []};
-  envs.forEach(function(e){ if (f.est[e.id] && f.est[e.id] !== e.estado) grupos[f.est[e.id]].push(e.id); });
+  envs.forEach(function(e){ if (f.est[e.id] && f.est[e.id] !== baseDe(e.estado)) grupos[f.est[e.id]].push(e.id); });
   var ahora = new Date().toISOString();
   var ps = Object.keys(grupos).filter(function(k){ return grupos[k].length; }).map(function(k){
     return sb.from('cal_envios').update({estado: k, actualizado_at: ahora}).in('id', grupos[k]).select().then(function(r){
@@ -2321,10 +2523,10 @@ function ejecutarCierre(){
 function filasExport(envs, marcaNombre){
   return envs.map(function(e){
     return [marcaNombre(e), fechaLarga(e.fecha), dowDe(e.fecha), e.hora || '', CLABEL[e.canal], e.tipo || '',
-      e.titulo, e.asunto || '', e.preheader || '', e.segmento || '', ELABEL[e.estado], e.notas || ''];
+      e.titulo, e.asunto || '', e.preheader || '', e.segmento || '', estLabel(e.estado), e.notas || '', (e.links || []).map(function(l){ return l.url; }).join(' ')];
   });
 }
-const CAB_EXPORT = ['Marca','Fecha','Día','Hora','Canal','Tipo','Tema','Asunto / copy','Preheader','Segmento','Estado','Notas'];
+const CAB_EXPORT = ['Marca','Fecha','Día','Hora','Canal','Tipo','Tema','Asunto / copy','Preheader','Segmento','Estado','Notas','Piezas'];
 function nombreDe(e){ return (D.marcaById[e.marca_id] || {}).nombre || ''; }
 function envsExport(){ return envDeMes(sel.marca, sel.periodo).filter(function(e){ return filtroCanal[e.canal]; }); }
 
@@ -2354,7 +2556,7 @@ function descargarCSV(){
 // página prolija, en claro, para mandar al cliente o guardar como PDF
 function vistaCliente(){
   var m = sel.marca, p = sel.periodo, marca = D.marcaById[m].nombre;
-  var envs = envDeMes(m, p).filter(function(e){ return e.estado !== 'cancelado' && e.estado !== 'idea' && filtroCanal[e.canal]; });
+  var envs = envDeMes(m, p).filter(function(e){ var b = baseDe(e.estado); return b !== 'cancelado' && b !== 'idea' && filtroCanal[e.canal]; });
   var reg = mesReg(m, p) || {};
   var keys = fechasDelMes(m, p);
   var col = {email:'#f04e23', push:'#3b6ea8', wpp:'#16a34a'};
@@ -2520,7 +2722,7 @@ function renderHistorial(){
 
   // tipos de envío más usados: sirve para ver el mix de la marca
   var tipos = {};
-  D.env[m].forEach(function(e){ if (e.estado !== 'cancelado' && e.tipo) tipos[e.tipo] = (tipos[e.tipo] || 0) + 1; });
+  D.env[m].forEach(function(e){ if (baseDe(e.estado) !== 'cancelado' && e.tipo) tipos[e.tipo] = (tipos[e.tipo] || 0) + 1; });
   var topTipos = Object.keys(tipos).sort(function(a, b){ return tipos[b] - tipos[a]; }).slice(0, 6);
   if (topTipos.length) h += '<div class="filters"><label>Mix histórico</label>' + topTipos.map(function(t){ return '<span class="chip grey">' + esc(t) + ' · ' + tipos[t] + '</span>'; }).join('') + '</div>';
 
@@ -2627,7 +2829,7 @@ function renderAccesos(){
   var h = '<div class="note">El mail tiene que ser el mismo con el que la persona entra a Supabase (@we-are.com.ar). ' +
     'La cuenta se crea en Supabase → Authentication → Users; acá solo se autoriza y se le asignan marcas. ' +
     '<b>Admin</b>: ve y edita todo. <b>Editor</b>: ve y edita solo el calendario, historial y fechas clave de las marcas que le asignes. <b>Lector</b>: ve, sin editar, solo el calendario de las marcas que le asignes.</div>' +
-    '<div class="section"><div class="section-hdr"><span class="section-title">Usuarios del calendario</span></div><div class="twrap"><table><thead><tr>' +
+    '<div class="section"><div class="section-hdr"><span class="section-title">Usuarios del calendario</span><button class="btn-sm" onclick="abrirEstados()">Estados y colores</button></div><div class="twrap"><table><thead><tr>' +
     '<th>Nombre</th><th>Email</th><th>Rol</th><th>Activo</th><th>Marcas asignadas</th><th>Último ingreso</th></tr></thead><tbody>' +
     D.usuarios.map(function(u){
       var suyas = D.um.filter(function(x){ return x.usuario_id === u.id; }).map(function(x){ return x.marca_id; });

@@ -287,3 +287,38 @@ create policy sem_celulas_cal_read on sem_celulas for select to authenticated
 -- insert into cal_usuarios (email, nombre, rol)
 -- select email, nombre, rol from sem_usuarios where activo
 -- on conflict do nothing;
+
+-- ── ESTADOS EDITABLES (20/10/2026) ──────────────────────────────────────────
+-- Nombre, color y orden de los estados de los envíos los define un admin.
+-- Cada estado "funciona como" uno de los 5 de base, que es lo que usa la app
+-- para contar enviados, excluir cancelados, etc. Los 5 de base no se borran.
+alter table cal_envios drop constraint if exists cal_envios_estado_check;
+
+create table if not exists cal_estados (
+  clave   text primary key,
+  nombre  text not null,
+  color   text not null default '#579bfc',
+  orden   int  not null default 99,
+  base    text not null check (base in ('idea','planificado','aprobado','enviado','cancelado'))
+);
+insert into cal_estados (clave, nombre, color, orden, base) values
+  ('idea',        'Idea',        '#7b8698', 1, 'idea'),
+  ('planificado', 'Planificado', '#579bfc', 2, 'planificado'),
+  ('aprobado',    'Aprobado',    '#fdab3d', 3, 'aprobado'),
+  ('enviado',     'Enviado',     '#00c875', 4, 'enviado'),
+  ('cancelado',   'Cancelado',   '#e2445c', 5, 'cancelado')
+on conflict (clave) do nothing;
+
+alter table cal_estados enable row level security;
+drop policy if exists cal_estados_read on cal_estados;
+create policy cal_estados_read on cal_estados for select to authenticated
+  using (cal_rol() is not null);
+drop policy if exists cal_estados_admin on cal_estados;
+create policy cal_estados_admin on cal_estados for all to authenticated
+  using (cal_rol() = 'admin') with check (cal_rol() = 'admin');
+
+-- ── LINKS DE LAS PIEZAS (20/10/2026) ────────────────────────────────────────
+-- Por envío: lista de links [{url, nombre}] (Drive, Figma, Canva…).
+-- Por marca-mes: la carpeta general del mes.
+alter table cal_envios add column if not exists links jsonb not null default '[]'::jsonb;
+alter table cal_meses  add column if not exists carpeta text;
