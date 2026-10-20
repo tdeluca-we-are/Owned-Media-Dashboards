@@ -431,6 +431,32 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 [data-theme="light"] .ev .ok{color:#15803d}
 [data-theme="light"] .toast.err{color:#b91c1c}
 [data-theme="light"] .role-analista,[data-theme="light"] .role-editor{color:#2f5d8f}
+/* modo claro, segunda vuelta: más contraste (textos, bordes y tarjetas) */
+:root[data-theme="light"]{
+  --bg:#e9edf3;--bg2:#ffffff;--bg3:#f1f4f8;
+  --border:rgba(11,25,41,.2);--border2:rgba(11,25,41,.18);
+  --text:#0b1929;--text2:#33405a;--text3:#5d6a82;
+}
+[data-theme="light"] .top-bar{background:#fff;box-shadow:0 1px 0 rgba(11,25,41,.08)}
+[data-theme="light"] .section,[data-theme="light"] .side-card,[data-theme="light"] .kpi,[data-theme="light"] .mesbar,
+[data-theme="light"] .cal,[data-theme="light"] .auth-card{box-shadow:0 1px 3px rgba(11,25,41,.1),0 1px 1px rgba(11,25,41,.04)}
+[data-theme="light"] .btn-sm,[data-theme="light"] .tab,[data-theme="light"] .mesnav button,[data-theme="light"] .mini{background:#fff;color:var(--text2);border-color:rgba(11,25,41,.22)}
+[data-theme="light"] .tab.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+[data-theme="light"] .seg button{color:var(--text2);background:#fff;border-color:rgba(11,25,41,.2)}
+[data-theme="light"] .seg button.on{background:#dfe5ee;color:var(--text);border-color:rgba(11,25,41,.3)}
+[data-theme="light"] .fchip{background:#fff;color:var(--text2)}
+[data-theme="light"] .fchip.on{background:#fff;color:var(--text);border-color:rgba(11,25,41,.3)}
+[data-theme="light"] th{color:#4b5870;background:#f7f9fc}
+[data-theme="light"] .cal-dow{color:#4b5870;background:#f7f9fc}
+[data-theme="light"] .cal-num{color:#33405a}
+[data-theme="light"] .ev{background:#f1f4f8;border-top:1px solid rgba(11,25,41,.08);border-right:1px solid rgba(11,25,41,.08);border-bottom:1px solid rgba(11,25,41,.08)}
+[data-theme="light"] .ev-h{color:#5d6a82}
+[data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{color:#8792a6}
+[data-theme="light"] .side-card textarea,[data-theme="light"] .m-in,[data-theme="light"] .m-area,[data-theme="light"] .addline input,
+[data-theme="light"] .addline select,[data-theme="light"] .bj-add input,[data-theme="light"] .bj-add select,[data-theme="light"] .filters select,
+[data-theme="light"] .filters input,[data-theme="light"] .fg input,[data-theme="light"] .fg select,[data-theme="light"] .fg textarea{background:#f7f9fc;border-color:rgba(11,25,41,.2)}
+[data-theme="light"] .user-pill{background:#fff}
+[data-theme="light"] .hint code{background:#fff}
 </style>
 </head>
 <body>
@@ -486,7 +512,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.5';
+const VERSION_APP = '2026-10-20.6';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
