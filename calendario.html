@@ -486,7 +486,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.4';
+const VERSION_APP = '2026-10-20.5';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -817,7 +817,7 @@ function renderCalendario(){
   var estMes = reg.estado || 'borrador';
   var canales = canalesDe(m);
 
-  var h = '<div class="filters">' + selectorMarca() + navMes() + '<span class="spacer"></span>' +
+  var h = '<div class="filters">' + selectorMarca() + (rubroDe(m) ? '<span class="chip grey" title="Rubro">' + esc(rubroDe(m)) + '</span>' : '') + navMes() + '<span class="spacer"></span>' +
     '<span class="seg"><button class="' + (sel.vista === 'cal' ? 'on' : '') + '" onclick="setVista(\'cal\')">Calendario</button>' +
     '<button class="' + (sel.vista === 'lista' ? 'on' : '') + '" onclick="setVista(\'lista\')">Lista</button></span></div>';
 
@@ -1140,7 +1140,7 @@ function moverEnvio(id, destino){
   });
 }
 function errBandeja(err){
-  return /bandeja|orden|origen|preheader/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
+  return /bandeja|orden|origen|preheader|rubro/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
 }
 // envíos sin día del mes
 function bandejaDeMes(marcaId, periodo){
@@ -1375,15 +1375,19 @@ function panelLateral(m, p, reg, ed, canales){
 
   // reglas de la marca
   var cfg = D.configById[m] || {};
-  h += '<div class="side-card rules"><div class="side-title">Reglas de la marca</div>';
+  h += '<div class="side-card rules"><div class="side-title">La marca: rubro y reglas</div>';
   if (ed){
+    h += '<div class="side-lab" style="margin-top:0">Rubro</div>' +
+      '<input class="m-in" style="padding:7px 10px;margin-bottom:10px" list="lRubros" value="' + esc(cfg.rubro || '') + '" placeholder="Ej: Moda, Calzado, Belleza…" onchange="guardarConfig({rubro: this.value.trim() || null})">' +
+      '<datalist id="lRubros">' + rubrosConocidos().map(function(r){ return '<option value="' + esc(r) + '">'; }).join('') + '</datalist>' +
+      '<div class="side-lab">Canales</div>';
     h += '<div style="margin-bottom:8px">' + CANALES.map(function(k){
       return '<label class="chk"><input type="checkbox"' + (canales.indexOf(k) >= 0 ? ' checked' : '') +
         ' onchange="toggleCanalMarca(\'' + k + '\', this.checked)"> ' + CLABEL[k] + '</label>';
     }).join('') + '</div>' +
-    '<textarea placeholder="Días que no se envía, frecuencia pactada, quién aprueba, tono, exclusiones…" onchange="guardarReglas(this.value)">' + esc(cfg.reglas || '') + '</textarea>';
+    '<div class="side-lab">Reglas</div><textarea placeholder="Días que no se envía, frecuencia pactada, quién aprueba, tono, exclusiones…" onchange="guardarReglas(this.value)">' + esc(cfg.reglas || '') + '</textarea>';
   } else {
-    h += '<div class="side-txt">Canales: ' + canales.map(function(k){ return CLABEL[k]; }).join(', ') + '</div>' +
+    h += '<div class="side-txt">Rubro: ' + esc(cfg.rubro || '—') + '</div><div class="side-txt">Canales: ' + canales.map(function(k){ return CLABEL[k]; }).join(', ') + '</div>' +
       '<div class="side-txt' + (cfg.reglas ? '' : ' vacio') + '" style="margin-top:6px">' + esc(cfg.reglas || 'Sin reglas cargadas.') + '</div>';
   }
   return h + '</div>';
@@ -1415,11 +1419,18 @@ function guardarMes(campo, val){
 }
 function setEstadoMes(s){ upsertMes({estado: s}).then(function(d){ if (d) render(); }); }
 
+// rubros: los que ya se usaron + una base común
+const RUBROS_BASE = ['Moda','Calzado','Deportes','Belleza y cuidado personal','Hogar y deco','Electro y tecnología','Alimentos y bebidas','Bebidas alcohólicas','Infantil y juguetería','Mascotas','Joyería y accesorios','Óptica','Farmacia y salud','Librería y regalería','Automotor','Viajes y turismo'];
+function rubrosConocidos(){
+  var usados = D.config.map(function(c){ return c.rubro; }).filter(Boolean);
+  return usados.concat(RUBROS_BASE).filter(function(x, i, a){ return a.indexOf(x) === i; }).sort(function(a, b){ return a.localeCompare(b); });
+}
+function rubroDe(marcaId){ return (D.configById[marcaId] || {}).rubro || ''; }
 function guardarConfig(campos){
   var m = sel.marca;
   var row = Object.assign({marca_id: m, canales: canalesDe(m), actualizado_at: new Date().toISOString()}, campos);
   sb.from('cal_marca_config').upsert(row, {onConflict: 'marca_id'}).select().single().then(function(r){
-    if (r.error) return toast(r.error.message, true);
+    if (r.error) return toast(errBandeja(r.error), true);
     D.configById[m] = r.data;
     var i = D.config.findIndex(function(x){ return x.marca_id === m; });
     if (i >= 0) D.config[i] = r.data; else D.config.push(r.data);
@@ -2331,7 +2342,7 @@ function vistaCliente(){
 }
 
 // ══ RESUMEN DEL EQUIPO ══════════════════════════════════════════════════════
-var filtroCelula = '';
+var filtroCelula = '', filtroRubro = '';
 function renderResumen(){
   var p = sel.periodo, prev = addMes(p, -1);
   if (!R[p]){
@@ -2345,7 +2356,7 @@ function renderResumen(){
   }
   if (typeof R[p].then === 'function') return;   // sigue cargando
   var datos = R[p];
-  var marcas = D.marcas.filter(function(m){ return m.activa && (!filtroCelula || String(m.celula_id || 0) === filtroCelula); });
+  var marcas = D.marcas.filter(function(m){ return m.activa && (!filtroCelula || String(m.celula_id || 0) === filtroCelula) && (!filtroRubro || (filtroRubro === '-' ? !rubroDe(m.id) : rubroDe(m.id) === filtroRubro)); });
   var filas = marcas.map(function(m){
     var eM = datos.envs.filter(function(e){ return e.marca_id === m.id; });
     var c  = contar(eM.filter(function(e){ return periodoDe(e.fecha) === p; }));
@@ -2366,6 +2377,7 @@ function renderResumen(){
   }).join('') + '<option value="0"' + (filtroCelula === '0' ? ' selected' : '') + '>Sin célula</option>';
 
   var h = '<div class="filters">' + navMes() + '<select onchange="filtroCelula=this.value;render()">' + celOpts + '</select>' +
+    '<select onchange="filtroRubro=this.value;render()"><option value="">Todos los rubros</option>' + D.config.map(function(c){ return c.rubro; }).filter(function(x, i, a){ return x && a.indexOf(x) === i; }).sort().map(function(r){ return '<option' + (r === filtroRubro ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('') + '<option value="-"' + (filtroRubro === '-' ? ' selected' : '') + '>Sin rubro</option></select>' +
     '<span class="spacer"></span><button class="btn-sm" onclick="csvEquipo()">Descargar CSV de todas las marcas</button></div>' +
     '<div class="kpi-row">' +
     '<div class="kpi' + (conCal === filas.length ? ' ok' : ' warn') + '"><div class="kpi-label">Con calendario</div><div class="kpi-val">' + conCal + '<span class="muted" style="font-size:14px"> / ' + filas.length + '</span></div><div class="kpi-sub">marcas con envíos cargados</div></div>' +
@@ -2382,17 +2394,18 @@ function renderResumen(){
     if (a === '0') return 1; if (b === '0') return -1;
     return String((D.celulaById[a] || {}).nombre || '').localeCompare(String((D.celulaById[b] || {}).nombre || ''));
   });
-  h += '<div class="section"><div class="twrap"><table><thead><tr><th>Marca</th><th>Canales</th>' +
+  h += '<div class="section"><div class="twrap"><table><thead><tr><th>Marca</th><th>Rubro</th><th>Canales</th>' +
     CANALES.map(function(k){ return '<th class="num">' + CLABEL[k] + '</th>'; }).join('') +
     '<th class="num">Total</th><th class="num">Mes ant.</th><th>Estado ' + periodoCorto(p) + '</th><th>' + periodoCorto(prev) + '</th><th>Última edición</th></tr></thead><tbody>';
   orden.forEach(function(k){
     var cel = D.celulaById[k];
-    h += '<tr class="crow"><td colspan="' + (CANALES.length + 7) + '">' + esc(cel ? cel.nombre : 'Sin célula') + (cel && cel.kam ? '<span class="kam">' + esc(cel.kam) + '</span>' : '') + '</td></tr>';
+    h += '<tr class="crow"><td colspan="' + (CANALES.length + 8) + '">' + esc(cel ? cel.nombre : 'Sin célula') + (cel && cel.kam ? '<span class="kam">' + esc(cel.kam) + '</span>' : '') + '</td></tr>';
     grupos[k].forEach(function(f){
       var est = f.reg ? f.reg.estado : null;
       var cerradoP = f.regP && f.regP.estado === 'cerrado';
       h += '<tr class="clickable" onclick="irA(' + f.m.id + ',\'' + p + '\')"><td class="strong">' + esc(f.m.nombre) +
         (D.misMarcas.indexOf(f.m.id) >= 0 ? ' <span class="chip orange">mía</span>' : '') + '</td>' +
+        '<td class="muted">' + esc(rubroDe(f.m.id) || '—') + '</td>' +
         '<td>' + canalesDe(f.m.id).map(function(c){ return '<i class="dot ' + c + '" title="' + CLABEL[c] + '" style="margin-right:3px"></i>'; }).join('') + '</td>' +
         CANALES.map(function(c){ return '<td class="num' + (f.c[c] ? '' : ' muted') + '">' + (f.c[c] || '—') + '</td>'; }).join('') +
         '<td class="num strong">' + (f.c.total || '<span class="muted">—</span>') + '</td>' +
@@ -2402,7 +2415,7 @@ function renderResumen(){
         '<td class="muted" style="font-size:11.5px">' + (f.reg && f.reg.actualizado_por ? esc(f.reg.actualizado_por) + ' · ' + fechaCorta(f.reg.actualizado_at.slice(0, 10)) : '') + '</td></tr>';
     });
   });
-  if (!filas.length) h += '<tr><td colspan="' + (CANALES.length + 7) + '"><div class="empty">No hay marcas activas.</div></td></tr>';
+  if (!filas.length) h += '<tr><td colspan="' + (CANALES.length + 8) + '"><div class="empty">No hay marcas activas.</div></td></tr>';
   $('panes').innerHTML = h + '</tbody></table></div></div>';
 }
 function csvEquipo(){

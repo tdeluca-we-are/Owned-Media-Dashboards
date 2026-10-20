@@ -111,6 +111,10 @@ alter table cal_envios add column if not exists orden int;
 -- email o copy de push/WhatsApp.
 alter table cal_envios add column if not exists preheader text;
 
+-- Rubro de la marca (20/10/2026): moda, calzado, belleza… Va en la config del
+-- calendario para no tocar las marcas del semáforo.
+alter table cal_marca_config add column if not exists rubro text;
+
 -- De dónde salió el envío ('acciones' = armado desde "Cargar acciones"). Antes se
 -- marcaba en las notas; se mueve acá y las notas quedan libres.
 alter table cal_envios add column if not exists origen text;
