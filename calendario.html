@@ -457,6 +457,35 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 [data-theme="light"] .filters input,[data-theme="light"] .fg input,[data-theme="light"] .fg select,[data-theme="light"] .fg textarea{background:#f7f9fc;border-color:rgba(11,25,41,.2)}
 [data-theme="light"] .user-pill{background:#fff}
 [data-theme="light"] .hint code{background:#fff}
+/* lista estilo Monday: filas parejas, separadores, franja del canal, estado en bloque */
+.ltab{border-collapse:separate;border-spacing:0}
+.ltab th{padding:10px 12px;border-bottom:1px solid var(--border);border-right:1px solid rgba(255,255,255,.06);font-size:10.5px}
+.ltab th:last-child,.ltab td:last-child{border-right:none}
+.ltab tbody td{height:44px;padding:0 12px;border-bottom:1px solid rgba(255,255,255,.07);border-right:1px solid rgba(255,255,255,.06);transition:background .12s}
+.ltab tbody tr[data-id]:hover td{background:rgba(255,255,255,.035)}
+.ltab tbody tr[data-id] td:first-child{padding-left:12px}
+.ltab tr.c-email td:first-child{box-shadow:inset 4px 0 0 var(--ch-email)}
+.ltab tr.c-push td:first-child{box-shadow:inset 4px 0 0 var(--ch-push)}
+.ltab tr.c-wpp td:first-child{box-shadow:inset 4px 0 0 var(--ch-wpp)}
+.ltab td.strong{font-size:13px}
+.ltab .ch-cell{width:120px;text-align:center}
+.ch-pill{appearance:none;-webkit-appearance:none;border:none;outline:none;cursor:pointer;font-family:var(--font);font-size:11.5px;font-weight:600;color:#fff;padding:5px 14px;border-radius:20px;min-width:96px;text-align:center;text-align-last:center}
+.ch-pill.c-email{background:var(--ch-email)}.ch-pill.c-push{background:#4f7fb8}.ch-pill.c-wpp{background:#16a34a}
+.ch-pill:hover{filter:brightness(1.1)}
+.ch-pill option,.est-block option{background:var(--bg2);color:var(--text)}
+.ltab .est-cell{width:150px;min-width:130px;padding:0 !important}
+.ltab td.strong{min-width:170px}
+.est-block{appearance:none;-webkit-appearance:none;display:block;width:100%;height:44px;border:none;border-radius:0;outline:none;cursor:pointer;font-family:var(--font);font-size:12.5px;font-weight:600;color:#fff;text-align:center;text-align-last:center}
+.est-block:hover{filter:brightness(1.08)}
+.est-block.s-idea{background:#7b8698}
+.est-block.s-planificado{background:#579bfc}
+.est-block.s-aprobado{background:#fdab3d}
+.est-block.s-enviado{background:#00c875}
+.est-block.s-cancelado{background:#e2445c}
+.ltab .more-cell{width:44px;text-align:center;padding:0 6px}
+[data-theme="light"] .ltab th{border-right-color:rgba(11,25,41,.08)}
+[data-theme="light"] .ltab tbody td{border-bottom-color:rgba(11,25,41,.09);border-right-color:rgba(11,25,41,.08)}
+[data-theme="light"] .ltab tbody tr[data-id]:hover td{background:#f5f8fc}
 </style>
 </head>
 <body>
@@ -512,7 +541,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.6';
+const VERSION_APP = '2026-10-20.7';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -1215,27 +1244,27 @@ function listaMes(envs, ed){
   if (nSel) h += barraLote(nSel, cs);
   h += '<div class="twrap"><table class="ltab"><thead><tr>' +
     '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + (envs.length ? '' : ' disabled') + ' onchange="selTodos(this.checked)"></th>' +
-    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>';
-  if (!envs.length) h += '<tr><td colspan="10"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
+    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th class="est-cell">Estado</th><th class="more-cell"></th></tr></thead><tbody>';
+  if (!envs.length) h += '<tr><td colspan="11"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
   envs.forEach(function(e){
     var id = e.id, ce = function(campo, cls, html){
       return '<td class="ed ' + cls + '" onclick="editarCelda(this,' + id + ',\'' + campo + '\')">' + html + '</td>';
     };
     var csE = cs.indexOf(e.canal) >= 0 ? cs : cs.concat([e.canal]);
-    h += '<tr class="' + (selIds[id] ? 'chk-on' : '') + '" data-id="' + id + '" data-drop="' + e.fecha + '">' +
+    h += '<tr class="c-' + e.canal + (selIds[id] ? ' chk-on' : '') + '" data-id="' + id + '" data-drop="' + e.fecha + '">' +
       '<td class="sel"><span class="grip" draggable="true" data-drag="' + id + '" title="Arrastrá para cambiar el día">⋮⋮</span><input type="checkbox"' + (selIds[id] ? ' checked' : '') + ' onchange="toggleSel(' + id + ',this.checked)"></td>' +
       ce('fecha', 'lst-fecha', dowDe(e.fecha) + ' ' + fechaCorta(e.fecha)) +
       ce('hora', 'lst-fecha muted', esc(e.hora || '')) +
-      '<td><select class="chip-sel c-' + e.canal + '" onchange="editCampo(' + id + ',\'canal\',this.value)">' + opciones(csE, e.canal, CLABEL) + '</select></td>' +
+      '<td class="ch-cell"><select class="ch-pill c-' + e.canal + '" onchange="editCampo(' + id + ',\'canal\',this.value)">' + opciones(csE, e.canal, CLABEL) + '</select></td>' +
       ce('tipo', 'muted', esc(e.tipo || '')) +
       ce('titulo', 'strong', esc(e.titulo)) +
       ce('asunto', '', '<div class="wrap-cell">' + esc(e.asunto || '') + '</div>') +
       (e.canal === 'email' ? ce('preheader', 'muted', '<div class="wrap-cell">' + esc(e.preheader || '') + '</div>') : '<td class="muted">—</td>') +
       ce('segmento', 'muted', esc(e.segmento || '')) +
-      '<td style="white-space:nowrap"><select class="chip-sel s-' + e.estado + '" onchange="editCampo(' + id + ',\'estado\',this.value)">' + opciones(EST_ENV, e.estado, ELABEL) + '</select>' +
-      ' <button class="mini" title="Abrir el envío completo" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
+      '<td class="est-cell"><select class="est-block s-' + e.estado + '" onchange="editCampo(' + id + ',\'estado\',this.value)">' + opciones(EST_ENV, e.estado, ELABEL) + '</select>' +
+      '</td><td class="more-cell"><button class="mini" title="Abrir el envío completo" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
   });
-  h += '<tr class="addtr"><td class="sel muted">+</td><td colspan="9"><div class="addline" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
+  h += '<tr class="addtr"><td class="sel muted">+</td><td colspan="10"><div class="addline" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
     '<input type="date" id="nFecha" value="' + nuevaFila.fecha + '">' +
     '<select id="nCanal">' + opciones(cs, nuevaFila.canal, CLABEL) + '</select>' +
     '<input class="tema" id="nTitulo" data-k="n-titulo" placeholder="Nuevo envío: escribí el tema y Enter" autocomplete="off">' +
