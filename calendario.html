@@ -206,6 +206,14 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .cal-dow{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:9px 10px;border-bottom:1px solid var(--border)}
 .cal-day{min-height:122px;border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);padding:6px;display:flex;flex-direction:column;gap:4px;position:relative}
 .cal-day:nth-child(7n){border-right:none}
+/* semanas con las acciones como barras que cruzan los días */
+.cal-week{display:grid;grid-template-columns:repeat(7,minmax(104px,1fr));min-width:740px;position:relative}
+.cal-bars{position:absolute;left:0;right:0;top:32px;height:0}
+.cal-bar{position:absolute;height:19px;line-height:15px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;border:1px solid rgba(245,158,11,.32);background:rgba(245,158,11,.16);color:#f59e0b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2;box-sizing:border-box}
+.cal-bar.ed{cursor:pointer}
+.cal-bar.ed:hover{filter:brightness(1.3)}
+.cal-bar.sigue-antes{border-top-left-radius:0;border-bottom-left-radius:0;border-left-style:dashed}
+.cal-bar.sigue-despues{border-top-right-radius:0;border-bottom-right-radius:0;border-right-style:dashed}
 .cal-day.edit{cursor:pointer}
 .cal-day.out{background:rgba(0,0,0,.2)}
 .cal-day.out .cal-num{opacity:.35}
@@ -217,12 +225,12 @@ tr.crow .kam{color:var(--text2);font-weight:500;text-transform:none;letter-spaci
 .cal-plus{font-size:15px;color:var(--text3);opacity:0;line-height:1;padding:0 3px}
 .cal-day.edit:hover .cal-plus{opacity:1}
 .cal-key{font-size:9.5px;font-weight:700;background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.28);border-radius:4px;padding:2px 5px;line-height:1.25}
-.cal-key.marca{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
+.cal-key.marca,.cal-bar.marca{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
 /* tipos de acción: bancaria · comercial · microevento · always on */
-.cal-key.cat-bancaria{background:rgba(122,158,202,.14);color:#9dbbe0;border-color:rgba(122,158,202,.38)}
-.cal-key.cat-comercial{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
-.cal-key.cat-microevento{background:rgba(192,132,252,.13);color:#d8b4fe;border-color:rgba(192,132,252,.35)}
-.cal-key.cat-always_on{background:rgba(34,197,94,.1);color:#6ee7a0;border-color:rgba(34,197,94,.28)}
+.cal-key.cat-bancaria,.cal-bar.cat-bancaria{background:rgba(122,158,202,.14);color:#9dbbe0;border-color:rgba(122,158,202,.38)}
+.cal-key.cat-comercial,.cal-bar.cat-comercial{background:rgba(240,78,35,.12);color:#ff8a66;border-color:rgba(240,78,35,.3)}
+.cal-key.cat-microevento,.cal-bar.cat-microevento{background:rgba(192,132,252,.13);color:#d8b4fe;border-color:rgba(192,132,252,.35)}
+.cal-key.cat-always_on,.cal-bar.cat-always_on{background:rgba(34,197,94,.1);color:#6ee7a0;border-color:rgba(34,197,94,.28)}
 .cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
 .cat-dot.cat-bancaria{background:#7a9eca}.cat-dot.cat-comercial{background:#f04e23}.cat-dot.cat-microevento{background:#c084fc}.cat-dot.cat-always_on{background:#22c55e}
 .legend-cat{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin:8px 2px 0}
@@ -441,7 +449,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.2';
+const VERSION_APP = '2026-10-20.3';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -771,7 +779,8 @@ function renderCalendario(){
     }).join('') + '</span><span class="spacer"></span>' +
     CANALES.filter(function(k){ return canales.indexOf(k) >= 0 || c[k]; }).map(function(k){
       return '<button class="fchip' + (filtroCanal[k] ? ' on' : '') + '" onclick="toggleCanal(\'' + k + '\')"><i class="dot ' + k + '"></i>' + CLABEL[k] + ' <b>' + c[k] + '</b></button>';
-    }).join('') + '</div>';
+    }).join('') +
+    (sel.vista === 'cal' ? '<button class="fchip' + (verAcciones ? ' on' : '') + '" title="Mostrar u ocultar las acciones (fechas clave)" onclick="verAcciones=!verAcciones;render()">★ Acciones</button>' : '') + '</div>';
 
   h += '<div class="filters"><div class="acciones">';
   if (ed){
@@ -800,35 +809,80 @@ function renderCalendario(){
 function setVista(v){ sel.vista = v; resetEdicion(); guardarSel(); render(); }
 function toggleCanal(k){ filtroCanal[k] = !filtroCanal[k]; render(); }
 
+// Las acciones (fechas clave) van como barras que cruzan los días que duran, una
+// vez por semana, en vez de repetirse como etiqueta en cada día.
+var verAcciones = true;
+function barrasSemana(keys, dias){
+  // dias: las 7 fechas de la semana ('' para los casilleros fuera del mes)
+  var validos = dias.filter(Boolean);
+  if (!validos.length) return [];
+  var ini = validos[0], fin = validos[validos.length - 1], segs = [];
+  keys.forEach(function(k){
+    if (k.hasta < ini || k.desde > fin) return;
+    var s = k.desde < ini ? ini : k.desde, e = k.hasta > fin ? fin : k.hasta;
+    segs.push({k: k, c0: dias.indexOf(s), c1: dias.indexOf(e), sigueAntes: k.desde < ini, sigueDespues: k.hasta > fin});
+  });
+  // las más largas arriba; carriles para que no se pisen
+  segs.sort(function(a, b){ return (b.c1 - b.c0) - (a.c1 - a.c0) || a.c0 - b.c0; });
+  var carriles = [];
+  segs.forEach(function(sg){
+    var l = 0;
+    while (carriles[l] && carriles[l].some(function(o){ return !(sg.c1 < o.c0 || sg.c0 > o.c1); })) l++;
+    (carriles[l] = carriles[l] || []).push(sg);
+    sg.lane = l;
+  });
+  return segs;
+}
 function gridMes(m, p, envs, ed){
   var primero = parseF(p), dim = diasDelMes(p);
   var lead = (primero.getDay() + 6) % 7;          // semana arranca el lunes
   var total = Math.ceil((lead + dim) / 7) * 7;
   var hoy = hoyStr();
-  var keys = fechasDelMes(m, p);
+  var keys = verAcciones ? fechasDelMes(m, p) : [];
   var porDia = {};
   envs.forEach(function(e){ (porDia[e.fecha] = porDia[e.fecha] || []).push(e); });
 
   var h = '<div class="cal"><div class="cal-scroll"><div class="cal-grid">' +
-    ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
-  for (var i = 0; i < total; i++){
-    var dia = i - lead + 1;
-    if (dia < 1 || dia > dim){ h += '<div class="cal-day out"></div>'; continue; }
-    var f = ymd(primero.getFullYear(), primero.getMonth() + 1, dia);
-    var we = (i % 7) >= 5;
-    h += '<div class="cal-day' + (we ? ' we' : '') + (f === hoy ? ' today' : '') + (ed ? ' edit' : '') + '" data-f="' + f + '"' + (ed ? ' data-drop="' + f + '"' : '') +
-      (ed ? ' onclick="clickDia(event,\'' + f + '\')"' : '') + '>' +
-      '<div class="cal-top"><span class="cal-num">' + dia + '</span>' + (ed ? '<span class="cal-plus" title="Envío con todos los campos">+</span>' : '') + '</div>';
-    keys.forEach(function(k){
-      if (f >= k.desde && f <= k.hasta) h += '<div class="cal-key' + (k.marca ? ' marca' : '') + (k.cat ? ' cat-' + k.cat : '') + '" title="' + esc(k.notas || '') + '">★ ' + esc(k.nombre) + '</div>';
+    ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('') + '</div>';
+  for (var w = 0; w < total / 7; w++){
+    var dias = [];
+    for (var c = 0; c < 7; c++){
+      var dd = w * 7 + c - lead + 1;
+      dias.push(dd < 1 || dd > dim ? '' : ymd(primero.getFullYear(), primero.getMonth() + 1, dd));
+    }
+    var segs = barrasSemana(keys, dias);
+    var lanes = segs.reduce(function(mx, s){ return Math.max(mx, s.lane + 1); }, 0);
+    h += '<div class="cal-week">';
+    dias.forEach(function(f, c){
+      if (!f){ h += '<div class="cal-day out"></div>'; return; }
+      var we = c >= 5;
+      h += '<div class="cal-day' + (we ? ' we' : '') + (f === hoy ? ' today' : '') + (ed ? ' edit' : '') + '" data-f="' + f + '"' + (ed ? ' data-drop="' + f + '"' : '') +
+        (ed ? ' onclick="clickDia(event,\'' + f + '\')"' : '') + '>' +
+        '<div class="cal-top"><span class="cal-num">' + (+f.slice(8)) + '</span>' + (ed ? '<span class="cal-plus" title="Envío con todos los campos">+</span>' : '') + '</div>' +
+        (lanes ? '<div style="height:' + (lanes * 22) + 'px;flex-shrink:0"></div>' : '');
+      (porDia[f] || []).forEach(function(e){ h += chipEnvio(e, ed); });
+      if (quick && quick.fecha === f) h += cajaRapida(m);
+      h += '</div>';
     });
-    (porDia[f] || []).forEach(function(e){ h += chipEnvio(e, ed); });
-    if (quick && quick.fecha === f) h += cajaRapida(m);
+    if (segs.length){
+      h += '<div class="cal-bars">' + segs.map(function(sg){
+        var k = sg.k, n = sg.c1 - sg.c0 + 1;
+        var editable = k.marca ? puedeEditar(m) : me.rol === 'admin';
+        var rango = fechaCorta(k.desde) + (k.hasta !== k.desde ? ' al ' + fechaCorta(k.hasta) : '');
+        return '<div class="cal-bar' + (k.marca ? ' marca' : '') + (k.cat ? ' cat-' + k.cat : '') +
+          (sg.sigueAntes ? ' sigue-antes' : '') + (sg.sigueDespues ? ' sigue-despues' : '') + (editable ? ' ed' : '') + '"' +
+          ' style="left:calc(' + sg.c0 + ' * 100% / 7 + 4px);width:calc(' + n + ' * 100% / 7 - 8px);top:' + (sg.lane * 22) + 'px"' +
+          ' title="' + esc(k.nombre + ' · ' + rango + (k.cat ? ' · ' + CATL[k.cat] : '') + (k.notas ? '\n' + k.notas : '') + (editable ? '\n(tocá para editar o borrar)' : '')) + '"' +
+          (editable ? ' onclick="event.stopPropagation();abrirFecha(' + k.id + ')"' : '') + '>' +
+          (sg.sigueAntes ? '‹ ' : '★ ') + esc(k.nombre) + (sg.sigueDespues ? ' ›' : '') + '</div>';
+      }).join('') + '</div>';
+    }
     h += '</div>';
   }
-  h += '</div></div></div>';
+  h += '</div></div>';
   var catsMes = CATS.filter(function(c){ return keys.some(function(k){ return k.cat === c; }); });
-  if (catsMes.length) h += '<div class="legend-cat">' + catsMes.map(function(c){ return '<span><i class="cat-dot cat-' + c + '"></i>' + CATPL[c] + '</span>'; }).join('') + '</div>';
+  if (catsMes.length) h += '<div class="legend-cat">' + catsMes.map(function(c){ return '<span><i class="cat-dot cat-' + c + '"></i>' + CATPL[c] + '</span>'; }).join('') +
+    (keys.length ? '<span>Tocá una acción para editarla o borrarla</span>' : '') + '</div>';
   if (ed) h += '<div class="hint"><b>Carga rápida:</b> tocá un día, escribí el tema y Enter (podés seguir cargando en el mismo día). ' +
     '<b>Tab</b> cambia el canal, o escribí <code>w: tema</code> / <code>p: tema</code> / <code>e: tema</code> y <code>10:30 tema</code> para la hora. ' +
     'El <b>+</b> abre el formulario completo. Arrastrá un envío para moverlo de día.</div>';
