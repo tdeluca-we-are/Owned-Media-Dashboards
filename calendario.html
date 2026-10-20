@@ -258,8 +258,9 @@ tr.flash td{animation:flash 1.8s ease-out}
 .ev-t{font-weight:600}
 .ev-hub{font-size:9.5px;font-weight:700;margin-top:2px;color:var(--text2)}
 .ev-hub.hub-aprobada,.ev-hub.hub-cargada{color:#22c55e}
-.m-hub{margin-top:10px;font-size:12.5px;color:var(--text2)}
-.m-hub a{color:var(--orange);font-weight:600}
+.m-hub{margin-top:12px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.m-hub-btn{display:inline-block;background:var(--orange);color:#fff !important;text-decoration:none;font-weight:700;font-size:13px;padding:8px 14px;border-radius:8px}
+.m-hub-btn:hover{background:var(--orange2)}
 .ev.st-idea{background:transparent;border:1px dashed var(--border2);border-left-width:3px}
 .ev.st-cancelado{opacity:.4}
 .ev.st-cancelado .ev-t{text-decoration:line-through}
@@ -440,7 +441,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.1';
+const VERSION_APP = '2026-10-20.2';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -1400,8 +1401,8 @@ function dibujarEnvio(enfocar){
     (f.id ? '<div class="m-lab">Estado</div>' + segEstado : '') +
     (f.id && f.canal === 'email' ? (function(){
       var h = D.hub[f.marca_id] && D.hub[f.marca_id][f.id];
-      if (h) return '<div class="m-hub">News en el hub: <b>' + esc(HUB_EST[h.estado] || h.estado) + '</b> · <a href="' + HUB_URL + '#news/' + h.news_id + '" target="_blank" rel="noopener">Abrir en el hub</a></div>';
-      return ed ? '<div class="m-hub"><a href="' + HUB_URL + '#desde/' + f.marca_id + '/' + f.id + '" target="_blank" rel="noopener">Armar la news en el hub →</a></div>' : '';
+      if (h) return '<div class="m-hub"><a class="m-hub-btn" href="' + HUB_URL + '#news/' + h.news_id + '" target="_blank" rel="noopener">Abrir en el hub</a><span>News: <b>' + esc(HUB_EST[h.estado] || h.estado) + '</b></span></div>';
+      return ed ? '<div class="m-hub"><a class="m-hub-btn" href="' + HUB_URL + '#desde/' + f.marca_id + '/' + f.id + '" target="_blank" rel="noopener" title="Crea la news en el hub con los datos de este envío y abre el editor">Maquetar en el hub</a><span>Se crea con el tema, asunto, segmento, fecha y hora de este envío.</span></div>' : '';
     })() : '') +
     '<button class="m-more" onclick="leerEnvio();frm.mas=!frm.mas;dibujarEnvio()">' + (f.mas ? '− Ocultar detalles' : '+ Tipo, segmento' + (f.id ? '' : ', estado') + ' y notas') + '</button>';
   if (f.mas){
