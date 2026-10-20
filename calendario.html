@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>We Are — Calendario Owned</title>
+<script>try{if(JSON.parse(localStorage.getItem('cal_tema'))==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <link rel="icon" type="image/png" href="Iso.png">
 <link rel="apple-touch-icon" href="Iso.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -395,6 +396,41 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
   .filters select.sel-marca{min-width:0;flex:1}
   .mesnav .lbl{min-width:120px;font-size:14px}
 }
+
+/* ── modo claro ───────────────────────────────────────────────────────────── */
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f3f5f9;--bg2:#ffffff;--bg3:#eef1f6;
+  --border:rgba(11,25,41,.16);--border2:rgba(11,25,41,.13);
+  --text:#0b1929;--text2:#4b5870;--text3:#8a95a8;
+}
+[data-theme="light"] .logo-we{color:#0b1929}
+[data-theme="light"] td{border-bottom-color:rgba(11,25,41,.07)}
+[data-theme="light"] .cal-dow,[data-theme="light"] .cal-day{border-color:rgba(11,25,41,.08)}
+[data-theme="light"] .cal-day.out{background:#e8ecf2}
+[data-theme="light"] .cal-day.we{background:#f8fafc}
+[data-theme="light"] input[type=checkbox]{border-color:rgba(11,25,41,.32);background:#fff}
+[data-theme="light"] input[type=checkbox]:checked{background:var(--orange);border-color:var(--orange)}
+[data-theme="light"] tr.clickable:hover td,[data-theme="light"] .ltab td.ed:hover{background:rgba(11,25,41,.04)}
+[data-theme="light"] tr.crow td{background:#e9eef5}
+[data-theme="light"] .modal-bg,[data-theme="light"] .drawer-bg{background:rgba(11,25,41,.35)}
+[data-theme="light"] .modal{box-shadow:0 24px 60px rgba(11,25,41,.2)}
+[data-theme="light"] .seg button.on.borrador{background:rgba(11,25,41,.08)}
+[data-theme="light"] .seg button.on.idea{background:rgba(11,25,41,.1)}
+[data-theme="light"] .cal-key,[data-theme="light"] .cal-bar{color:#b45309}
+[data-theme="light"] .cal-key.marca,[data-theme="light"] .cal-bar.marca,
+[data-theme="light"] .cal-key.cat-comercial,[data-theme="light"] .cal-bar.cat-comercial{color:#c2410c}
+[data-theme="light"] .cal-key.cat-bancaria,[data-theme="light"] .cal-bar.cat-bancaria{color:#2f5d8f}
+[data-theme="light"] .cal-key.cat-microevento,[data-theme="light"] .cal-bar.cat-microevento{color:#7e22ce}
+[data-theme="light"] .cal-key.cat-always_on,[data-theme="light"] .cal-bar.cat-always_on{color:#15803d}
+[data-theme="light"] .chip.green,[data-theme="light"] .chip-sel.s-enviado,[data-theme="light"] .chip-sel.c-wpp{color:#15803d}
+[data-theme="light"] .chip.amber,[data-theme="light"] .chip-sel.s-aprobado{color:#b45309}
+[data-theme="light"] .chip.blue,[data-theme="light"] .chip-sel.s-planificado,[data-theme="light"] .chip-sel.c-push{color:#2f5d8f}
+[data-theme="light"] .chip.red,[data-theme="light"] .chip-sel.s-cancelado{color:#b91c1c}
+[data-theme="light"] .chip.orange,[data-theme="light"] .chip-sel.c-email{color:#c2410c}
+[data-theme="light"] .ev .ok{color:#15803d}
+[data-theme="light"] .toast.err{color:#b91c1c}
+[data-theme="light"] .role-analista,[data-theme="light"] .role-editor{color:#2f5d8f}
 </style>
 </head>
 <body>
@@ -423,6 +459,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
     <div class="top-right">
       <span class="user-pill" id="userPill"></span>
       <span class="role-badge" id="roleBadge"></span>
+      <button class="btn-sm" id="temaBtn" title="Modo claro / oscuro"></button>
       <button class="btn-sm" id="logoutBtn">Salir</button>
     </div>
   </div>
@@ -449,7 +486,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-20.3';
+const VERSION_APP = '2026-10-20.4';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -549,6 +586,18 @@ $('loginBtn').onclick = function(){
 };
 $('pass').onkeydown = function(ev){ if (ev.key === 'Enter') $('loginBtn').click(); };
 $('logoutBtn').onclick = function(){ sb.auth.signOut().then(function(){ location.reload(); }); };
+
+// modo claro / oscuro: se recuerda en este navegador
+function aplicarTema(t){
+  if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+  $('temaBtn').textContent = t === 'light' ? '☾ Oscuro' : '☀ Claro';
+}
+aplicarTema(lsGet('cal_tema') === 'light' ? 'light' : 'dark');
+$('temaBtn').onclick = function(){
+  var nuevo = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  lsSet('cal_tema', nuevo); aplicarTema(nuevo);
+};
 sb.auth.getSession().then(function(r){ if (r.data.session) boot(); });
 
 function boot(){
@@ -1091,7 +1140,7 @@ function moverEnvio(id, destino){
   });
 }
 function errBandeja(err){
-  return /bandeja|orden/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
+  return /bandeja|orden|origen|preheader/i.test(err.message || '') ? 'Falta actualizar la base: corré de nuevo calendario-schema.sql en Supabase' : (err.message || String(err));
 }
 // envíos sin día del mes
 function bandejaDeMes(marcaId, periodo){
@@ -1140,8 +1189,8 @@ function listaMes(envs, ed){
   if (nSel) h += barraLote(nSel, cs);
   h += '<div class="twrap"><table class="ltab"><thead><tr>' +
     '<th class="sel"><input type="checkbox" title="Seleccionar todos"' + (nSel && nSel === envs.length ? ' checked' : '') + (envs.length ? '' : ' disabled') + ' onchange="selTodos(this.checked)"></th>' +
-    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>';
-  if (!envs.length) h += '<tr><td colspan="9"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
+    '<th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>';
+  if (!envs.length) h += '<tr><td colspan="10"><div class="empty" style="padding:26px 10px">No hay envíos cargados para este mes. Escribí el primero acá abajo, o usá <b>Pegar desde planilla</b> / <b>Copiar de otro mes</b>.</div></td></tr>';
   envs.forEach(function(e){
     var id = e.id, ce = function(campo, cls, html){
       return '<td class="ed ' + cls + '" onclick="editarCelda(this,' + id + ',\'' + campo + '\')">' + html + '</td>';
@@ -1155,11 +1204,12 @@ function listaMes(envs, ed){
       ce('tipo', 'muted', esc(e.tipo || '')) +
       ce('titulo', 'strong', esc(e.titulo)) +
       ce('asunto', '', '<div class="wrap-cell">' + esc(e.asunto || '') + '</div>') +
+      (e.canal === 'email' ? ce('preheader', 'muted', '<div class="wrap-cell">' + esc(e.preheader || '') + '</div>') : '<td class="muted">—</td>') +
       ce('segmento', 'muted', esc(e.segmento || '')) +
       '<td style="white-space:nowrap"><select class="chip-sel s-' + e.estado + '" onchange="editCampo(' + id + ',\'estado\',this.value)">' + opciones(EST_ENV, e.estado, ELABEL) + '</select>' +
       ' <button class="mini" title="Abrir el envío completo" onclick="abrirEnvio(' + id + ')">⋯</button></td></tr>';
   });
-  h += '<tr class="addtr"><td class="sel muted">+</td><td colspan="8"><div class="addline" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
+  h += '<tr class="addtr"><td class="sel muted">+</td><td colspan="9"><div class="addline" onkeydown="if(event.key===\'Enter\'){event.preventDefault();agregarFila()}">' +
     '<input type="date" id="nFecha" value="' + nuevaFila.fecha + '">' +
     '<select id="nCanal">' + opciones(cs, nuevaFila.canal, CLABEL) + '</select>' +
     '<input class="tema" id="nTitulo" data-k="n-titulo" placeholder="Nuevo envío: escribí el tema y Enter" autocomplete="off">' +
@@ -1262,13 +1312,13 @@ function borrarLote(){
 function listaLectura(envs, ed){
   if (!envs.length) return '<div class="section"><div class="empty">No hay envíos cargados para este mes' +
     (ed ? '.<br>Usá <b>+ Envío</b> o <b>Copiar de otro mes</b> para arrancar.' : '.') + '</div></div>';
-  return '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>' +
+  return '<div class="section"><div class="twrap"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Canal</th><th>Tipo</th><th>Tema</th><th>Asunto / copy</th><th>Preheader</th><th>Segmento</th><th>Estado</th></tr></thead><tbody>' +
     envs.map(function(e){
       return '<tr class="clickable" onclick="abrirEnvio(' + e.id + ')"><td class="lst-fecha">' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + '</td>' +
         '<td class="lst-fecha muted">' + esc(e.hora || '') + '</td>' +
         '<td><span class="chip grey"><i class="dot ' + e.canal + '"></i>' + CLABEL[e.canal] + '</span></td>' +
         '<td class="muted">' + esc(e.tipo || '') + '</td><td class="strong">' + esc(e.titulo) + '</td>' +
-        '<td><div class="wrap-cell">' + esc(e.asunto || '') + '</div></td><td class="muted">' + esc(e.segmento || '') + '</td>' +
+        '<td><div class="wrap-cell">' + esc(e.asunto || '') + '</div></td><td class="muted"><div class="wrap-cell">' + esc(e.preheader || '') + '</div></td><td class="muted">' + esc(e.segmento || '') + '</td>' +
         '<td>' + chipEstado(e.estado) + '</td></tr>';
     }).join('') + '</tbody></table></div></div>';
 }
@@ -1450,8 +1500,14 @@ function dibujarEnvio(enfocar){
     ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();guardarEnvio()}">' +
     '<div class="m-row"><label class="m-pill">Fecha<input type="date" id="fFecha" value="' + esc(f.fecha) + '"' + dis + '></label>' +
     '<label class="m-pill">Hora<input type="time" id="fHora" value="' + esc(f.hora || '') + '"' + dis + '></label></div>' +
-    '<textarea class="m-area" id="fAsunto" rows="2" placeholder="' + (f.canal === 'email' ? 'Asunto / preheader' : 'Copy del mensaje') + ' (opcional)"' + dis +
-    ' onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){event.preventDefault();guardarEnvio()}">' + esc(f.asunto || '') + '</textarea>' +
+    // email: asunto y preheader por separado; push y WhatsApp: el copy
+    (f.canal === 'email'
+      ? '<div class="m-lab">Asunto</div><input class="m-in" id="fAsunto" value="' + esc(f.asunto || '') + '" placeholder="Asunto del email (opcional)" autocomplete="off"' + dis +
+        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();guardarEnvio()}">' +
+        '<div class="m-lab">Preheader</div><input class="m-in" id="fPre" value="' + esc(f.preheader || '') + '" placeholder="Texto que se ve al lado del asunto (opcional)" autocomplete="off"' + dis +
+        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();guardarEnvio()}">'
+      : '<textarea class="m-area" id="fAsunto" rows="2" placeholder="Copy del mensaje (opcional)"' + dis +
+        ' onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){event.preventDefault();guardarEnvio()}">' + esc(f.asunto || '') + '</textarea>') +
     (f.id ? '<div class="m-lab">Estado</div>' + segEstado : '') +
     (f.id && f.canal === 'email' ? (function(){
       var h = D.hub[f.marca_id] && D.hub[f.marca_id][f.id];
@@ -1484,7 +1540,7 @@ $('mBg').onclick = function(ev){ if (ev.target === $('mBg')) cerrarModal(); };
 function leerEnvio(){
   if (!frm || !$('fTitulo')) return;
   var v = function(id, k){ var el = $(id); if (el) frm[k] = el.value; };
-  v('fFecha', 'fecha'); v('fHora', 'hora'); v('fTitulo', 'titulo'); v('fAsunto', 'asunto');
+  v('fFecha', 'fecha'); v('fHora', 'hora'); v('fTitulo', 'titulo'); v('fAsunto', 'asunto'); v('fPre', 'preheader');
   v('fTipo', 'tipo'); v('fSeg', 'segmento'); v('fNotas', 'notas');
 }
 function guardarEnvio(){
@@ -1499,6 +1555,8 @@ function guardarEnvio(){
     estado: f.estado, actualizado_at: new Date().toISOString()};
   // de la bandeja: si le cambiaron la fecha, queda agendado
   var orig = f.id ? buscarEnvio(f.id) : null;
+  // el preheader se manda solo si hay algo (así no falla si la base todavía no tiene la columna)
+  if (t(f.preheader) || (orig && orig.preheader)) row.preheader = t(f.preheader);
   if (orig && orig.bandeja && f.fecha !== orig.fecha && !f.dup) row.bandeja = false;
   if (f.dup && f.bandeja) row.bandeja = true;
   var q = f.id
@@ -1583,7 +1641,7 @@ function ejecutarCopia(){
   var f = frm, m = sel.marca;
   var rows = envDeMes(m, f.origen).filter(function(e){ return !f.no[e.id]; }).map(function(e){
     return {marca_id: m, fecha: fechaEquivalente(e.fecha, sel.periodo, f.modo), hora: e.hora, canal: e.canal, tipo: e.tipo,
-      titulo: e.titulo, asunto: e.asunto, segmento: e.segmento, notas: e.notas, estado: 'planificado',
+      titulo: e.titulo, asunto: e.asunto, preheader: e.preheader || undefined, segmento: e.segmento, notas: e.notas, estado: 'planificado',
       copiado_de: e.id, creado_por: nombreUsuario()};
   });
   if (!rows.length) return;
@@ -1654,7 +1712,7 @@ function parseTabla(txt){
 }
 const COLS_PEGAR = {fecha:['fecha','date'], dia:['dia'], hora:['hora','horario'], canal:['canal','medio','channel'],
   tipo:['tipo','categoria'], titulo:['tema','titulo','campana','nombre','envio'], asunto:['asunto','copy','subject','mensaje','texto'],
-  segmento:['segmento','audiencia','publico','base'], estado:['estado','status'], notas:['notas','nota','comentarios','observaciones','obs']};
+  preheader:['preheader','pre-header','preencabezado','bajada'], segmento:['segmento','audiencia','publico','base'], estado:['estado','status'], notas:['notas','nota','comentarios','observaciones','obs']};
 function mapaCabecera(row){
   // una fila con una fecha válida es un dato, no títulos
   if (row.some(function(c){ return parseFechaTxt(c, '2000-01-01'); })) return null;
@@ -1680,7 +1738,7 @@ function parsePegado(txt, periodo, marcaId){
     var g = function(k){ return map[k] != null ? String(r[map[k]] || '').trim() : ''; };
     var c = g('canal');
     var o = {fecha: parseFechaTxt(g('fecha'), periodo), hora: parseHora(g('hora')), canal: c ? parseCanal(c) : defCanal,
-      tipo: g('tipo') || null, titulo: g('titulo'), asunto: g('asunto') || null, segmento: g('segmento') || null,
+      tipo: g('tipo') || null, titulo: g('titulo'), asunto: g('asunto') || null, preheader: g('preheader') || undefined, segmento: g('segmento') || null,
       notas: g('notas') || null, estado: parseEstado(g('estado')), err: null, aviso: null};
     if (!o.fecha) o.err = 'Fecha no válida' + (g('fecha') ? ': “' + g('fecha') + '”' : '');
     else if (!o.titulo) o.err = 'Falta el tema';
@@ -1726,7 +1784,7 @@ function previewPegar(){
 function importarPegado(){
   var rows = frm.filas.filter(function(f){ return !f.err; }).map(function(f){
     return {marca_id: sel.marca, fecha: f.fecha, hora: f.hora, canal: f.canal, tipo: f.tipo, titulo: f.titulo,
-      asunto: f.asunto, segmento: f.segmento, notas: f.notas, estado: f.estado, creado_por: nombreUsuario()};
+      asunto: f.asunto, preheader: f.preheader, segmento: f.segmento, notas: f.notas, estado: f.estado, creado_por: nombreUsuario()};
   });
   if (!rows.length) return;
   $('pBtn').disabled = true;
@@ -2013,7 +2071,7 @@ function enviosPropuestos(){
     if (envsMarca.some(function(x){ return x.fecha === fecha && x.canal === canal && x.titulo === titulo; })) return;
     // ¿ya hay uno armado desde acciones ese día y canal? se le suman los nombres que falten
     var previo = envsMarca.find(function(x){
-      return x.fecha === fecha && x.canal === canal && x.notas === MARCA_ACCIONES && (x.estado === 'planificado' || x.estado === 'idea');
+      return x.fecha === fecha && x.canal === canal && (x.origen === 'acciones' || x.notas === MARCA_ACCIONES) && (x.estado === 'planificado' || x.estado === 'idea');
     });
     if (previo){
       var faltan = prop.nombres.filter(function(n){ return previo.titulo.indexOf(n) < 0; });
@@ -2094,7 +2152,7 @@ function importarAcciones(){
   var ahora = new Date().toISOString();
   var nuevos = envs.filter(function(e){ return !e.update; }).map(function(e){
     return {marca_id: m, fecha: e.fecha, canal: e.canal, titulo: e.titulo, tipo: e.tipo, estado: 'planificado',
-      notas: MARCA_ACCIONES, creado_por: nombreUsuario()};
+      origen: 'acciones', creado_por: nombreUsuario()};
   });
   var sumas = envs.filter(function(e){ return e.update; });
   $('acBtn').disabled = true;
@@ -2118,7 +2176,7 @@ function importarAcciones(){
   }).then(function(n){
     cerrarDrawer(); render();
     toast(elegidas.length + ' acción(es) y ' + (n + sumas.length) + ' envío(s) cargados');
-  }).catch(function(e){ $('acBtn').disabled = false; toast(e.message || String(e), true); });
+  }).catch(function(e){ $('acBtn').disabled = false; toast(errBandeja(e), true); });
 }
 
 // ── cerrar el mes: marcar qué salió y dejar los aprendizajes ───────────────
@@ -2180,10 +2238,10 @@ function ejecutarCierre(){
 function filasExport(envs, marcaNombre){
   return envs.map(function(e){
     return [marcaNombre(e), fechaLarga(e.fecha), dowDe(e.fecha), e.hora || '', CLABEL[e.canal], e.tipo || '',
-      e.titulo, e.asunto || '', e.segmento || '', ELABEL[e.estado], e.notas || ''];
+      e.titulo, e.asunto || '', e.preheader || '', e.segmento || '', ELABEL[e.estado], e.notas || ''];
   });
 }
-const CAB_EXPORT = ['Marca','Fecha','Día','Hora','Canal','Tipo','Tema','Asunto / copy','Segmento','Estado','Notas'];
+const CAB_EXPORT = ['Marca','Fecha','Día','Hora','Canal','Tipo','Tema','Asunto / copy','Preheader','Segmento','Estado','Notas'];
 function nombreDe(e){ return (D.marcaById[e.marca_id] || {}).nombre || ''; }
 function envsExport(){ return envDeMes(sel.marca, sel.periodo).filter(function(e){ return filtroCanal[e.canal]; }); }
 
@@ -2237,7 +2295,7 @@ function vistaCliente(){
     return '<tr><td>' + dowDe(e.fecha) + ' ' + fechaCorta(e.fecha) + (e.hora ? ' · ' + esc(e.hora) : '') + '</td>' +
       '<td><span class="c" style="background:' + col[e.canal] + '"></span>' + CLABEL[e.canal] + '</td>' +
       '<td><b>' + esc(e.titulo) + '</b>' + (e.tipo ? '<br><small>' + esc(e.tipo) + '</small>' : '') + '</td>' +
-      '<td>' + esc(e.asunto || '') + '</td><td>' + esc(e.segmento || '') + '</td></tr>';
+      '<td>' + esc(e.asunto || '') + (e.preheader ? '<br><small>' + esc(e.preheader) + '</small>' : '') + '</td><td>' + esc(e.segmento || '') + '</td></tr>';
   }).join('');
 
   var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' + esc(marca) + ' — Calendario ' + periodoLargo(p) + '</title>' +

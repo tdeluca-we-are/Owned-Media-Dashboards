@@ -107,6 +107,16 @@ alter table cal_envios add column if not exists bandeja boolean not null default
 -- Orden dentro del día (07/10/2026): lo arma el usuario arrastrando en la lista.
 alter table cal_envios add column if not exists orden int;
 
+-- Asunto y preheader por separado (20/10/2026). 'asunto' queda como asunto del
+-- email o copy de push/WhatsApp.
+alter table cal_envios add column if not exists preheader text;
+
+-- De dónde salió el envío ('acciones' = armado desde "Cargar acciones"). Antes se
+-- marcaba en las notas; se mueve acá y las notas quedan libres.
+alter table cal_envios add column if not exists origen text;
+update cal_envios set origen = 'acciones', notas = null
+ where notas = 'Armado desde acciones comerciales';
+
 -- ── FECHAS CLAVE ────────────────────────────────────────────────────────────
 -- marca_id null = fecha general (aparece en todas las marcas).
 -- anual = se repite todos los años el mismo día (Navidad, San Valentín…).
