@@ -256,6 +256,10 @@ tr.flash td{animation:flash 1.8s ease-out}
 .ev.email{border-left-color:var(--ch-email)}.ev.push{border-left-color:var(--ch-push)}.ev.wpp{border-left-color:var(--ch-wpp)}
 .ev-h{font-family:var(--mono);font-size:9.5px;color:var(--text2);display:flex;justify-content:space-between;gap:4px}
 .ev-t{font-weight:600}
+.ev-hub{font-size:9.5px;font-weight:700;margin-top:2px;color:var(--text2)}
+.ev-hub.hub-aprobada,.ev-hub.hub-cargada{color:#22c55e}
+.m-hub{margin-top:10px;font-size:12.5px;color:var(--text2)}
+.m-hub a{color:var(--orange);font-weight:600}
 .ev.st-idea{background:transparent;border:1px dashed var(--border2);border-left-width:3px}
 .ev.st-cancelado{opacity:.4}
 .ev.st-cancelado .ev-t{text-decoration:line-through}
@@ -436,7 +440,7 @@ td select.inl{font-family:var(--font);font-size:12px;padding:5px 8px;background:
 <div class="toast" id="toast"></div>
 
 <script>
-const VERSION_APP = '2026-10-07.12';
+const VERSION_APP = '2026-10-20.1';
 const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
 const sb = supabase.createClient(SB_URL, SB_ANON);
@@ -453,7 +457,10 @@ const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agost
 const DOW     = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 var me   = null;      // fila de cal_usuarios
-var D    = {env:{}, meses:{}, cargando:{}};   // catálogos + datos por marca
+var D    = {env:{}, meses:{}, cargando:{}, hub:{}};   // catálogos + datos por marca
+// Hub de implementación de news: cada envío de email puede tener su news armada ahí.
+var HUB_URL = 'https://tdeluca-we-are.github.io/Implementacion-News/';
+var HUB_EST = {borrador:'En armado', lista:'Lista para aprobar', aprobada:'Aprobada', cargada:'Cargada en la herramienta'};
 var R    = {};        // resumen por período (todas las marcas)
 var tab  = 'calendario';
 var sel  = {marca: null, periodo: null, vista: 'cal'};
@@ -609,6 +616,11 @@ function cargarMarca(marcaId){
   ]).then(function(res){
     D.env[marcaId] = res[0];
     D.meses[marcaId] = res[1];
+    // Estado de las news del hub para estos envíos. Si el hub no está instalado, no pasa nada.
+    return sb.rpc('nws_estado_envios', {m: marcaId}).then(function(r){
+      D.hub[marcaId] = {};
+      (r.data || []).forEach(function(x){ D.hub[marcaId][x.cal_envio_id] = x; });
+    }, function(){ D.hub[marcaId] = {}; });
   }).catch(function(e){
     delete D.cargando[marcaId];
     toast('No se pudieron traer los envíos: ' + (e.message || e), true);
@@ -868,7 +880,12 @@ function chipEnvio(e, ed){
     ' onclick="event.stopPropagation();abrirEnvio(' + e.id + ')" title="' + esc(CLABEL[e.canal] + ' · ' + ELABEL[e.estado] + (e.asunto ? '\n' + e.asunto : '')) + '">' +
     '<div class="ev-h"><span>' + CLABEL[e.canal] + (e.hora ? ' ' + esc(e.hora) : '') + '</span>' +
     (e.estado === 'enviado' ? '<span class="ok">✓</span>' : e.estado === 'aprobado' ? '<span>✔</span>' : e.estado === 'idea' ? '<span>idea</span>' : '') + '</div>' +
-    '<div class="ev-t">' + esc(e.titulo) + '</div></div>';
+    '<div class="ev-t">' + esc(e.titulo) + '</div>' + hubDeEnvio(e) + '</div>';
+}
+// Etiqueta chica con el estado de la news en el hub (solo envíos de email que ya tienen news).
+function hubDeEnvio(e){
+  var h = e.canal === 'email' && D.hub[e.marca_id] && D.hub[e.marca_id][e.id];
+  return h ? '<div class="ev-hub hub-' + h.estado + '">Hub · ' + esc(HUB_EST[h.estado] || h.estado) + '</div>' : '';
 }
 function clickDia(ev, f){
   if (ev.target.closest('.ev') || ev.target.closest('.qa')) return;
@@ -1381,6 +1398,11 @@ function dibujarEnvio(enfocar){
     '<textarea class="m-area" id="fAsunto" rows="2" placeholder="' + (f.canal === 'email' ? 'Asunto / preheader' : 'Copy del mensaje') + ' (opcional)"' + dis +
     ' onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){event.preventDefault();guardarEnvio()}">' + esc(f.asunto || '') + '</textarea>' +
     (f.id ? '<div class="m-lab">Estado</div>' + segEstado : '') +
+    (f.id && f.canal === 'email' ? (function(){
+      var h = D.hub[f.marca_id] && D.hub[f.marca_id][f.id];
+      if (h) return '<div class="m-hub">News en el hub: <b>' + esc(HUB_EST[h.estado] || h.estado) + '</b> · <a href="' + HUB_URL + '#news/' + h.news_id + '" target="_blank" rel="noopener">Abrir en el hub</a></div>';
+      return ed ? '<div class="m-hub"><a href="' + HUB_URL + '#desde/' + f.marca_id + '/' + f.id + '" target="_blank" rel="noopener">Armar la news en el hub →</a></div>' : '';
+    })() : '') +
     '<button class="m-more" onclick="leerEnvio();frm.mas=!frm.mas;dibujarEnvio()">' + (f.mas ? '− Ocultar detalles' : '+ Tipo, segmento' + (f.id ? '' : ', estado') + ' y notas') + '</button>';
   if (f.mas){
     h += '<div class="m-grid" style="margin-top:10px">' +
