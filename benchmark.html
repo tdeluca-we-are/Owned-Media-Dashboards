@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We Are — Benchmark de email</title>
+<link rel="icon" type="image/png" href="Iso.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1929;--bg2:#112240;--bg3:#1a3355;
+  --border:rgba(255,255,255,0.18);--border2:rgba(255,255,255,0.15);
+  --text:#f0f0f0;--text2:#8892a4;--text3:#5b6d8a;
+  --orange:#f04e23;--orange2:#d43d16;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#7a9eca;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-xl);padding:40px;width:100%;max-width:380px}
+.text-logo-xl{font-size:36px;font-weight:800;letter-spacing:-0.03em;text-align:center;margin-bottom:6px}
+.text-logo-sm{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.logo-we{color:#f0f0f0}.logo-are{color:var(--orange)}
+.auth-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:24px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em}
+.fg input,.fg select,.fg textarea{font-family:var(--font);font-size:13px;padding:9px 12px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;width:100%}
+.fg textarea{resize:vertical;min-height:60px}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--orange)}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg-check{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12.5px;color:var(--text2)}
+.fg-check label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.btn-primary{width:100%;font-family:var(--font);font-size:14px;font-weight:600;padding:12px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;margin-top:6px}
+.btn-primary:hover{background:var(--orange2)}
+.auth-error{font-size:12px;color:var(--orange);text-align:center;margin-top:10px;min-height:18px}
+
+.app{display:none;min-height:100vh;flex-direction:column}.app.visible{display:flex}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:200;gap:10px}
+.top-left,.top-right{display:flex;align-items:center;gap:10px}
+.top-divider{width:1px;height:20px;background:var(--border2)}
+.user-pill{font-size:12px;color:var(--text2);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
+.btn-sm{font-family:var(--font);font-size:12px;padding:6px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer}
+.btn-sm:hover{color:var(--orange);border-color:var(--orange)}
+.btn-orange{font-family:var(--font);font-size:12px;font-weight:600;padding:8px 16px;background:var(--orange);color:#fff;border:none;border-radius:var(--radius);cursor:pointer}
+.btn-orange:hover{background:var(--orange2)}
+.btn-orange:disabled{opacity:.4;cursor:default}
+.main{padding:20px 24px;max-width:1600px;width:100%;margin:0 auto}
+.loading,.empty{text-align:center;padding:50px 20px;color:var(--text3);font-size:13px}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.tab{font-family:var(--font);font-size:13px;font-weight:500;padding:8px 18px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:7px}
+.tab:hover{border-color:var(--orange);color:var(--text)}
+.tab.active{background:var(--orange);color:#fff;border-color:var(--orange);font-weight:600}
+.tab-count{font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(255,255,255,.14);padding:1px 6px;border-radius:20px}
+.tab-count.warn{background:var(--red);color:#fff}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.filters select,.filters input{font-family:var(--font);font-size:12px;padding:7px 11px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius);outline:none;max-width:100%}
+.filters select:focus,.filters input:focus{border-color:var(--orange)}
+.filters input[type=search]{min-width:220px}
+.spacer{flex:1}
+
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:var(--radius-lg);padding:13px 16px}
+.kpi-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:700;font-family:var(--mono);line-height:1}
+.kpi-sub{font-size:11px;color:var(--text2);margin-top:5px}
+
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:18px}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);gap:12px}
+.section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:9px 14px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
+td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:rgba(255,255,255,.03)}
+.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+.muted{color:var(--text3)}
+.nowrap{white-space:nowrap}
+.asunto{font-weight:600;max-width:520px}
+.pre{font-size:11.5px;color:var(--text2);margin-top:2px;max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mas{display:block;margin:14px auto}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:20px;white-space:nowrap}
+.chip.green{background:rgba(34,197,94,.13);color:#22c55e;border:1px solid rgba(34,197,94,.28)}
+.chip.red{background:rgba(239,68,68,.13);color:#ef4444;border:1px solid rgba(239,68,68,.28)}
+.chip.amber{background:rgba(245,158,11,.13);color:#f59e0b;border:1px solid rgba(245,158,11,.28)}
+.chip.blue{background:rgba(122,158,202,.13);color:#7a9eca;border:1px solid rgba(122,158,202,.28)}
+.chip.grey{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border2)}
+.chip.orange{background:rgba(240,78,35,.13);color:#f04e23;border:1px solid rgba(240,78,35,.3)}
+
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none}
+.drawer-bg.open{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--bg);border-left:1px solid var(--border);z-index:301;transform:translateX(100%);transition:transform .22s;display:flex;flex-direction:column}
+.drawer.ancho{width:min(1120px,100%)}
+.drawer.open{transform:translateX(0)}
+.drawer-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.drawer-name{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.drawer-meta{font-size:12px;color:var(--text2);margin-top:4px}
+.drawer-body{padding:18px 22px;overflow-y:auto;flex:1}
+.drawer-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.drawer-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.drawer-close:hover{color:var(--orange)}
+
+.mail-layout{display:grid;grid-template-columns:minmax(0,640px) minmax(280px,1fr);gap:20px;align-items:start}
+.mail-frame{width:100%;height:calc(100vh - 190px);min-height:420px;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+.dato{margin-bottom:12px}
+.dato-k{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px}
+.dato-v{font-size:13px;line-height:1.45}
+.sep{border:none;border-top:1px solid var(--border);margin:16px 0}
+.nota{font-size:11.5px;color:var(--text2);line-height:1.5}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:10px 18px;border-radius:var(--radius);font-size:13px;opacity:0;transition:opacity .2s;z-index:400;pointer-events:none}
+.toast.show{opacity:1}
+.toast.err{border-color:var(--red);color:#ffb4b4}
+
+@media (max-width:860px){
+  .mail-layout{grid-template-columns:1fr}
+  .mail-frame{height:70vh}
+  .main{padding:16px}
+  .top-bar{padding:0 16px}
+  .user-pill{display:none}
+  .fg-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="text-logo-xl"><span class="logo-we">WE</span><span class="logo-are">ARE</span></div>
+    <div class="auth-title">Benchmark de email</div>
+    <div class="auth-sub">Qué comunican las marcas por mail</div>
+    <div class="fg"><label>Email</label><input type="email" id="email" autocomplete="username"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="pass" autocomplete="current-password"></div>
+    <button class="btn-primary" id="loginBtn">Entrar</button>
+    <div class="auth-error" id="authErr"></div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="text-logo-sm"><span class="logo-we">WE</span><span class="logo-are">ARE</span></div>
+      <div class="top-divider"></div>
+      <span style="font-size:13px;font-weight:600">Benchmark de email</span>
+    </div>
+    <div class="top-right">
+      <span class="user-pill" id="userPill"></span>
+      <button class="btn-sm" id="logoutBtn">Salir</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="tabs" id="tabs"></div>
+    <div id="pane"><div class="loading">Cargando…</div></div>
+  </div>
+</div>
+
+<div class="drawer-bg" id="drawerBg"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hdr">
+    <div><div class="drawer-name" id="dName"></div><div class="drawer-meta" id="dMeta"></div></div>
+    <button class="drawer-close" id="dClose" aria-label="Cerrar">&times;</button>
+  </div>
+  <div class="drawer-body" id="dBody"></div>
+  <div class="drawer-foot" id="dFoot" style="display:none"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL  = 'https://ojzcxwhoinmljospgmfp.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qemN4d2hvaW5tbGpvc3BnbWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDY5MTYsImV4cCI6MjA5MzQ4MjkxNn0.jmvVP3weuclrBpQJb57BwmHD77Ofy4CDe43cnmiSFCk';
+const DEMO = location.hash === '#demo';
+const sb = DEMO ? null : supabase.createClient(SB_URL, SB_ANON);
+
+// Igual que lib/taxonomia.mjs
+const TIPOS = {promocion:'Promoción', lanzamiento:'Lanzamiento', contenido:'Contenido', newsletter:'Newsletter',
+  bienvenida:'Bienvenida', carrito_abandonado:'Carrito abandonado', reactivacion:'Reactivación',
+  transaccional:'Transaccional', encuesta:'Encuesta', evento:'Evento', institucional:'Institucional', otro:'Otro'};
+const FECHAS = {hot_sale:'Hot Sale', cyber_monday:'CyberMonday', black_friday:'Black Friday', dia_madre:'Día de la Madre',
+  dia_padre:'Día del Padre', dia_nino:'Día del Niño', dia_enamorados:'San Valentín', dia_amigo:'Día del Amigo',
+  navidad:'Navidad', fin_de_anio:'Fin de año', vuelta_clases:'Vuelta a clases', cambio_temporada:'Cambio de temporada',
+  aniversario_marca:'Aniversario', otra:'Otra'};
+const TONOS = {urgente:'Urgente', aspiracional:'Aspiracional', informativo:'Informativo', emocional:'Emocional',
+  humoristico:'Humorístico', exclusivo:'Exclusivo'};
+const COLOR_TIPO = {promocion:'orange', lanzamiento:'blue', contenido:'green', bienvenida:'amber', carrito_abandonado:'red', reactivacion:'red'};
+
+var me = null, D = {}, tab = 'mails';
+var F = {desde: diasAtras(30), hasta: hoyISO(), marca: '', rubro: '', tipo: '', fecha: '', estado: '', q: '', competencia: ''};
+var visibles = 100;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function toast(msg, isErr){
+  var t = $('toast'); t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._t); t._t = setTimeout(function(){ t.className = 'toast'; }, 2800);
+}
+function hoyISO(){ return new Date().toISOString().slice(0,10); }
+function diasAtras(n){ var d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); }
+function fmtFecha(ts){
+  var d = new Date(ts);
+  return d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+}
+function fmtLarga(ts){
+  return new Date(ts).toLocaleString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+function puedeEditar(){ return me && (me.rol === 'admin' || me.rol === 'analista'); }
+function opts(map, sel, vacio){
+  return (vacio != null ? '<option value="">' + esc(vacio) + '</option>' : '') +
+    Object.keys(map).map(function(k){ return '<option value="' + esc(k) + '"' + (k === String(sel == null ? '' : sel) ? ' selected' : '') + '>' + esc(map[k]) + '</option>'; }).join('');
+}
+function chipTipo(t){ return t ? '<span class="chip ' + (COLOR_TIPO[t] || 'grey') + '">' + esc(TIPOS[t] || t) + '</span>' : ''; }
+function chk(r){ if (r.error) throw r.error; return r.data; }
+function fetchAll(build){
+  var out = [], size = 1000;
+  function paso(page){
+    return build().range(page * size, page * size + size - 1).then(function(r){
+      var rows = chk(r); out = out.concat(rows);
+      return rows.length < size ? out : paso(page + 1);
+    });
+  }
+  return paso(0);
+}
+
+// ── API (Supabase o demo) ──────────────────────────────────────────────────
+var CAMPOS_MAIL = 'id,marca_id,remitente_nombre,remitente_email,dominio,asunto,preheader,enviado_at,links,imagenes,peso_kb,estado,' +
+  'bm_clasificacion(tipo,fecha_comercial,descuento_max,cuotas_sin_interes,envio_gratis,cupon,categorias,cta,tono,asunto_urgencia,asunto_personalizado,asunto_emoji,asunto_largo,resumen,confianza,corregido_por,corregido_at)';
+
+var api = {
+  base: function(){
+    return Promise.all([
+      fetchAll(function(){ return sb.from('bm_marcas').select('*').order('nombre'); }),
+      fetchAll(function(){ return sb.from('bm_competidores').select('*'); }),
+      fetchAll(function(){ return sb.from('sem_marcas').select('id,nombre,activa').order('nombre'); }),
+      fetchAll(function(){ return sb.from('bm_sin_marca').select('*').order('mails', {ascending:false}); })
+    ]).then(function(r){ return {marcas:r[0], comp:r[1], clientes:r[2], sinMarca:r[3]}; });
+  },
+  mails: function(f){
+    return fetchAll(function(){
+      var q = sb.from('bm_emails').select(CAMPOS_MAIL)
+        .gte('enviado_at', f.desde + 'T00:00:00-03:00').lte('enviado_at', f.hasta + 'T23:59:59-03:00')
+        .order('enviado_at', {ascending:false});
+      if (f.q) q = q.textSearch('busqueda', f.q, {type:'websearch', config:'spanish'});
+      return q;
+    });
+  },
+  html: function(id){
+    return sb.from('bm_email_html').select('html').eq('email_id', id).maybeSingle().then(function(r){ return (chk(r) || {}).html || ''; });
+  },
+  guardarClasif: function(id, c){
+    return sb.from('bm_clasificacion').upsert(Object.assign({email_id:id}, c)).then(chk).then(function(){
+      return sb.from('bm_emails').update({estado:'clasificado'}).eq('id', id).then(chk);
+    });
+  },
+  estado: function(id, estado){ return sb.from('bm_emails').update({estado:estado}).eq('id', id).then(chk); },
+  guardarMarca: function(m, compIds){
+    var datos = Object.assign({}, m); delete datos.id; delete datos.creada_at;
+    var p = m.id ? sb.from('bm_marcas').update(datos).eq('id', m.id).select().single()
+                 : sb.from('bm_marcas').insert(datos).select().single();
+    return p.then(chk).then(function(row){
+      return sb.from('bm_competidores').delete().eq('marca_id', row.id).then(chk).then(function(){
+        if (!compIds.length) return row;
+        return sb.from('bm_competidores').insert(compIds.map(function(c){ return {marca_id:row.id, sem_marca_id:c}; })).then(chk).then(function(){ return row; });
+      });
+    }).then(function(row){
+      // dominios nuevos pueden reclamar mails que estaban sin marca
+      return Promise.all((row.dominios || []).map(function(d){ return sb.rpc('bm_asignar_dominio', {p_dominio:d, p_marca_id:row.id}).then(chk); }));
+    });
+  },
+  asignar: function(dom, marcaId){ return sb.rpc('bm_asignar_dominio', {p_dominio:dom, p_marca_id:marcaId}).then(chk); }
+};
+
+// ── auth ───────────────────────────────────────────────────────────────────
+$('loginBtn').onclick = function(){
+  var e = $('email').value.trim(), p = $('pass').value;
+  if (!e || !p) { $('authErr').textContent = 'Completá email y contraseña'; return; }
+  $('authErr').textContent = '';
+  sb.auth.signInWithPassword({email:e, password:p}).then(function(r){
+    if (r.error) { $('authErr').textContent = r.error.message || 'No se pudo entrar'; return; }
+    boot();
+  });
+};
+$('pass').onkeydown = function(ev){ if (ev.key === 'Enter') $('loginBtn').click(); };
+$('logoutBtn').onclick = function(){ if (DEMO) { location.hash = ''; location.reload(); return; } sb.auth.signOut().then(function(){ location.reload(); }); };
+
+function entrar(row){
+  me = row;
+  $('authScreen').style.display = 'none';
+  $('app').classList.add('visible');
+  $('userPill').textContent = (me.nombre || me.email) + ' · ' + me.rol;
+  cargarBase();
+}
+
+function boot(){
+  // mismo acceso que el semáforo: sem_vincular devuelve la fila de sem_usuarios
+  sb.rpc('sem_vincular').then(function(r){
+    var row = (r.data || [])[0];
+    if (r.error || !row) {
+      $('authErr').textContent = 'Tu usuario no tiene acceso (se habilita desde Accesos del semáforo)';
+      sb.auth.signOut();
+      return;
+    }
+    entrar(row);
+  });
+}
+
+// ── datos ──────────────────────────────────────────────────────────────────
+function cargarBase(){
+  api.base().then(function(b){
+    D.marcas = b.marcas; D.comp = b.comp; D.clientes = b.clientes; D.sinMarca = b.sinMarca;
+    D.marcaById = {}; D.marcas.forEach(function(m){ D.marcaById[m.id] = m; });
+    D.clienteById = {}; D.clientes.forEach(function(c){ D.clienteById[c.id] = c; });
+    cargarMails();
+  }).catch(errorCarga);
+}
+function cargarMails(){
+  $('pane').innerHTML = '<div class="loading">Cargando mails…</div>';
+  api.mails(F).then(function(rows){
+    rows.forEach(function(r){
+      var c = r.bm_clasificacion; r.c = Array.isArray(c) ? c[0] || null : c; delete r.bm_clasificacion;
+    });
+    D.mails = rows; visibles = 100;
+    render();
+  }).catch(errorCarga);
+}
+function errorCarga(e){
+  $('pane').innerHTML = '<div class="empty">No se pudieron cargar los datos.<br><span class="muted">' + esc(e.message || e) + '</span></div>';
+}
+
+// ── render ─────────────────────────────────────────────────────────────────
+function render(){
+  var pend = D.mails.filter(function(m){ return m.estado === 'pendiente'; }).length;
+  var tabs = [['mails','Mails', D.mails.length], ['marcas','Marcas', D.marcas.length], ['sinmarca','Sin marca', D.sinMarca.length, D.sinMarca.length > 0]];
+  $('tabs').innerHTML = tabs.map(function(t){
+    return '<button class="tab' + (tab === t[0] ? ' active' : '') + '" data-tab="' + t[0] + '">' + t[1] +
+      ' <span class="tab-count' + (t[3] ? ' warn' : '') + '">' + t[2] + '</span></button>';
+  }).join('');
+  $('tabs').querySelectorAll('.tab').forEach(function(b){ b.onclick = function(){ tab = b.dataset.tab; render(); }; });
+  if (tab === 'mails') renderMails(pend);
+  else if (tab === 'marcas') renderMarcas();
+  else renderSinMarca();
+}
+
+function filtrados(){
+  return D.mails.filter(function(m){
+    var marca = D.marcaById[m.marca_id];
+    if (F.marca && String(m.marca_id) !== F.marca) return false;
+    if (F.rubro && (!marca || marca.rubro !== F.rubro)) return false;
+    if (F.competencia && !D.comp.some(function(c){ return c.marca_id === m.marca_id && String(c.sem_marca_id) === F.competencia; })) return false;
+    if (F.estado && m.estado !== F.estado) return false;
+    if (F.tipo && (!m.c || m.c.tipo !== F.tipo)) return false;
+    if (F.fecha && (!m.c || m.c.fecha_comercial !== F.fecha)) return false;
+    return true;
+  });
+}
+
+function renderMails(pend){
+  var rubros = {}; D.marcas.forEach(function(m){ if (m.rubro) rubros[m.rubro] = m.rubro; });
+  var marcasOpt = {}; D.marcas.forEach(function(m){ marcasOpt[m.id] = m.nombre; });
+  var clientesComp = {}; D.comp.forEach(function(c){ var cl = D.clienteById[c.sem_marca_id]; if (cl) clientesComp[cl.id] = 'Competencia de ' + cl.nombre; });
+  var rows = filtrados();
+  var clasif = rows.filter(function(m){ return m.c; });
+  var promos = clasif.filter(function(m){ return m.c.tipo === 'promocion'; });
+  var descs = clasif.map(function(m){ return m.c.descuento_max; }).filter(function(x){ return x != null; });
+  var marcasActivas = {}; rows.forEach(function(m){ if (m.marca_id) marcasActivas[m.marca_id] = 1; });
+  var nMarcas = Object.keys(marcasActivas).length;
+  var dias = Math.max(1, Math.round((new Date(F.hasta) - new Date(F.desde)) / 86400000) + 1);
+
+  var h = '<div class="filters">' +
+    '<input type="date" id="fDesde" value="' + F.desde + '"> <span class="muted">a</span> <input type="date" id="fHasta" value="' + F.hasta + '">' +
+    '<input type="search" id="fQ" placeholder="Buscar en asunto y texto…" value="' + esc(F.q) + '">' +
+    '<select id="fMarca">' + opts(marcasOpt, F.marca, 'Todas las marcas') + '</select>' +
+    '<select id="fRubro">' + opts(rubros, F.rubro, 'Todos los rubros') + '</select>' +
+    (Object.keys(clientesComp).length ? '<select id="fComp">' + opts(clientesComp, F.competencia, 'Cualquier cliente') + '</select>' : '') +
+    '<select id="fTipo">' + opts(TIPOS, F.tipo, 'Todos los tipos') + '</select>' +
+    '<select id="fFecha">' + opts(FECHAS, F.fecha, 'Cualquier fecha comercial') + '</select>' +
+    '<select id="fEstado">' + opts({pendiente:'Sin clasificar', clasificado:'Clasificados', descartado:'Descartados'}, F.estado, 'Todos los estados') + '</select>' +
+    '</div>';
+
+  h += '<div class="kpi-row">' +
+    kpi('Mails', rows.length, nMarcas + ' marcas · ' + dias + ' días') +
+    kpi('Por marca por semana', nMarcas ? (rows.length / nMarcas / dias * 7).toFixed(1) : '—', 'frecuencia promedio') +
+    kpi('Promociones', clasif.length ? Math.round(promos.length / clasif.length * 100) + '%' : '—', 'de los clasificados') +
+    kpi('Descuento máx. promedio', descs.length ? Math.round(descs.reduce(function(a,b){ return a + b; }, 0) / descs.length) + '%' : '—', descs.length + ' mails con % OFF') +
+    kpi('Sin clasificar', pend, pend ? 'pedile a Claude: "clasificá el benchmark"' : 'todo al día') +
+    '</div>';
+
+  if (!rows.length) {
+    h += '<div class="section"><div class="empty">' + (D.mails.length ? 'Ningún mail con esos filtros.' :
+      'Todavía no hay mails en este rango. Cuando el Apps Script capture, aparecen acá.') + '</div></div>';
+    $('pane').innerHTML = h; bindFiltros(); return;
+  }
+
+  h += '<div class="section"><div class="twrap"><table><thead><tr><th>Enviado</th><th>Marca</th><th>Asunto</th><th>Tipo</th><th>Fecha comercial</th><th class="num">% OFF</th><th class="num">Cuotas</th></tr></thead><tbody>';
+  rows.slice(0, visibles).forEach(function(m){
+    var marca = D.marcaById[m.marca_id];
+    var c = m.c || {};
+    h += '<tr class="clickable" data-id="' + m.id + '">' +
+      '<td class="nowrap muted">' + fmtFecha(m.enviado_at) + '</td>' +
+      '<td class="nowrap">' + (marca ? esc(marca.nombre) : '<span class="muted">' + esc(m.dominio) + '</span>') + '</td>' +
+      '<td><div class="asunto">' + esc(m.asunto) + '</div>' + (m.preheader ? '<div class="pre">' + esc(m.preheader) + '</div>' : '') + '</td>' +
+      '<td>' + (m.estado === 'descartado' ? '<span class="chip grey">Descartado</span>' : m.c ? chipTipo(c.tipo) : '<span class="chip grey">Sin clasificar</span>') + '</td>' +
+      '<td class="nowrap">' + (c.fecha_comercial ? esc(FECHAS[c.fecha_comercial]) : '') + '</td>' +
+      '<td class="num">' + (c.descuento_max != null ? c.descuento_max + '%' : '') + '</td>' +
+      '<td class="num">' + (c.cuotas_sin_interes != null ? c.cuotas_sin_interes : '') + '</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  if (rows.length > visibles) h += '<button class="btn-sm mas" id="verMas">Ver ' + Math.min(100, rows.length - visibles) + ' más (' + (rows.length - visibles) + ' restantes)</button>';
+  h += '</div>';
+  $('pane').innerHTML = h;
+  bindFiltros();
+  $('pane').querySelectorAll('tr[data-id]').forEach(function(tr){ tr.onclick = function(){ abrirMail(Number(tr.dataset.id)); }; });
+  if ($('verMas')) $('verMas').onclick = function(){ visibles += 100; render(); };
+}
+function kpi(l, v, s){ return '<div class="kpi"><div class="kpi-label">' + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-sub">' + esc(s) + '</div></div>'; }
+
+function bindFiltros(){
+  // fechas y búsqueda vuelven a pedir al servidor; el resto filtra en memoria
+  [['fDesde','desde'],['fHasta','hasta']].forEach(function(p){
+    $(p[0]).onchange = function(){ if (this.value) { F[p[1]] = this.value; cargarMails(); } };
+  });
+  $('fQ').onkeydown = function(ev){ if (ev.key === 'Enter') { F.q = this.value.trim(); cargarMails(); } };
+  $('fQ').onsearch = function(){ if (!this.value && F.q) { F.q = ''; cargarMails(); } };
+  [['fMarca','marca'],['fRubro','rubro'],['fComp','competencia'],['fTipo','tipo'],['fFecha','fecha'],['fEstado','estado']].forEach(function(p){
+    if ($(p[0])) $(p[0]).onchange = function(){ F[p[1]] = this.value; visibles = 100; render(); };
+  });
+}
+
+// ── detalle de un mail ─────────────────────────────────────────────────────
+function abrirDrawer(ancho){
+  $('drawer').className = 'drawer open' + (ancho ? ' ancho' : '');
+  $('drawerBg').className = 'drawer-bg open';
+}
+function cerrarDrawer(){ $('drawer').className = 'drawer'; $('drawerBg').className = 'drawer-bg'; }
+$('dClose').onclick = cerrarDrawer; $('drawerBg').onclick = cerrarDrawer;
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrarDrawer(); });
+
+function abrirMail(id){
+  var m = D.mails.find(function(x){ return x.id === id; });
+  var marca = D.marcaById[m.marca_id];
+  $('dName').textContent = m.asunto || '(sin asunto)';
+  $('dMeta').textContent = (marca ? marca.nombre : m.dominio) + ' · ' + fmtLarga(m.enviado_at);
+  var c = m.c || {};
+  var edit = puedeEditar();
+  var h = '<div class="mail-layout"><iframe class="mail-frame" id="mailFrame" title="Vista del mail" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe><div>';
+  h += dato('Remitente', esc((m.remitente_nombre ? m.remitente_nombre + ' ' : '') + '<' + m.remitente_email + '>'));
+  if (m.preheader) h += dato('Preheader', esc(m.preheader));
+  h += dato('Pieza', (m.links != null ? m.links + ' links · ' : '') + (m.imagenes != null ? m.imagenes + ' imágenes · ' : '') + (m.peso_kb != null ? m.peso_kb + ' KB' : ''));
+  if (c.resumen) h += dato('Resumen', esc(c.resumen));
+  h += '<hr class="sep">';
+  if (m.c && c.corregido_at) h += '<p class="nota" style="margin-bottom:12px">Corregido por ' + esc(c.corregido_por) + '. Claude ya no pisa esta clasificación.</p>';
+  else if (m.c) h += '<p class="nota" style="margin-bottom:12px">Clasificado por Claude' + (c.confianza != null ? ' · confianza ' + Math.round(c.confianza * 100) + '%' : '') + '.' + (edit ? ' Si lo corregís, queda fijo.' : '') + '</p>';
+  else h += '<p class="nota" style="margin-bottom:12px">' + (m.estado === 'descartado' ? 'Descartado (no es comunicación de marca).' : 'Todavía sin clasificar.') + '</p>';
+
+  var dis = edit ? '' : ' disabled';
+  h += '<div class="fg"><label>Tipo</label><select id="cTipo"' + dis + '>' + opts(TIPOS, c.tipo, '—') + '</select></div>' +
+    '<div class="fg"><label>Fecha comercial</label><select id="cFecha"' + dis + '>' + opts(FECHAS, c.fecha_comercial, 'Ninguna') + '</select></div>' +
+    '<div class="fg-row"><div class="fg"><label>Descuento máx. %</label><input type="number" min="0" max="100" id="cDesc" value="' + (c.descuento_max != null ? c.descuento_max : '') + '"' + dis + '></div>' +
+    '<div class="fg"><label>Cuotas sin interés</label><input type="number" min="0" max="36" id="cCuotas" value="' + (c.cuotas_sin_interes != null ? c.cuotas_sin_interes : '') + '"' + dis + '></div></div>' +
+    '<div class="fg-row"><div class="fg"><label>Cupón</label><input id="cCupon" value="' + esc(c.cupon || '') + '"' + dis + '></div>' +
+    '<div class="fg"><label>Tono</label><select id="cTono"' + dis + '>' + opts(TONOS, c.tono, '—') + '</select></div></div>' +
+    '<div class="fg"><label>CTA principal</label><input id="cCta" value="' + esc(c.cta || '') + '"' + dis + '></div>' +
+    '<div class="fg"><label>Categorías (separadas por coma)</label><input id="cCat" value="' + esc((c.categorias || []).join(', ')) + '"' + dis + '></div>' +
+    '<div class="fg-check">' +
+      '<label><input type="checkbox" id="cEnvio"' + (c.envio_gratis ? ' checked' : '') + dis + '> Envío gratis</label>' +
+      '<label><input type="checkbox" id="cUrg"' + (c.asunto_urgencia ? ' checked' : '') + dis + '> Asunto con urgencia</label>' +
+      '<label><input type="checkbox" id="cPers"' + (c.asunto_personalizado ? ' checked' : '') + dis + '> Asunto personalizado</label>' +
+    '</div>' +
+    '<div class="fg"><label>Resumen</label><textarea id="cRes"' + dis + '>' + esc(c.resumen || '') + '</textarea></div>';
+  h += '</div></div>';
+  $('dBody').innerHTML = h;
+
+  if (edit) {
+    $('dFoot').style.display = 'flex';
+    $('dFoot').innerHTML = '<button class="btn-orange" id="cGuardar">Guardar corrección</button><span class="spacer"></span>' +
+      (m.estado === 'descartado' ? '<button class="btn-sm" id="cEstado">Volver a pendiente</button>' : '<button class="btn-sm" id="cEstado">Descartar</button>');
+    $('cGuardar').onclick = function(){ guardarClasif(m); };
+    $('cEstado').onclick = function(){
+      var nuevo = m.estado === 'descartado' ? 'pendiente' : 'descartado';
+      api.estado(m.id, nuevo).then(function(){ m.estado = nuevo; toast(nuevo === 'descartado' ? 'Descartado' : 'Vuelve a la cola de Claude'); cerrarDrawer(); render(); })
+        .catch(function(e){ toast(e.message, true); });
+    };
+  } else { $('dFoot').style.display = 'none'; }
+  abrirDrawer(true);
+
+  $('mailFrame').srcdoc = '<p style="font:13px sans-serif;color:#888;padding:20px">Cargando…</p>';
+  api.html(id).then(function(html){
+    // sin scripts (sandbox) y con los links abriendo afuera
+    $('mailFrame').srcdoc = html ? '<base target="_blank">' + html : '<p style="font:13px sans-serif;color:#888;padding:20px">No se guardó el HTML de este mail.</p>';
+  }).catch(function(e){ toast(e.message, true); });
+}
+function dato(k, v){ return '<div class="dato"><div class="dato-k">' + k + '</div><div class="dato-v">' + v + '</div></div>'; }
+
+function guardarClasif(m){
+  var tipo = $('cTipo').value;
+  if (!tipo) { toast('Elegí un tipo', true); return; }
+  var entero = function(v){ return v === '' ? null : Math.round(Number(v)); };
+  var c = {
+    tipo: tipo, fecha_comercial: $('cFecha').value || null,
+    descuento_max: entero($('cDesc').value), cuotas_sin_interes: entero($('cCuotas').value),
+    cupon: $('cCupon').value.trim() || null, tono: $('cTono').value || null, cta: $('cCta').value.trim() || null,
+    categorias: $('cCat').value.split(',').map(function(s){ return s.trim().toLowerCase(); }).filter(Boolean),
+    envio_gratis: $('cEnvio').checked, asunto_urgencia: $('cUrg').checked, asunto_personalizado: $('cPers').checked,
+    resumen: $('cRes').value.trim() || null,
+    corregido_por: me.nombre || me.email, corregido_at: new Date().toISOString()
+  };
+  api.guardarClasif(m.id, c).then(function(){
+    m.c = Object.assign({}, m.c || {}, c); m.estado = 'clasificado';
+    toast('Clasificación corregida'); cerrarDrawer(); render();
+  }).catch(function(e){ toast(e.message, true); });
+}
+
+// ── marcas ─────────────────────────────────────────────────────────────────
+function renderMarcas(){
+  var porMarca = {};
+  D.mails.forEach(function(m){
+    if (!m.marca_id) return;
+    var p = porMarca[m.marca_id] || (porMarca[m.marca_id] = {n:0, promo:0, clas:0, ultimo:null});
+    p.n++; if (m.c) { p.clas++; if (m.c.tipo === 'promocion') p.promo++; }
+    if (!p.ultimo || m.enviado_at > p.ultimo) p.ultimo = m.enviado_at;
+  });
+  var h = '<div class="filters"><span class="muted" style="font-size:12px">Mails del rango ' + F.desde + ' a ' + F.hasta + '</span><span class="spacer"></span>' +
+    (puedeEditar() ? '<button class="btn-orange" id="nuevaMarca">+ Marca</button>' : '') + '</div>';
+  if (!D.marcas.length) {
+    h += '<div class="section"><div class="empty">Todavía no hay marcas. Cargalas acá o desde la solapa Sin marca, a medida que lleguen mails.</div></div>';
+  } else {
+    h += '<div class="section"><div class="twrap"><table><thead><tr><th>Marca</th><th>Rubro</th><th>Dominios</th><th>Cliente / competencia de</th><th class="num">Mails</th><th class="num">% promo</th><th>Último</th></tr></thead><tbody>';
+    D.marcas.forEach(function(m){
+      var p = porMarca[m.id] || {n:0};
+      var comp = D.comp.filter(function(c){ return c.marca_id === m.id; }).map(function(c){ return (D.clienteById[c.sem_marca_id] || {}).nombre; });
+      h += '<tr class="clickable" data-id="' + m.id + '"><td><b>' + esc(m.nombre) + '</b>' + (m.activa ? '' : ' <span class="chip grey">Inactiva</span>') + '</td>' +
+        '<td>' + esc(m.rubro || '') + '</td><td class="muted">' + esc((m.dominios || []).join(', ')) + '</td>' +
+        '<td>' + (m.sem_marca_id ? '<span class="chip orange">Cliente</span> ' : '') + esc(comp.join(', ')) + '</td>' +
+        '<td class="num">' + p.n + '</td><td class="num">' + (p.clas ? Math.round(p.promo / p.clas * 100) + '%' : '') + '</td>' +
+        '<td class="nowrap muted">' + (p.ultimo ? fmtFecha(p.ultimo) : '') + '</td></tr>';
+    });
+    h += '</tbody></table></div></div>';
+  }
+  $('pane').innerHTML = h;
+  if ($('nuevaMarca')) $('nuevaMarca').onclick = function(){ editarMarca(null); };
+  $('pane').querySelectorAll('tr[data-id]').forEach(function(tr){ tr.onclick = function(){ editarMarca(D.marcaById[Number(tr.dataset.id)]); }; });
+}
+
+function editarMarca(m, dominioInicial){
+  m = m || {nombre:'', rubro:'', web:'', dominios: dominioInicial ? [dominioInicial] : [], sem_marca_id:null, activa:true, suscripta_at:null, notas:''};
+  var edit = puedeEditar(), dis = edit ? '' : ' disabled';
+  var comp = D.comp.filter(function(c){ return c.marca_id === m.id; }).map(function(c){ return c.sem_marca_id; });
+  var clientes = {}; D.clientes.forEach(function(c){ if (c.activa) clientes[c.id] = c.nombre; });
+  var rubros = {}; D.marcas.forEach(function(x){ if (x.rubro) rubros[x.rubro] = 1; });
+  $('dName').textContent = m.id ? m.nombre : 'Nueva marca';
+  $('dMeta').textContent = 'Marca seguida en el benchmark';
+  $('dBody').innerHTML =
+    '<div class="fg"><label>Nombre</label><input id="mNombre" value="' + esc(m.nombre) + '"' + dis + '></div>' +
+    '<div class="fg-row"><div class="fg"><label>Rubro</label><input id="mRubro" list="rubrosList" value="' + esc(m.rubro || '') + '"' + dis + '>' +
+      '<datalist id="rubrosList">' + Object.keys(rubros).map(function(r){ return '<option value="' + esc(r) + '">'; }).join('') + '</datalist></div>' +
+    '<div class="fg"><label>Web</label><input id="mWeb" value="' + esc(m.web || '') + '"' + dis + '></div></div>' +
+    '<div class="fg"><label>Dominios de envío (separados por coma)</label><input id="mDom" placeholder="news.marca.com.ar, marca.com.ar" value="' + esc((m.dominios || []).join(', ')) + '"' + dis + '></div>' +
+    '<p class="nota" style="margin:-6px 0 14px">Un mail es de la marca si el dominio del remitente es igual o termina en alguno de estos.</p>' +
+    '<div class="fg"><label>Es cliente nuestro</label><select id="mCliente"' + dis + '>' + opts(clientes, m.sem_marca_id, 'No') + '</select></div>' +
+    '<div class="fg"><label>Es competencia de (Ctrl/Cmd para elegir varios)</label><select id="mComp" multiple size="6"' + dis + '>' +
+      Object.keys(clientes).map(function(id){ return '<option value="' + id + '"' + (comp.indexOf(Number(id)) >= 0 ? ' selected' : '') + '>' + esc(clientes[id]) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="fg-row"><div class="fg"><label>Suscriptos desde</label><input type="date" id="mSusc" value="' + (m.suscripta_at || '') + '"' + dis + '></div>' +
+    '<div class="fg"><label>Estado</label><select id="mActiva"' + dis + '><option value="1"' + (m.activa ? ' selected' : '') + '>Activa</option><option value="0"' + (m.activa ? '' : ' selected') + '>Inactiva</option></select></div></div>' +
+    '<div class="fg"><label>Notas</label><textarea id="mNotas"' + dis + '>' + esc(m.notas || '') + '</textarea></div>';
+  if (edit) {
+    $('dFoot').style.display = 'flex';
+    $('dFoot').innerHTML = '<button class="btn-orange" id="mGuardar">Guardar</button>';
+    $('mGuardar').onclick = function(){
+      var nombre = $('mNombre').value.trim();
+      if (!nombre) { toast('Falta el nombre', true); return; }
+      var datos = {
+        id: m.id, nombre: nombre, rubro: $('mRubro').value.trim() || null, web: $('mWeb').value.trim() || null,
+        dominios: $('mDom').value.split(',').map(function(s){ return s.trim().toLowerCase().replace(/^.*@/, ''); }).filter(Boolean),
+        sem_marca_id: $('mCliente').value ? Number($('mCliente').value) : null,
+        activa: $('mActiva').value === '1', suscripta_at: $('mSusc').value || null, notas: $('mNotas').value.trim() || null
+      };
+      var compIds = Array.prototype.filter.call($('mComp').options, function(o){ return o.selected; }).map(function(o){ return Number(o.value); });
+      this.disabled = true;
+      api.guardarMarca(datos, compIds).then(function(){ toast('Marca guardada'); cerrarDrawer(); cargarBase(); })
+        .catch(function(e){ toast(e.message, true); $('mGuardar').disabled = false; });
+    };
+  } else { $('dFoot').style.display = 'none'; }
+  abrirDrawer(false);
+}
+
+// ── sin marca ──────────────────────────────────────────────────────────────
+function renderSinMarca(){
+  var marcasOpt = {}; D.marcas.forEach(function(m){ marcasOpt[m.id] = m.nombre; });
+  var h = '<p class="nota" style="margin-bottom:16px">Dominios que mandaron mails y no coinciden con ninguna marca. Asignalos a una marca existente o creá una nueva; los mails pasan a esa marca.</p>';
+  if (!D.sinMarca.length) { $('pane').innerHTML = h + '<div class="section"><div class="empty">Todos los mails tienen marca.</div></div>'; return; }
+  h += '<div class="section"><div class="twrap"><table><thead><tr><th>Dominio</th><th>Remitente</th><th>Último asunto</th><th class="num">Mails</th><th></th></tr></thead><tbody>';
+  D.sinMarca.forEach(function(s, i){
+    h += '<tr><td><b>' + esc(s.dominio) + '</b></td><td>' + esc(s.remitente || '') + '</td><td class="muted">' + esc(s.ultimo_asunto || '') + '</td>' +
+      '<td class="num">' + s.mails + '</td><td class="nowrap">' + (puedeEditar() ?
+        '<select data-sel="' + i + '">' + opts(marcasOpt, '', 'Asignar a…') + '</select> <button class="btn-sm" data-nueva="' + i + '">Nueva marca</button>' : '') + '</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  $('pane').innerHTML = h;
+  $('pane').querySelectorAll('select[data-sel]').forEach(function(sel){
+    sel.style.cssText = 'font-family:var(--font);font-size:12px;padding:6px 10px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius)';
+    sel.onchange = function(){
+      var s = D.sinMarca[Number(sel.dataset.sel)];
+      api.asignar(s.dominio, Number(sel.value)).then(function(n){ toast(s.dominio + ' → ' + marcasOpt[sel.value]); cargarBase(); })
+        .catch(function(e){ toast(e.message, true); });
+    };
+  });
+  $('pane').querySelectorAll('button[data-nueva]').forEach(function(b){
+    b.onclick = function(){
+      var s = D.sinMarca[Number(b.dataset.nueva)];
+      var raiz = s.dominio.split('.').filter(function(p){ return !/^(news|mail|email|e|info|mkt|newsletter|comunicaciones|em|m)$/.test(p); }).join('.');
+      editarMarca({nombre: (s.remitente || '').trim(), rubro:'', web:'', dominios:[raiz || s.dominio], sem_marca_id:null, activa:true, suscripta_at:null, notas:''});
+    };
+  });
+}
+
+// ── arranque ───────────────────────────────────────────────────────────────
+if (DEMO) {
+  var demo = demoDatos();
+  api = demo.api;
+  entrar({nombre:'Demo', email:'demo', rol:'admin'});
+} else {
+  sb.auth.getSession().then(function(r){ if (r.data.session) boot(); });
+}
+
+// Datos de ejemplo para ver el visor sin login (#demo). No escribe nada.
+function demoDatos(){
+  var marcas = [
+    {id:1, nombre:'Nike', rubro:'Deportes', dominios:['nike.com.ar'], sem_marca_id:null, activa:true},
+    {id:2, nombre:'Adidas', rubro:'Deportes', dominios:['adidas.com.ar'], sem_marca_id:null, activa:true},
+    {id:3, nombre:'Frávega', rubro:'Electro', dominios:['fravega.com'], sem_marca_id:null, activa:true},
+    {id:4, nombre:'Grimoldi', rubro:'Calzado', dominios:['grimoldi.com'], sem_marca_id:10, activa:true}
+  ];
+  var asuntos = [
+    [1,'🔥 Últimas horas de CyberMonday: hasta 50% OFF','Y 6 cuotas sin interés en toda la tienda','promocion','cyber_monday',50,6],
+    [2,'Nueva colección Originals','Descubrí lo nuevo antes que nadie','lanzamiento',null,null,null],
+    [3,'Tomás, tu carrito te espera','Los productos que elegiste se pueden agotar','carrito_abandonado',null,null,12],
+    [4,'Todo para entrenar este verano','Guía de calzado según tu deporte','contenido',null,null,null],
+    [1,'Solo para miembros: acceso anticipado','Black Friday empieza antes para vos','promocion','black_friday',40,3],
+    [3,'Hasta 18 cuotas sin interés en Smart TV','Envío gratis a todo el país','promocion',null,null,18],
+    [2,'Confirmá tu suscripción',null,null,null,null,null],
+    [4,'Mamá se merece lo mejor 💐','20% OFF en toda la línea mujer','promocion','dia_madre',20,null]
+  ];
+  var mails = asuntos.map(function(a, i){
+    var d = new Date(); d.setDate(d.getDate() - i * 2); d.setHours(10 + i, 0, 0, 0);
+    return {id:i+1, marca_id:a[0], remitente_nombre:marcas[a[0]-1].nombre, remitente_email:'news@' + marcas[a[0]-1].dominios[0],
+      dominio:marcas[a[0]-1].dominios[0], asunto:a[1], preheader:a[2], enviado_at:d.toISOString(), links:12, imagenes:8, peso_kb:64,
+      estado: a[3] ? 'clasificado' : 'pendiente',
+      c: a[3] ? {tipo:a[3], fecha_comercial:a[4], descuento_max:a[5], cuotas_sin_interes:a[6], envio_gratis:i % 2 === 0, categorias:['calzado'],
+        cta:'Comprá ahora', tono: a[4] ? 'urgente' : 'informativo', resumen:a[2], confianza:0.9} : null};
+  });
+  mails.push({id:99, marca_id:null, remitente_nombre:'Dexter', remitente_email:'hola@mail.dexter.com.ar', dominio:'mail.dexter.com.ar',
+    asunto:'Hot Sale anticipado', preheader:null, enviado_at:new Date().toISOString(), estado:'pendiente', c:null});
+  var html = '<div style="font-family:Arial;max-width:600px;margin:auto"><div style="background:#111;color:#fff;padding:40px;text-align:center;font-size:28px;font-weight:bold">MAIL DE EJEMPLO</div><p style="padding:20px">Acá se ve el HTML del mail tal cual llegó.</p><a href="https://example.com" style="display:block;margin:20px;background:#f04e23;color:#fff;text-align:center;padding:14px;text-decoration:none">Comprá ahora</a></div>';
+  var ok = function(x){ return Promise.resolve(x); };
+  return {api: {
+    base: function(){ return ok({marcas:marcas, comp:[{marca_id:1, sem_marca_id:10},{marca_id:2, sem_marca_id:10}], clientes:[{id:10, nombre:'Grimoldi', activa:true}],
+      sinMarca:[{dominio:'mail.dexter.com.ar', mails:1, remitente:'Dexter', ultimo_asunto:'Hot Sale anticipado'}]}); },
+    mails: function(f){ return ok(mails.map(function(m){ return Object.assign({}, m, {bm_clasificacion: m.c}); })
+      .filter(function(m){ return !f.q || (m.asunto + ' ' + (m.preheader || '')).toLowerCase().indexOf(f.q.toLowerCase()) >= 0; })); },
+    html: function(){ return ok(html); },
+    guardarClasif: function(){ return ok(); }, estado: function(){ return ok(); },
+    guardarMarca: function(){ return ok(); }, asignar: function(){ return ok(1); }
+  }};
+}
+</script>
+</body>
+</html>
