@@ -64,6 +64,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .filters select:focus,.filters input:focus{border-color:var(--orange)}
 .filters input[type=search]{min-width:220px}
 .spacer{flex:1}
+.btn-sm.activo{color:var(--orange);border-color:var(--orange)}
+.periodo{position:relative;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.periodo-panel{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.combo{position:relative;display:inline-flex;align-items:center}
+.combo input{min-width:170px;padding-right:26px!important}
+.combo-x{position:absolute;right:6px;background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;line-height:1}
+.combo-x:hover{color:var(--orange)}
+.combo-list{display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);z-index:50;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.combo-op{display:block;padding:7px 10px;font-size:12.5px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.combo-op:hover{background:var(--bg3)}
+.combo-vacio{display:block;padding:7px 10px;font-size:12px;color:var(--text3)}
 
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
 .kpi{background:var(--bg2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:var(--radius-lg);padding:13px 16px}
@@ -207,7 +218,9 @@ const TONOS = {urgente:'Urgente', aspiracional:'Aspiracional', informativo:'Info
 const COLOR_TIPO = {promocion:'orange', lanzamiento:'blue', contenido:'green', bienvenida:'amber', carrito_abandonado:'red', reactivacion:'red'};
 
 var me = null, D = {}, tab = 'mails';
-var F = {desde: diasAtras(30), hasta: hoyISO(), marca: '', rubro: '', tipo: '', fecha: '', estado: '', q: '', competencia: ''};
+// Sin período = todo. El período se elige aparte, desde el botón "Período".
+var F = {desde: '', hasta: '', marca: '', rubro: '', tipo: '', fecha: '', estado: '', q: ''};
+var periodoAbierto = false;
 var visibles = 100;
 var vista = 'galeria';
 try { vista = localStorage.getItem('bm_vista') || 'galeria'; } catch (e) {}
@@ -267,8 +280,9 @@ var api = {
   mails: function(f){
     return fetchAll(function(){
       var q = sb.from('bm_emails').select(CAMPOS_MAIL)
-        .gte('enviado_at', f.desde + 'T00:00:00-03:00').lte('enviado_at', f.hasta + 'T23:59:59-03:00')
         .order('enviado_at', {ascending:false});
+      if (f.desde) q = q.gte('enviado_at', f.desde + 'T00:00:00-03:00');
+      if (f.hasta) q = q.lte('enviado_at', f.hasta + 'T23:59:59-03:00');
       if (f.q) q = q.textSearch('busqueda', f.q, {type:'websearch', config:'spanish'});
       return q;
     });
@@ -378,7 +392,6 @@ function filtrados(){
     var marca = D.marcaById[m.marca_id];
     if (F.marca && String(m.marca_id) !== F.marca) return false;
     if (F.rubro && (!marca || marca.rubro !== F.rubro)) return false;
-    if (F.competencia && !D.comp.some(function(c){ return c.marca_id === m.marca_id && String(c.sem_marca_id) === F.competencia; })) return false;
     if (F.estado && m.estado !== F.estado) return false;
     if (F.tipo && (!m.c || m.c.tipo !== F.tipo)) return false;
     if (F.fecha && (!m.c || m.c.fecha_comercial !== F.fecha)) return false;
@@ -387,23 +400,27 @@ function filtrados(){
 }
 
 function renderMails(pend){
-  var rubros = {}; D.marcas.forEach(function(m){ if (m.rubro) rubros[m.rubro] = m.rubro; });
-  var marcasOpt = {}; D.marcas.forEach(function(m){ marcasOpt[m.id] = m.nombre; });
-  var clientesComp = {}; D.comp.forEach(function(c){ var cl = D.clienteById[c.sem_marca_id]; if (cl) clientesComp[cl.id] = 'Competencia de ' + cl.nombre; });
   var rows = filtrados();
   var clasif = rows.filter(function(m){ return m.c; });
   var promos = clasif.filter(function(m){ return m.c.tipo === 'promocion'; });
   var descs = clasif.map(function(m){ return m.c.descuento_max; }).filter(function(x){ return x != null; });
   var marcasActivas = {}; rows.forEach(function(m){ if (m.marca_id) marcasActivas[m.marca_id] = 1; });
   var nMarcas = Object.keys(marcasActivas).length;
-  var dias = Math.max(1, Math.round((new Date(F.hasta) - new Date(F.desde)) / 86400000) + 1);
+  // días cubiertos: el período elegido o, si es todo, del mail más viejo al más nuevo
+  var fechas = rows.map(function(m){ return m.enviado_at; }).sort();
+  var dDesde = F.desde ? new Date(F.desde) : (fechas.length ? new Date(fechas[0]) : new Date());
+  var dHasta = F.hasta ? new Date(F.hasta) : (fechas.length ? new Date(fechas[fechas.length - 1]) : new Date());
+  var dias = Math.max(1, Math.round((dHasta - dDesde) / 86400000) + 1);
 
+  var marca = D.marcaById[F.marca];
   var h = '<div class="filters">' +
-    '<input type="date" id="fDesde" value="' + F.desde + '"> <span class="muted">a</span> <input type="date" id="fHasta" value="' + F.hasta + '">' +
+    '<span class="periodo"><button class="btn-sm' + (F.desde || F.hasta ? ' activo' : '') + '" id="fPeriodo">' + esc(textoPeriodo()) + '</button>' +
+    (periodoAbierto ? '<span class="periodo-panel"><input type="date" id="fDesde" value="' + F.desde + '"> <span class="muted">a</span> <input type="date" id="fHasta" value="' + F.hasta + '">' +
+      '<button class="btn-orange" id="fAplicar">Aplicar</button>' + (F.desde || F.hasta ? '<button class="btn-sm" id="fTodo">Ver todo</button>' : '') + '</span>' : '') +
+    '</span>' +
     '<input type="search" id="fQ" placeholder="Buscar en asunto y texto…" value="' + esc(F.q) + '">' +
-    '<select id="fMarca">' + opts(marcasOpt, F.marca, 'Todas las marcas') + '</select>' +
-    '<select id="fRubro">' + opts(rubros, F.rubro, 'Todos los rubros') + '</select>' +
-    (Object.keys(clientesComp).length ? '<select id="fComp">' + opts(clientesComp, F.competencia, 'Cualquier cliente') + '</select>' : '') +
+    combo('cMarca', 'Escribí una marca…', marca ? marca.nombre : '') +
+    combo('cRubro', 'Escribí un rubro…', F.rubro) +
     '<select id="fTipo">' + opts(TIPOS, F.tipo, 'Todos los tipos') + '</select>' +
     '<select id="fFecha">' + opts(FECHAS, F.fecha, 'Cualquier fecha comercial') + '</select>' +
     '<select id="fEstado">' + opts({pendiente:'Sin clasificar', clasificado:'Clasificados', descartado:'Descartados'}, F.estado, 'Todos los estados') + '</select>' +
@@ -544,14 +561,60 @@ window.addEventListener('resize', function(){
 
 function kpi(l, v, s){ return '<div class="kpi"><div class="kpi-label">' + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-sub">' + esc(s) + '</div></div>'; }
 
+function textoPeriodo(){
+  var f = function(s){ var p = s.split('-'); return p[2] + '/' + p[1] + '/' + p[0].slice(2); };
+  if (F.desde && F.hasta) return 'Período: ' + f(F.desde) + ' a ' + f(F.hasta);
+  if (F.desde) return 'Período: desde ' + f(F.desde);
+  if (F.hasta) return 'Período: hasta ' + f(F.hasta);
+  return 'Período: todo';
+}
+
+// Buscador escribiendo: no muestra la lista entera, solo hasta 8 coincidencias
+function combo(id, ph, valor){
+  return '<span class="combo"><input type="text" id="' + id + '" placeholder="' + ph + '" value="' + esc(valor) + '" autocomplete="off">' +
+    (valor ? '<button class="combo-x" data-limpiar="' + id + '" aria-label="Quitar">&times;</button>' : '') +
+    '<span class="combo-list" id="' + id + 'L"></span></span>';
+}
+function bindCombo(id, opciones, elegir){
+  var inp = $(id), lista = $(id + 'L'), activas = [];
+  var norm = function(s){ return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
+  inp.oninput = function(){
+    var t = norm(inp.value.trim());
+    if (!t) { lista.innerHTML = ''; lista.style.display = 'none'; return; }
+    activas = opciones.filter(function(o){ return norm(o.label).indexOf(t) >= 0; })
+      .sort(function(a, b){ return norm(a.label).indexOf(t) - norm(b.label).indexOf(t) || a.label.localeCompare(b.label); }).slice(0, 8);
+    lista.innerHTML = activas.length ? activas.map(function(o, i){ return '<span class="combo-op" data-i="' + i + '">' + esc(o.label) + '</span>'; }).join('')
+      : '<span class="combo-vacio">Sin coincidencias</span>';
+    lista.style.display = 'block';
+  };
+  inp.onkeydown = function(ev){
+    if (ev.key === 'Enter' && activas.length && inp.value.trim()) elegir(activas[0].v);
+    if (ev.key === 'Escape') { lista.style.display = 'none'; }
+  };
+  inp.onblur = function(){ setTimeout(function(){ lista.style.display = 'none'; }, 150); };
+  lista.onmousedown = function(ev){
+    var op = ev.target.closest('.combo-op'); if (!op) return;
+    ev.preventDefault(); elegir(activas[Number(op.dataset.i)].v);
+  };
+}
+
 function bindFiltros(){
-  // fechas y búsqueda vuelven a pedir al servidor; el resto filtra en memoria
-  [['fDesde','desde'],['fHasta','hasta']].forEach(function(p){
-    $(p[0]).onchange = function(){ if (this.value) { F[p[1]] = this.value; cargarMails(); } };
-  });
+  // período y búsqueda vuelven a pedir al servidor; el resto filtra en memoria
+  $('fPeriodo').onclick = function(){ periodoAbierto = !periodoAbierto; render(); };
+  if ($('fAplicar')) $('fAplicar').onclick = function(){
+    F.desde = $('fDesde').value; F.hasta = $('fHasta').value; periodoAbierto = false; cargarMails();
+  };
+  if ($('fTodo')) $('fTodo').onclick = function(){ F.desde = ''; F.hasta = ''; periodoAbierto = false; cargarMails(); };
   $('fQ').onkeydown = function(ev){ if (ev.key === 'Enter') { F.q = this.value.trim(); cargarMails(); } };
   $('fQ').onsearch = function(){ if (!this.value && F.q) { F.q = ''; cargarMails(); } };
-  [['fMarca','marca'],['fRubro','rubro'],['fComp','competencia'],['fTipo','tipo'],['fFecha','fecha'],['fEstado','estado']].forEach(function(p){
+  var reset = function(){ visibles = vista === 'galeria' ? 60 : 100; render(); };
+  bindCombo('cMarca', D.marcas.map(function(m){ return {v: String(m.id), label: m.nombre}; }), function(v){ F.marca = v; reset(); });
+  var rubros = {}; D.marcas.forEach(function(m){ if (m.rubro) rubros[m.rubro] = 1; });
+  bindCombo('cRubro', Object.keys(rubros).map(function(r){ return {v: r, label: r}; }), function(v){ F.rubro = v; reset(); });
+  $('pane').querySelectorAll('[data-limpiar]').forEach(function(b){
+    b.onclick = function(){ if (b.dataset.limpiar === 'cMarca') F.marca = ''; else F.rubro = ''; reset(); };
+  });
+  [['fTipo','tipo'],['fFecha','fecha'],['fEstado','estado']].forEach(function(p){
     if ($(p[0])) $(p[0]).onchange = function(){ F[p[1]] = this.value; visibles = vista === 'galeria' ? 60 : 100; render(); };
   });
   $('pane').querySelectorAll('[data-vista]').forEach(function(b){
@@ -658,7 +721,7 @@ function renderMarcas(){
     p.n++; if (m.c) { p.clas++; if (m.c.tipo === 'promocion') p.promo++; }
     if (!p.ultimo || m.enviado_at > p.ultimo) p.ultimo = m.enviado_at;
   });
-  var h = '<div class="filters"><span class="muted" style="font-size:12px">Mails del rango ' + F.desde + ' a ' + F.hasta + '</span><span class="spacer"></span>' +
+  var h = '<div class="filters"><span class="muted" style="font-size:12px">' + esc(F.desde || F.hasta ? 'Mails del ' + textoPeriodo().toLowerCase() : 'Todos los mails') + '</span><span class="spacer"></span>' +
     (puedeEditar() ? '<button class="btn-orange" id="nuevaMarca">+ Marca</button>' : '') + '</div>';
   if (!D.marcas.length) {
     h += '<div class="section"><div class="empty">Todavía no hay marcas. Cargalas acá o desde la solapa Sin marca, a medida que lleguen mails.</div></div>';
