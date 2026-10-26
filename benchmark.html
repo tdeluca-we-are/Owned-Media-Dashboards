@@ -109,6 +109,20 @@ tr.clickable:hover td{background:rgba(255,255,255,.03)}
 .drawer-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
 .drawer-close:hover{color:var(--orange)}
 
+.vista{display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden}
+.vista button{font-family:var(--font);font-size:12px;padding:7px 12px;background:transparent;color:var(--text2);border:none;cursor:pointer}
+.vista button.on{background:var(--bg3);color:var(--text);font-weight:600}
+.galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--orange);transform:translateY(-2px)}
+.thumb{position:relative;height:360px;overflow:hidden;background:#fff}
+.thumb iframe{position:absolute;top:0;left:0;width:600px;height:1400px;border:0;transform-origin:0 0;pointer-events:none}
+.thumb .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa3b2;font-size:12px;background:#f3f4f6}
+.card-info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:5px}
+.card-top{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text2)}
+.card-top b{color:var(--text);font-weight:600}
+.card-asunto{font-size:12.5px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-chips{display:flex;gap:5px;flex-wrap:wrap}
 .mail-layout{display:grid;grid-template-columns:minmax(0,640px) minmax(280px,1fr);gap:20px;align-items:start}
 .mail-frame{width:100%;height:calc(100vh - 190px);min-height:420px;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
 .dato{margin-bottom:12px}
@@ -195,6 +209,10 @@ const COLOR_TIPO = {promocion:'orange', lanzamiento:'blue', contenido:'green', b
 var me = null, D = {}, tab = 'mails';
 var F = {desde: diasAtras(30), hasta: hoyISO(), marca: '', rubro: '', tipo: '', fecha: '', estado: '', q: '', competencia: ''};
 var visibles = 100;
+var vista = 'galeria';
+try { vista = localStorage.getItem('bm_vista') || 'galeria'; } catch (e) {}
+var HTML = {};         // cache del HTML de cada mail (id → html)
+var observador = null; // carga las miniaturas a medida que aparecen en pantalla
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function $(id){ return document.getElementById(id); }
@@ -257,6 +275,9 @@ var api = {
   },
   html: function(id){
     return sb.from('bm_email_html').select('html').eq('email_id', id).maybeSingle().then(function(r){ return (chk(r) || {}).html || ''; });
+  },
+  htmls: function(ids){
+    return sb.from('bm_email_html').select('email_id,html').in('email_id', ids).then(chk);
   },
   guardarClasif: function(id, c){
     return sb.from('bm_clasificacion').upsert(Object.assign({email_id:id}, c)).then(chk).then(function(){
@@ -330,7 +351,7 @@ function cargarMails(){
     rows.forEach(function(r){
       var c = r.bm_clasificacion; r.c = Array.isArray(c) ? c[0] || null : c; delete r.bm_clasificacion;
     });
-    D.mails = rows; visibles = 100;
+    D.mails = rows; visibles = vista === 'galeria' ? 60 : 100;
     render();
   }).catch(errorCarga);
 }
@@ -386,6 +407,8 @@ function renderMails(pend){
     '<select id="fTipo">' + opts(TIPOS, F.tipo, 'Todos los tipos') + '</select>' +
     '<select id="fFecha">' + opts(FECHAS, F.fecha, 'Cualquier fecha comercial') + '</select>' +
     '<select id="fEstado">' + opts({pendiente:'Sin clasificar', clasificado:'Clasificados', descartado:'Descartados'}, F.estado, 'Todos los estados') + '</select>' +
+    '<span class="spacer"></span><span class="vista"><button data-vista="galeria"' + (vista === 'galeria' ? ' class="on"' : '') + '>Galería</button>' +
+    '<button data-vista="lista"' + (vista === 'lista' ? ' class="on"' : '') + '>Lista</button></span>' +
     '</div>';
 
   h += '<div class="kpi-row">' +
@@ -401,6 +424,8 @@ function renderMails(pend){
       'Todavía no hay mails en este rango. Cuando el Apps Script capture, aparecen acá.') + '</div></div>';
     $('pane').innerHTML = h; bindFiltros(); return;
   }
+
+  if (vista === 'galeria') { renderGaleria(h, rows); return; }
 
   h += '<div class="section"><div class="twrap"><table><thead><tr><th>Enviado</th><th>Marca</th><th>Asunto</th><th>Tipo</th><th>Fecha comercial</th><th class="num">% OFF</th><th class="num">Cuotas</th></tr></thead><tbody>';
   rows.slice(0, visibles).forEach(function(m){
@@ -423,6 +448,72 @@ function renderMails(pend){
   $('pane').querySelectorAll('tr[data-id]').forEach(function(tr){ tr.onclick = function(){ abrirMail(Number(tr.dataset.id)); }; });
   if ($('verMas')) $('verMas').onclick = function(){ visibles += 100; render(); };
 }
+// Grilla de creativos: cada tarjeta muestra el mail renderizado en miniatura.
+// El HTML se pide recién cuando la tarjeta entra en pantalla, de a tandas.
+function renderGaleria(h, rows){
+  var cant = Math.min(visibles, rows.length);
+  h += '<div class="galeria">';
+  rows.slice(0, cant).forEach(function(m){
+    var marca = D.marcaById[m.marca_id], c = m.c || {};
+    var chips = (m.estado === 'descartado' ? '<span class="chip grey">Descartado</span>' : m.c ? chipTipo(c.tipo) : '<span class="chip grey">Sin clasificar</span>') +
+      (c.fecha_comercial ? ' <span class="chip blue">' + esc(FECHAS[c.fecha_comercial]) + '</span>' : '') +
+      (c.descuento_max != null ? ' <span class="chip orange">' + c.descuento_max + '% OFF</span>' : '') +
+      (c.cuotas_sin_interes != null ? ' <span class="chip grey">' + c.cuotas_sin_interes + ' cuotas</span>' : '');
+    h += '<div class="card" data-id="' + m.id + '"><div class="thumb"><div class="ph">Cargando…</div></div>' +
+      '<div class="card-info"><div class="card-top"><b>' + esc(marca ? marca.nombre : m.dominio) + '</b><span>' + fmtFecha(m.enviado_at) + '</span></div>' +
+      '<div class="card-asunto" title="' + esc(m.preheader || '') + '">' + esc(m.asunto || '(sin asunto)') + '</div>' +
+      '<div class="card-chips">' + chips + '</div></div></div>';
+  });
+  h += '</div>';
+  if (rows.length > cant) h += '<button class="btn-sm mas" id="verMas">Ver ' + Math.min(60, rows.length - cant) + ' más (' + (rows.length - cant) + ' restantes)</button>';
+  $('pane').innerHTML = h;
+  bindFiltros();
+  if ($('verMas')) $('verMas').onclick = function(){ visibles += 60; render(); };
+
+  var cola = [], timer = null;
+  function pedir(){
+    var ids = cola.splice(0, 12).filter(function(id){ return HTML[id] === undefined; });
+    if (!ids.length) return;
+    api.htmls(ids).then(function(filas){
+      filas.forEach(function(f){ HTML[f.email_id] = f.html; });
+      ids.forEach(function(id){ if (HTML[id] === undefined) HTML[id] = ''; pintar(id); });
+      if (cola.length) pedir();
+    }).catch(function(e){ toast(e.message, true); });
+  }
+  if (observador) observador.disconnect();
+  observador = new IntersectionObserver(function(entradas){
+    entradas.forEach(function(en){
+      if (!en.isIntersecting) return;
+      observador.unobserve(en.target);
+      var id = Number(en.target.dataset.id);
+      if (HTML[id] !== undefined) pintar(id); else cola.push(id);
+    });
+    clearTimeout(timer); timer = setTimeout(pedir, 60);
+  }, {rootMargin: '400px'});
+  $('pane').querySelectorAll('.card').forEach(function(card){
+    card.onclick = function(){ abrirMail(Number(card.dataset.id)); };
+    observador.observe(card);
+  });
+}
+
+function pintar(id){
+  var thumb = document.querySelector('.card[data-id="' + id + '"] .thumb');
+  if (!thumb || thumb.querySelector('iframe')) return;
+  if (!HTML[id]) { thumb.querySelector('.ph').textContent = 'Sin vista previa'; return; }
+  var f = document.createElement('iframe');
+  f.setAttribute('sandbox', 'allow-same-origin');  // sin allow-scripts: el mail no puede correr nada
+  f.setAttribute('loading', 'lazy');
+  f.setAttribute('tabindex', '-1');
+  f.setAttribute('aria-hidden', 'true');
+  f.style.transform = 'scale(' + (thumb.clientWidth / 600) + ')';
+  f.srcdoc = '<style>body{margin:0;overflow:hidden}</style>' + HTML[id];
+  thumb.appendChild(f);
+  f.onload = function(){ var ph = thumb.querySelector('.ph'); if (ph) ph.remove(); };
+}
+window.addEventListener('resize', function(){
+  document.querySelectorAll('.thumb iframe').forEach(function(f){ f.style.transform = 'scale(' + (f.parentNode.clientWidth / 600) + ')'; });
+});
+
 function kpi(l, v, s){ return '<div class="kpi"><div class="kpi-label">' + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-sub">' + esc(s) + '</div></div>'; }
 
 function bindFiltros(){
@@ -433,7 +524,14 @@ function bindFiltros(){
   $('fQ').onkeydown = function(ev){ if (ev.key === 'Enter') { F.q = this.value.trim(); cargarMails(); } };
   $('fQ').onsearch = function(){ if (!this.value && F.q) { F.q = ''; cargarMails(); } };
   [['fMarca','marca'],['fRubro','rubro'],['fComp','competencia'],['fTipo','tipo'],['fFecha','fecha'],['fEstado','estado']].forEach(function(p){
-    if ($(p[0])) $(p[0]).onchange = function(){ F[p[1]] = this.value; visibles = 100; render(); };
+    if ($(p[0])) $(p[0]).onchange = function(){ F[p[1]] = this.value; visibles = vista === 'galeria' ? 60 : 100; render(); };
+  });
+  $('pane').querySelectorAll('[data-vista]').forEach(function(b){
+    b.onclick = function(){
+      vista = b.dataset.vista; visibles = vista === 'galeria' ? 60 : 100;
+      try { localStorage.setItem('bm_vista', vista); } catch (e) {}
+      render();
+    };
   });
 }
 
@@ -453,7 +551,7 @@ function abrirMail(id){
   $('dMeta').textContent = (marca ? marca.nombre : m.dominio) + ' · ' + fmtLarga(m.enviado_at);
   var c = m.c || {};
   var edit = puedeEditar();
-  var h = '<div class="mail-layout"><iframe class="mail-frame" id="mailFrame" title="Vista del mail" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe><div>';
+  var h = '<div class="mail-layout"><iframe class="mail-frame" id="mailFrame" title="Vista del mail" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe><div>';
   h += dato('Remitente', esc((m.remitente_nombre ? m.remitente_nombre + ' ' : '') + '<' + m.remitente_email + '>'));
   if (m.preheader) h += dato('Preheader', esc(m.preheader));
   h += dato('Pieza', (m.links != null ? m.links + ' links · ' : '') + (m.imagenes != null ? m.imagenes + ' imágenes · ' : '') + (m.peso_kb != null ? m.peso_kb + ' KB' : ''));
@@ -495,7 +593,8 @@ function abrirMail(id){
   abrirDrawer(true);
 
   $('mailFrame').srcdoc = '<p style="font:13px sans-serif;color:#888;padding:20px">Cargando…</p>';
-  api.html(id).then(function(html){
+  (HTML[id] !== undefined ? Promise.resolve(HTML[id]) : api.html(id)).then(function(html){
+    HTML[id] = html;
     // sin scripts (sandbox) y con los links abriendo afuera
     $('mailFrame').srcdoc = html ? '<base target="_blank">' + html : '<p style="font:13px sans-serif;color:#888;padding:20px">No se guardó el HTML de este mail.</p>';
   }).catch(function(e){ toast(e.message, true); });
@@ -661,14 +760,27 @@ function demoDatos(){
   });
   mails.push({id:99, marca_id:null, remitente_nombre:'Dexter', remitente_email:'hola@mail.dexter.com.ar', dominio:'mail.dexter.com.ar',
     asunto:'Hot Sale anticipado', preheader:null, enviado_at:new Date().toISOString(), estado:'pendiente', c:null});
-  var html = '<div style="font-family:Arial;max-width:600px;margin:auto"><div style="background:#111;color:#fff;padding:40px;text-align:center;font-size:28px;font-weight:bold">MAIL DE EJEMPLO</div><p style="padding:20px">Acá se ve el HTML del mail tal cual llegó.</p><a href="https://example.com" style="display:block;margin:20px;background:#f04e23;color:#fff;text-align:center;padding:14px;text-decoration:none">Comprá ahora</a></div>';
+  var colores = ['#111111','#1d4ed8','#b91c1c','#065f46','#7c3aed','#c2410c','#0f766e','#be185d','#374151'];
+  function htmlDemo(id){
+    var m = mails.find(function(x){ return x.id === id; }) || mails[0];
+    var col = colores[id % colores.length];
+    return '<div style="font-family:Arial;width:600px;margin:auto;background:#fff">' +
+      '<div style="padding:18px;text-align:center;font-weight:bold;letter-spacing:3px;font-size:20px">' + esc((m.remitente_nombre || '').toUpperCase()) + '</div>' +
+      '<div style="background:' + col + ';color:#fff;height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px">' +
+      '<div style="font-size:44px;font-weight:900;line-height:1.05">' + esc(m.asunto.replace(/[^\wÁÉÍÓÚáéíóúñÑ%: ]/g, '').trim()) + '</div>' +
+      '<div style="font-size:18px;margin-top:16px;opacity:.85">' + esc(m.preheader || '') + '</div></div>' +
+      '<a href="https://example.com" style="display:block;margin:24px 120px;background:#000;color:#fff;text-align:center;padding:16px;text-decoration:none;font-weight:bold">COMPRÁ AHORA</a>' +
+      '<div style="display:flex;gap:10px;padding:0 20px"><div style="flex:1;height:200px;background:#e5e7eb"></div><div style="flex:1;height:200px;background:#d1d5db"></div></div>' +
+      '<p style="padding:20px;color:#6b7280;font-size:12px">Mail de ejemplo del modo demo.</p></div>';
+  }
   var ok = function(x){ return Promise.resolve(x); };
   return {api: {
     base: function(){ return ok({marcas:marcas, comp:[{marca_id:1, sem_marca_id:10},{marca_id:2, sem_marca_id:10}], clientes:[{id:10, nombre:'Grimoldi', activa:true}],
       sinMarca:[{dominio:'mail.dexter.com.ar', mails:1, remitente:'Dexter', ultimo_asunto:'Hot Sale anticipado'}]}); },
     mails: function(f){ return ok(mails.map(function(m){ return Object.assign({}, m, {bm_clasificacion: m.c}); })
       .filter(function(m){ return !f.q || (m.asunto + ' ' + (m.preheader || '')).toLowerCase().indexOf(f.q.toLowerCase()) >= 0; })); },
-    html: function(){ return ok(html); },
+    html: function(id){ return ok(htmlDemo(id)); },
+    htmls: function(ids){ return ok(ids.map(function(id){ return {email_id:id, html:htmlDemo(id)}; })); },
     guardarClasif: function(){ return ok(); }, estado: function(){ return ok(); },
     guardarMarca: function(){ return ok(); }, asignar: function(){ return ok(1); }
   }};
