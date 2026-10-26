@@ -505,13 +505,41 @@ function pintar(id){
   f.setAttribute('loading', 'lazy');
   f.setAttribute('tabindex', '-1');
   f.setAttribute('aria-hidden', 'true');
-  f.style.transform = 'scale(' + (thumb.clientWidth / 600) + ')';
   f.srcdoc = '<style>body{margin:0;overflow:hidden}</style>' + HTML[id];
   thumb.appendChild(f);
-  f.onload = function(){ var ph = thumb.querySelector('.ph'); if (ph) ph.remove(); };
+  escalarMiniatura(f);
+  f.onload = function(){
+    var ph = thumb.querySelector('.ph'); if (ph) ph.remove();
+    escalarMiniatura(f);
+  };
+}
+// Ancho real del mail: muchos miden 640–800 px, no 600
+function anchoMail(f){
+  try {
+    var d = f.contentDocument;
+    return Math.max(600, d.documentElement.scrollWidth, d.body ? d.body.scrollWidth : 0);
+  } catch (e) { return 600; }
+}
+// La miniatura muestra el mail entero de ancho, achicado al tamaño de la tarjeta
+function escalarMiniatura(f){
+  var ancho = f.dataset.ancho ? Number(f.dataset.ancho) : 600;
+  if (f.contentDocument && f.contentDocument.readyState === 'complete') { ancho = anchoMail(f); f.dataset.ancho = ancho; }
+  var s = f.parentNode.clientWidth / ancho;
+  f.style.width = ancho + 'px';
+  f.style.height = Math.ceil(f.parentNode.clientHeight / s) + 'px';
+  f.style.transform = 'scale(' + s + ')';
+}
+// En el detalle, si el mail es más ancho que el panel, se achica para que entre completo
+function ajustarDetalle(f){
+  try {
+    var d = f.contentDocument; d.documentElement.style.zoom = '';
+    var ancho = anchoMail(f), disp = f.clientWidth - 16;  // 16: barra de scroll
+    if (ancho > disp) d.documentElement.style.zoom = (disp / ancho).toFixed(3);
+  } catch (e) {}
 }
 window.addEventListener('resize', function(){
-  document.querySelectorAll('.thumb iframe').forEach(function(f){ f.style.transform = 'scale(' + (f.parentNode.clientWidth / 600) + ')'; });
+  document.querySelectorAll('.thumb iframe').forEach(escalarMiniatura);
+  if ($('mailFrame')) ajustarDetalle($('mailFrame'));
 });
 
 function kpi(l, v, s){ return '<div class="kpi"><div class="kpi-label">' + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-sub">' + esc(s) + '</div></div>'; }
@@ -596,6 +624,7 @@ function abrirMail(id){
   (HTML[id] !== undefined ? Promise.resolve(HTML[id]) : api.html(id)).then(function(html){
     HTML[id] = html;
     // sin scripts (sandbox) y con los links abriendo afuera
+    $('mailFrame').onload = function(){ ajustarDetalle(this); };
     $('mailFrame').srcdoc = html ? '<base target="_blank">' + html : '<p style="font:13px sans-serif;color:#888;padding:20px">No se guardó el HTML de este mail.</p>';
   }).catch(function(e){ toast(e.message, true); });
 }
